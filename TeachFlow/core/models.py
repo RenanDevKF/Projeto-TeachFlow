@@ -77,3 +77,16 @@ class Lesson(models.Model):
     
     class Meta:
         ordering = ['-date']
+        
+class Exercise(models.Model):
+    """Activities or exercises applied during a lesson"""
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='exercises')
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    duration = models.IntegerField(help_text="Duration in minutes", null=True, blank=True)
+    materials = models.TextField(blank=True)
+    objectives = models. ManyToManyField(LearningObjective, blank=True, related_name='exercises')
+    tags = models.ManyToManyField(Tag, blank=True, related_name='exercises')
+    
+    def __str__(self):
+        return self.title
