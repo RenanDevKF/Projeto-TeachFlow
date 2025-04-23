@@ -1,1 +1,67 @@
+# Arquivos Python gerados
+__pycache__/
+*.pyc
+*.pyd
+*.egg-info
+build/
+dist/
+sdist/
+
+# Banco de dados
+*.sqlite3
+*.db
+
+# Ambiente virtual
 venv/
+env/
+.venv/
+.env
+
+# Arquivos de log
+*.log
+
+# Arquivos de configuração específicos do ambiente
+local_settings.py
+instance/
+
+# Arquivos de cache do Django
+*.swp
+*.swo
+*.bak
+.DS_Store
+
+# Arquivos de mídia e estáticos (se você não os commitar diretamente)
+media/
+static/
+staticfiles/
+
+# Arquivos de pacotes e gerenciadores de pacotes
+requirements.txt.lock
+pip-log.txt
+yarn-error.log
+node_modules/
+
+# Arquivos de cobertura de testes
+.coverage
+coverage/
+
+# Arquivos de ferramentas de análise de código
+.flake8
+.pylintrc
+.editorconfig
+
+# Arquivos de Docker (se você não commitar os logs de build)
+docker-compose.override.yml
+*.dockerignore
+
+# Outros arquivos específicos do seu sistema operacional ou IDE
+.vscode/
+.idea/
+*.orig
+*.rej
+*.pydevproject
+
+# Arquivos temporários
+tmp/
+temp/
+*.tmp
