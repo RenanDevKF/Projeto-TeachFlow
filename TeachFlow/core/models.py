@@ -13,3 +13,15 @@ class Teacher(models.Model):
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"
     
+class ClassGroup(models.Model):
+    """Represents a class or group of students"""
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='class_groups')
+    year = models.IntegerField(default=timezone.now().year)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.name} ({self.teacher})"
