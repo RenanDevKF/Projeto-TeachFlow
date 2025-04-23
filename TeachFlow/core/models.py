@@ -59,3 +59,21 @@ class LearningObjective(models.Model):
     
     def __str__(self):
         return self.title
+    
+class Lesson(models.Model):
+    """Represents a lesson taught to a class group"""
+    class_group = models.ForeignKey(ClassGroup, on_delete=models.CASCADE, related_name='lessons')
+    date = models.DateField()
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    performance_notes = models.TextField(blank=True)
+    objectives = models.ManyToManyField(LearningObjective, blank=True, related_name='lessons')
+    tags = models.ManyToManyField(Tag, blank=True, related_name='lessons')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.title} - {self.date}"
+    
+    class Meta:
+        ordering = ['-date']
