@@ -40,3 +40,12 @@ class Student(models.Model):
     
     class Meta:
         ordering = ['last_name', 'first_name']
+        
+class Tag(models.Model):
+    """Tags to categorize lessons, exercises, or learning objectives"""
+    name = models.CharField(max_length=50)
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='tags')
+    color = models.CharField(max_length=7, default="#007bff")  # Hex color code
+    
+    def __str__(self):
+        return self.name
