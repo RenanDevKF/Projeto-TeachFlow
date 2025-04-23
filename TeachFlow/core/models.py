@@ -90,3 +90,15 @@ class Exercise(models.Model):
     
     def __str__(self):
         return self.title
+    
+class FutureIdea(models.Model):
+    """Storage for future lesson ideas and notes"""
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='future_ideas')
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    class_group = models.ForeignKey(ClassGroup, on_delete=models.SET_NULL, null=True, blank=True, related_name='future_ideas')
+    tags = models.ManyToManyField(Tag, blank=True, related_name='future_ideas')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.title
