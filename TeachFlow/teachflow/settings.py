@@ -37,8 +37,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'core',
     'accounts',
+    'core',
+    
 ]
 
 MIDDLEWARE = [
@@ -67,6 +68,11 @@ TEMPLATES = [
         },
     },
 ]
+
+# URLs de login/logout
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'class-group-list'  # Página após login
+LOGOUT_REDIRECT_URL = 'login'
 
 WSGI_APPLICATION = 'teachflow.wsgi.application'
 
