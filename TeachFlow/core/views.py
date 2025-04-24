@@ -66,3 +66,13 @@ class ClassGroupUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
     
     def get_success_url(self):
         return reverse_lazy('class-group-detail', kwargs={'pk': self.object.pk})
+    
+@method_decorator(csrf_protect, name='dispatch')
+class ClassGroupDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DeleteView):
+    model = ClassGroup
+    template_name = 'core/class_group_confirm_delete.html'
+    success_url = reverse_lazy('class-group-list')
+    
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, "Class group deleted successfully.")
+        return super().delete(request, *args, **kwargs)
