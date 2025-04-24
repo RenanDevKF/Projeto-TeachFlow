@@ -39,3 +39,9 @@ class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     
     def get_queryset(self):
         return ClassGroup.objects.filter(teacher=self.request.user.teacher_profile)
+    
+@method_decorator(csrf_protect, name='dispatch')
+class ClassGroupDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView):
+    model = ClassGroup
+    template_name = 'core/class_group_detail.html'
+    context_object_name = 'class_group'
