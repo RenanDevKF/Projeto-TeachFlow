@@ -57,3 +57,12 @@ class ClassGroupCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView)
         form.instance.teacher = self.request.user.teacher_profile
         messages.success(self.request, "Class group created successfully!")
         return super().form_valid(form)
+    
+@method_decorator(csrf_protect, name='dispatch')
+class ClassGroupUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, UpdateView):
+    model = ClassGroup
+    template_name = 'core/class_group_form.html'
+    fields = ['name', 'description', 'year', 'is_active']
+    
+    def get_success_url(self):
+        return reverse_lazy('class-group-detail', kwargs={'pk': self.object.pk})
