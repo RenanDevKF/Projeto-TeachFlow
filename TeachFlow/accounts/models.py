@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from core.models import Teacher
+from core.views import SubscriptionPlan
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, is_teacher=False, **extra_fields):
@@ -42,6 +43,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']
 
+    subscription_plan = models.CharField(
+        max_length=20,
+        choices=SubscriptionPlan.choices,
+        default=SubscriptionPlan.FREE
+    )
+    
     def __str__(self):
         return self.email
 
@@ -52,4 +59,28 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 @receiver(post_save, sender=CustomUser)
 def create_teacher_profile(sender, instance, created, **kwargs):
     if created and instance.is_teacher:  # Adicione um campo `is_teacher` no CustomUser se necessário
-        Teacher.objects.create(user=instance)         
+        Teacher.objects.create(user=instance)  
+        
+class SubscriptionPlan(models.TextChoices):
+    FREE = 'free', 'Free'
+    PRO = 'pro', 'Pro'
+    # Adicione outros planos aqui
+
+class Subscription(models.Model):
+    user = models.OneToOneField(
+        CustomUser, 
+        on_delete=models.CASCADE,
+        related_name='subscription'
+    )
+    plan = models.CharField(
+        max_length=20,
+        choices=SubscriptionPlan.choices,
+        default=SubscriptionPlan.FREE
+    )
+    external_id = models.CharField(max_length=100, blank=True)  # ID do gateway
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.plan}"     
