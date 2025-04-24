@@ -76,3 +76,65 @@ class ClassGroupDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
     def delete(self, request, *args, **kwargs):
         messages.success(request, "Class group deleted successfully.")
         return super().delete(request, *args, **kwargs)
+    
+# Lesson Views
+@method_decorator(csrf_protect, name='dispatch')
+class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
+    model = Lesson
+    template_name = 'core/lesson_list.html'
+    context_object_name = 'lessons'
+    
+    def get_queryset(self):
+        class_group_id = self.kwargs.get('class_group_id')
+        return Lesson.objects.filter(class_group_id=class_group_id, 
+                                     class_group__teacher=self.request.user.teacher_profile)
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView):
+    model = Lesson
+    template_name = 'core/lesson_detail.html'
+    context_object_name = 'lesson'
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class LessonCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
+    model = Lesson
+    template_name = 'core/lesson_form.html'
+    fields = ['date', 'title', 'content', 'performance_notes', 'objectives', 'tags']
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Security check: verify class group belongs to this teacher
+        self.class_group = get_object_or_404(
+            ClassGroup, 
+            pk=self.kwargs.get('class_group_id'),
+            teacher=self.request.user.teacher_profile
+        )
+        return super().dispatch(request, *args, **kwargs)
+    
+    def form_valid(self, form):
+        form.instance.class_group = self.class_group
+        messages.success(self.request, "Lesson created successfully!")
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse_lazy('lesson-detail', kwargs={'pk': self.object.pk})
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class LessonUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, UpdateView):
+    model = Lesson
+    template_name = 'core/lesson_form.html'
+    fields = ['date', 'title', 'content', 'performance_notes', 'objectives', 'tags']
+    
+    def get_success_url(self):
+        return reverse_lazy('lesson-detail', kwargs={'pk': self.object.pk})
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class LessonDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DeleteView):
+    model = Lesson
+    template_name = 'core/lesson_confirm_delete.html'
+    
+    def get_success_url(self):
+        return reverse_lazy('lesson-list', kwargs={'class_group_id': self.object.class_group_id})
