@@ -29,3 +29,13 @@ class OwnershipRequiredMixin:
         elif hasattr(self.model, 'class_group'):
             return base_qs.filter(class_group__teacher=self.request.user.teacher_profile)
         return base_qs.none()  # Fallback to empty queryset if no ownership relation exists
+
+# Class Group Views
+@method_decorator(csrf_protect, name='dispatch')
+class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
+    model = ClassGroup
+    template_name = 'core/class_group_list.html'
+    context_object_name = 'class_groups'
+    
+    def get_queryset(self):
+        return ClassGroup.objects.filter(teacher=self.request.user.teacher_profile)
