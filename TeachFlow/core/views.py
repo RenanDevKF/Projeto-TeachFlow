@@ -162,3 +162,26 @@ class ExerciseCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     
     def get_success_url(self):
         return reverse_lazy('lesson-detail', kwargs={'pk': self.lesson.pk})
+    
+# Learning Objective Views
+@method_decorator(csrf_protect, name='dispatch')
+class LearningObjectiveListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
+    model = LearningObjective
+    template_name = 'core/learning_objective_list.html'
+    context_object_name = 'objectives'
+    
+    def get_queryset(self):
+        return LearningObjective.objects.filter(teacher=self.request.user.teacher_profile)
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class LearningObjectiveCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
+    model = LearningObjective
+    template_name = 'core/learning_objective_form.html'
+    fields = ['title', 'description', 'tags']
+    success_url = reverse_lazy('objective-list')
+    
+    def form_valid(self, form):
+        form.instance.teacher = self.request.user.teacher_profile
+        messages.success(self.request, "Learning objective created successfully!")
+        return super().form_valid(form)
