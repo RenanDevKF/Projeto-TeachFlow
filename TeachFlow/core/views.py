@@ -138,3 +138,27 @@ class LessonDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
     
     def get_success_url(self):
         return reverse_lazy('lesson-list', kwargs={'class_group_id': self.object.class_group_id})
+    
+# Exercise Views
+@method_decorator(csrf_protect, name='dispatch')
+class ExerciseCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
+    model = Exercise
+    template_name = 'core/exercise_form.html'
+    fields = ['title', 'description', 'duration', 'materials', 'objectives', 'tags']
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Security check: verify lesson belongs to this teacher
+        self.lesson = get_object_or_404(
+            Lesson, 
+            pk=self.kwargs.get('lesson_id'),
+            class_group__teacher=self.request.user.teacher_profile
+        )
+        return super().dispatch(request, *args, **kwargs)
+    
+    def form_valid(self, form):
+        form.instance.lesson = self.lesson
+        messages.success(self.request, "Exercise added successfully!")
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse_lazy('lesson-detail', kwargs={'pk': self.lesson.pk})
