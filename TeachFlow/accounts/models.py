@@ -3,13 +3,16 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from core.models import Teacher
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self, email, password=None, **extra_fields):
+    def create_user(self, email, password=None, is_teacher=False, **extra_fields):
         if not email:
             raise ValueError('O email é obrigatório')
         email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
+        user = self.model(email=email, is_teacher=is_teacher, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -32,7 +35,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
-
+    is_teacher = models.BooleanField(default=False)
+    
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'email'
@@ -44,3 +48,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def validate_email_domain(email):
         if email.endswith('@tempmail.com'):
             raise ValidationError("Email inválido.")
+
+@receiver(post_save, sender=CustomUser)
+def create_teacher_profile(sender, instance, created, **kwargs):
+    if created and instance.is_teacher:  # Adicione um campo `is_teacher` no CustomUser se necessário
+        Teacher.objects.create(user=instance)         
