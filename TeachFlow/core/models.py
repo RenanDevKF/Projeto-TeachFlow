@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from accounts.models import CustomUser
-
+from django.contrib.admin.models import LogEntry
 
 class Teacher(models.Model):
     """Perfil do professor vinculado ao CustomUser"""
@@ -103,3 +103,10 @@ class FutureIdea(models.Model):
     
     def __str__(self):
         return self.title
+    
+class AdminActionLog(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
+    action = models.CharField(max_length=100)  # "create", "update", "delete"
+    model_name = models.CharField(max_length=100)
+    object_id = models.IntegerField()
+    timestamp = models.DateTimeField(auto_now_add=True)
