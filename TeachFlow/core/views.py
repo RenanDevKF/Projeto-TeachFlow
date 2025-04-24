@@ -18,3 +18,14 @@ class TeacherRequiredMixin(UserPassesTestMixin):
     def handle_no_permission(self):
         messages.error(self.request, "You must be a teacher to access this page.")
         return redirect('login')
+    
+class OwnershipRequiredMixin:
+    """Ensure users can only access their own data"""
+    def get_queryset(self):
+        # Filter queryset to only include objects owned by the current user
+        base_qs = super().get_queryset()
+        if hasattr(self.model, 'teacher'):
+            return base_qs.filter(teacher=self.request.user.teacher_profile)
+        elif hasattr(self.model, 'class_group'):
+            return base_qs.filter(class_group__teacher=self.request.user.teacher_profile)
+        return base_qs.none()  # Fallback to empty queryset if no ownership relation exists
