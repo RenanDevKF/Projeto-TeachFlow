@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from .models import (
     ClassGroup, Student, Lesson, Exercise, 
-    Tag, LearningObjective, FutureIdea
+    Tag, LearningObjective, FutureIdea, AdminActionLog
 )
 
 # Security-enhanced admin configuration
@@ -246,3 +246,11 @@ admin.site.index_title = "Administration Panel"
 
 # Unregister models that aren't needed for the technical staff
 admin.site.unregister(Group)
+
+@admin.register(AdminActionLog)
+class AdminActionLogAdmin(admin.ModelAdmin):
+    list_display = ('action', 'model_name', 'object_id', 'user', 'timestamp')
+    list_filter = ('action', 'model_name', 'timestamp')
+    search_fields = ('user__email', 'model_name', 'object_id')
+    readonly_fields = ('timestamp',)  # Evita edição da data
+    date_hierarchy = 'timestamp'  # Navegação por datas
