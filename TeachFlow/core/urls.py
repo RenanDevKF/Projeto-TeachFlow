@@ -26,4 +26,6 @@ urlpatterns = [
     # Future Ideas URLs
     path('ideas/', views.FutureIdeaListView.as_view(), name='idea-list'),
     path('ideas/new/', views.FutureIdeaCreateView.as_view(), name='idea-create'),
+    
+    path('', views.dashboard_view, name='dashboard'),
 ]
