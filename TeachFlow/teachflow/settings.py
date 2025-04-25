@@ -72,7 +72,7 @@ TEMPLATES = [
 
 # URLs de login/logout
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'class-group-list'  # Página após login
+LOGIN_REDIRECT_URL = 'dashboard'  # Página após login
 LOGOUT_REDIRECT_URL = 'login'
 
 WSGI_APPLICATION = 'teachflow.wsgi.application'
@@ -126,6 +126,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -133,7 +136,7 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Força o uso de HTTPS
-SECURE_SSL_REDIRECT = True  # Em produção
+SECURE_SSL_REDIRECT = False  # Em produção
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Se atrás de proxy
 
 # Proteção de cookies
