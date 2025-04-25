@@ -1,19 +1,9 @@
 from django.db import models
-from django.contrib.auth.models import User
 from django.utils import timezone
-from accounts.models import CustomUser
 from django.contrib.admin.models import LogEntry
+from accounts.models import Teacher
 
-class Teacher(models.Model):
-    """Perfil do professor vinculado ao CustomUser"""
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='teacher_profile')
-    bio = models.TextField(blank=True)
-    subject_area = models.CharField(max_length=100, blank=True)
-    phone = models.CharField(max_length=20, blank=True)
 
-    def __str__(self):
-        return f"{self.user.first_name} {self.user.last_name}"
-    
 class ClassGroup(models.Model):
     """Represents a class or group of students"""
     name = models.CharField(max_length=100)
@@ -105,8 +95,46 @@ class FutureIdea(models.Model):
         return self.title
     
 class AdminActionLog(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
-    action = models.CharField(max_length=100)  # "create", "update", "delete"
-    model_name = models.CharField(max_length=100)
-    object_id = models.IntegerField()
-    timestamp = models.DateTimeField(auto_now_add=True)
+    ACTION_CHOICES = [
+        ('create', 'Criação'),
+        ('update', 'Atualização'),
+        ('delete', 'Exclusão'),
+        ('other', 'Outro')
+    ]
+
+    user = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,  # Permite registro sem usuário (caso o usuário seja deletado)
+        verbose_name='Usuário'
+    )
+    action = models.CharField(
+        max_length=100,
+        choices=ACTION_CHOICES,
+        verbose_name='Ação'
+    )
+    model_name = models.CharField(
+        max_length=100,
+        verbose_name='Modelo afetado'
+    )
+    object_id = models.IntegerField(
+        verbose_name='ID do Objeto'
+    )
+    details = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name='Detalhes (JSON)'
+    )
+    timestamp = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Data/Hora'
+    )
+
+    class Meta:
+        verbose_name = 'Log de Ação'
+        verbose_name_plural = 'Logs de Ações'
+        ordering = ['-timestamp']  # Mais recentes primeiro
+
+    def __str__(self):
+        return f"{self.get_action_display()} em {self.model_name} (ID: {self.object_id})"
