@@ -1,13 +1,16 @@
 # accounts/views.py
-from django.views.generic import CreateView
+from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import CreateView, UpdateView
 from django.urls import reverse_lazy
 from django.views.decorators.cache import never_cache
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ValidationError
 from django.contrib import messages
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
 from django.db import transaction
-from .models import CustomUser, SubscriptionPlan, Subscription
+from django.shortcuts import redirect
+from .models import CustomUser, Subscription
 from core.models import Teacher
 import uuid  # Adicionado para gerar IDs únicos
 
@@ -68,3 +71,26 @@ class SignupView(CreateView):
         context = super().get_context_data(**kwargs)
         context['plans'] = SubscriptionPlan.CHOICES
         return context
+    
+@method_decorator(never_cache, name='dispatch')
+class CustomLoginView(LoginView):
+    template_name = 'accounts/login.html'
+    redirect_authenticated_user = True
+    
+    def get_success_url(self):
+        return reverse_lazy('dashboard')  # Altere para sua view inicial
+
+@method_decorator(never_cache, name='dispatch')
+class CustomLogoutView(LogoutView):
+    next_page = reverse_lazy('login')
+
+# View de perfil
+@method_decorator(never_cache, name='dispatch')
+class ProfileUpdateView(LoginRequiredMixin, UpdateView):
+    model = CustomUser
+    fields = ['first_name', 'last_name', 'email']
+    template_name = 'accounts/profile.html'
+    success_url = reverse_lazy('profile')
+    
+    def get_object(self):
+        return self.request.user
