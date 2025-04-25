@@ -1,13 +1,14 @@
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
-from django.shortcuts import redirect, get_object_or_404
+from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib import messages
 from django.db.models import Q
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
-
+from datetime import date
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea
+from django.contrib.auth.decorators import login_required
 
 
 class TeacherRequiredMixin(UserPassesTestMixin):
@@ -29,6 +30,21 @@ class OwnershipRequiredMixin:
         elif hasattr(self.model, 'class_group'):
             return base_qs.filter(class_group__teacher=self.request.user.teacher_profile)
         return base_qs.none()  # Fallback to empty queryset if no ownership relation exists
+    
+    
+@login_required
+def dashboard_view(request):
+    if not hasattr(request.user, 'teacher_profile'):
+        return redirect('login')  # ou renderize uma página de erro personalizada
+    
+    teacher = request.user.teacher_profile
+    today_lessons = Lesson.objects.filter(date=date.today(), class_group__teacher=teacher)
+    class_groups = ClassGroup.objects.filter(teacher=teacher)
+    
+    return render(request, 'core/home.html', {
+        'today_lessons': today_lessons,
+        'class_groups': class_groups
+    })
 
 # Class Group Views
 @method_decorator(csrf_protect, name='dispatch')
