@@ -5,9 +5,13 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from core.models import Teacher
-from core.views import SubscriptionPlan
 
+
+class SubscriptionPlan(models.TextChoices):
+    FREE = 'free', 'Free'
+    PRO = 'pro', 'Pro'
+    # Adicione outros planos aqui
+    
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, is_teacher=False, **extra_fields):
         if not email:
@@ -60,11 +64,19 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 def create_teacher_profile(sender, instance, created, **kwargs):
     if created and instance.is_teacher:  # Adicione um campo `is_teacher` no CustomUser se necessário
         Teacher.objects.create(user=instance)  
-        
-class SubscriptionPlan(models.TextChoices):
-    FREE = 'free', 'Free'
-    PRO = 'pro', 'Pro'
-    # Adicione outros planos aqui
+
+
+class Teacher(models.Model):
+    """Perfil do professor vinculado ao CustomUser"""
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='teacher_profile')
+    bio = models.TextField(blank=True)
+    subject_area = models.CharField(max_length=100, blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+
+    def __str__(self):
+        return f"{self.user.first_name} {self.user.last_name}"
+            
+
 
 class Subscription(models.Model):
     user = models.OneToOneField(
