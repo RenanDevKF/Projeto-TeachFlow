@@ -32,7 +32,6 @@ instance/
 
 # Arquivos de mídia e estáticos (se você não os commitar diretamente)
 media/
-static/
 staticfiles/
 
 # Arquivos de pacotes e gerenciadores de pacotes
