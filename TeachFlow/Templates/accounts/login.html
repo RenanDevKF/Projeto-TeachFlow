@@ -5,129 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TeachFlow - Login</title>
-    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+    <!-- Fontes e Estilos -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #f8fafc;
-            font-family: 'Poppins', sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-        
-        .login-container {
-            max-width: 480px;
-            width: 90%;
-            padding: 2rem;
-        }
-        
-        .logo-container {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        
-        .book-icon {
-            background-color: #e6f0fd;
-            color: #4A90E2;
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 1rem;
-        }
-        
-        .login-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(226, 232, 240, 0.6);
-            border-radius: 8px;
-            padding: 2.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-        
-        .login-input {
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 0.85rem 1rem;
-            width: 100%;
-            margin-top: 0.5rem;
-            font-family: 'Poppins', sans-serif;
-            background-color: #f0f5ff;
-            transition: all 0.2s ease;
-        }
-        
-        .login-input:focus {
-            outline: none;
-            border-color: #4A90E2;
-        }
-        
-        .login-btn {
-            background: #4A90E2;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 0.85rem;
-            width: 100%;
-            font-weight: 500;
-            margin-top: 1.5rem;
-            cursor: pointer;
-            font-family: 'Poppins', sans-serif;
-            transition: background-color 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .login-btn:hover {
-            background: #3a7bc8;
-        }
-        
-        .create-account {
-            text-align: center;
-            margin-top: 1.5rem;
-        }
-        
-        .create-account a {
-            color: #4A90E2;
-            text-decoration: none;
-            font-size: 0.875rem;
-        }
-        
-        .create-account a:hover {
-            text-decoration: underline;
-        }
-        
-        .loading-state {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .loading-spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-            margin-right: 10px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
+    <link href="{% static 'css/auth.css' %}" rel="stylesheet">
+    <link href="{% static 'css/login.css' %}" rel="stylesheet">
 </head>
 <body>
-    <div class="login-container">
+    <div class="auth-container login-container">
         <div class="logo-container">
             <div class="book-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                     <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                 </svg>
@@ -135,97 +23,48 @@
             <h1 style="font-size: 2.0rem; font-weight: 1200; color: #1e293b; margin-bottom: 0.5rem;">TeachFlow</h1>
             <p style="color: #64748b; font-size: 0.875rem;">Sua plataforma para organização pedagógica</p>
         </div>
-        
-        <div class="login-card">
-            <form id="loginForm">
+
+        <div class="auth-card login-card">
+            <form id="loginForm" method="post" action="{% url 'login' %}">
+                {% csrf_token %}
                 <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; font-size: 0.875rem; color: #475569; margin-bottom: 0.5rem;">Email</label>
+                    <label class="text-sm text-gray-600">Email</label>
                     <input 
                         id="email" 
                         name="email" 
                         type="email" 
-                        class="login-input" 
+                        class="auth-input" 
                         placeholder="seu@email.com"
                         required
                     >
                 </div>
-                
+
                 <div style="margin-bottom: 1rem;">
-                    <label style="display: block; font-size: 0.875rem; color: #475569; margin-bottom: 0.5rem;">Senha</label>
+                    <label class="text-sm text-gray-600">Senha</label>
                     <input 
                         id="password" 
                         name="password" 
                         type="password" 
-                        class="login-input" 
+                        class="auth-input" 
                         placeholder="••••••••"
                         required
                     >
                 </div>
-                
-                <div id="errorMessage" style="color: #ef4444; font-size: 0.75rem; margin-top: 0.5rem; display: none;"></div>
-                
-                <button type="submit" id="submitButton" class="login-btn">
+
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+                <button type="submit" id="submitButton" class="auth-btn">
                     Entrar
                 </button>
             </form>
         </div>
-        
-        <div class="create-account">
+
+        <div class="auth-link">
             <a href="{% url 'register' %}">Criar conta</a>
         </div>
     </div>
 
-    <script src="{% static 'js/main.js' %}"></script>
-    <script type="module">
-        const form = document.getElementById('loginForm');
-        const errorMessage = document.getElementById('errorMessage');
-        const submitButton = document.getElementById('submitButton');
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            errorMessage.style.display = 'none';
-            
-            const email = form.email.value;
-            const password = form.password.value;
-
-            if (!email || !password) {
-                errorMessage.textContent = 'Por favor, preencha todos os campos';
-                errorMessage.style.display = 'block';
-                return;
-            }
-
-            // Aqui você pode adicionar sua lógica de autenticação
-            console.log('Tentativa de login com:', email, password);
-            
-            // Mostrar estado de carregamento com spinner animado
-            const originalText = submitButton.textContent;
-            submitButton.disabled = true;
-            submitButton.innerHTML = `
-                <div class="loading-state">
-                    <div class="loading-spinner"></div>
-                    <span>Salvando...</span>
-                </div>
-            `;
-            
-            try {
-                const response = await fetch('{% url "login" %}', {  // Use a URL name do Django
-                    method: 'POST',
-                    body: new FormData(form),
-                    headers: { 
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-            
-                if (response.redirected) {
-                    window.location.href = '{% url "dashboard" %}';  // Django já redireciona corretamente
-                } else {
-                    const data = await response.json();
-                    throw new Error(data.error || 'Login failed');
-                }
-            }
-            
-        });
-    </script>
+    <!-- Scripts -->
+    <script src="{% static 'js/login.js' %}"></script>
 </body>
 </html>

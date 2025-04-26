@@ -5,292 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TeachFlow - Cadastro</title>
-    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
+    <!-- Fontes e Estilos -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #f8fafc;
-            font-family: 'Poppins', sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-        
-        .signup-container {
-            max-width: 620px;
-            width: 90%;
-            padding: 2rem;
-        }
-        
-        .logo-container {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        
-        .book-icon {
-            background-color: #e6f0fd;
-            color: #4A90E2;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 1rem;
-        }
-        
-        .signup-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(226, 232, 240, 0.6);
-            border-radius: 8px;
-            padding: 2.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .form-input {
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 0.85rem 1rem;
-            width: 100%;
-            margin-top: 0.5rem;
-            font-family: 'Poppins', sans-serif;
-            background-color: #f0f5ff;
-            transition: all 0.2s ease;
-        }
-        
-        .form-input:focus {
-            outline: none;
-            border-color: #4A90E2;
-        }
-        
-        .submit-btn {
-            background: #4A90E2;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 0.85rem;
-            width: 100%;
-            font-weight: 500;
-            margin-top: 1.5rem;
-            cursor: pointer;
-            font-family: 'Poppins', sans-serif;
-            transition: background-color 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .submit-btn:hover {
-            background: #3a7bc8;
-        }
-        
-        .login-link {
-            text-align: center;
-            margin-top: 1.5rem;
-        }
-        
-        .login-link a {
-            color: #4A90E2;
-            text-decoration: none;
-            font-size: 0.875rem;
-        }
-        
-        .login-link a:hover {
-            text-decoration: underline;
-        }
-        
-        .plan-selector {
-            margin-bottom: 1.5rem;
-        }
-        
-        .plan-options {
-            display: flex;
-            gap: 1rem;
-            margin-top: 0.5rem;
-        }
-        
-        .plan-option {
-            flex: 1;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 1rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-        }
-        
-        .plan-option:hover {
-            border-color: #4A90E2;
-            background-color: #f0f5ff;
-        }
-        
-        .plan-option.selected {
-            border-color: #4A90E2;
-            background-color: #f0f5ff;
-            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.25);
-        }
-        
-        .plan-option.selected::before {
-            content: "✓";
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            width: 1.5rem;
-            height: 1.5rem;
-            background: #4A90E2;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.875rem;
-        }
-        
-        .plan-name {
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 0.25rem;
-        }
-        
-        .plan-price {
-            font-size: 0.875rem;
-            color: #64748b;
-            margin-bottom: 0.5rem;
-        }
-        
-        .plan-features {
-            font-size: 0.75rem;
-            color: #64748b;
-            margin-top: 0.5rem;
-        }
-        
-        .plan-feature {
-            display: flex;
-            align-items: center;
-            margin-bottom: 0.25rem;
-        }
-        
-        .plan-feature::before {
-            content: "•";
-            margin-right: 0.25rem;
-            color: #4A90E2;
-        }
-        
-        .step {
-            display: none;
-        }
-        
-        .step.active {
-            display: block;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .steps-indicator {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 1.5rem;
-        }
-        
-        .step-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #e2e8f0;
-            margin: 0 4px;
-        }
-        
-        .step-dot.active {
-            background-color: #4A90E2;
-            transform: scale(1.25);
-        }
-        
-        .loading-state {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .loading-spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-            margin-right: 10px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-        
-        .form-label {
-            display: block;
-            font-size: 0.875rem;
-            color: #475569;
-            margin-bottom: 0.5rem;
-        }
-        
-        .error-message {
-            color: #ef4444;
-            font-size: 0.75rem;
-            margin-top: 0.5rem;
-            display: none;
-        }
-        
-        .navigation-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 1.5rem;
-        }
-        
-        .back-btn {
-            background: transparent;
-            color: #4A90E2;
-            border: 1px solid #4A90E2;
-            border-radius: 6px;
-            padding: 0.85rem 1.5rem;
-            font-weight: 500;
-            cursor: pointer;
-            font-family: 'Poppins', sans-serif;
-            transition: all 0.2s ease;
-        }
-        
-        .back-btn:hover {
-            background: #f0f5ff;
-        }
-        
-        .next-btn {
-            background: #4A90E2;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 0.85rem 1.5rem;
-            font-weight: 500;
-            cursor: pointer;
-            font-family: 'Poppins', sans-serif;
-            transition: background-color 0.2s;
-        }
-        
-        .next-btn:hover {
-            background: #3a7bc8;
-        }
-    </style>
+    <link href="{% static 'css/auth.css' %}" rel="stylesheet">
+    <link href="{% static 'css/signup.css' %}" rel="stylesheet">
 </head>
 <body>
-    <div class="signup-container">
+    <div class="auth-container signup-container">
         <div class="logo-container">
             <div class="book-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -301,21 +23,21 @@
             <h1 style="font-size: 2.0rem; font-weight: 1200; color: #1e293b; margin-bottom: 0.5rem;">TeachFlow</h1>
             <p style="color: #64748b; font-size: 0.875rem;">Sua plataforma para organização pedagógica</p>
         </div>
-        
-        <div class="signup-card">
+
+        <div class="auth-card signup-card">
             <div class="steps-indicator">
                 <div class="step-dot active" data-step="1"></div>
                 <div class="step-dot" data-step="2"></div>
                 <div class="step-dot" data-step="3"></div>
             </div>
-            
-            <form id="signupForm" method="post">
+
+            <form id="signupForm" method="post" action="{% url 'register' %}">
                 {% csrf_token %}
-                
+
                 <!-- Step 1: Escolha do plano -->
                 <div class="step active" id="step-1">
-                    <h2 style="font-size: 1.25rem; font-weight: 600; color: #1e293b; margin-bottom: 1.5rem; text-align: center;">Escolha seu plano</h2>
-                    
+                    <h2 class="text-center text-lg font-semibold text-gray-800 mb-6">Escolha seu plano</h2>
+
                     <div class="plan-selector">
                         <div class="plan-options">
                             <div class="plan-option selected" data-plan="free">
@@ -326,9 +48,9 @@
                                     <div class="plan-feature">5 turmas</div>
                                     <div class="plan-feature">Funcionalidades básicas</div>
                                 </div>
-                                <input type="radio" name="plan" value="free" checked style="display: none;">
+                                <input type="radio" name="plan" value="free" checked hidden>
                             </div>
-                            
+
                             <div class="plan-option" data-plan="basic">
                                 <div class="plan-name">Plano Básico</div>
                                 <div class="plan-price">R$49,90/mês</div>
@@ -337,9 +59,9 @@
                                     <div class="plan-feature">10 turmas</div>
                                     <div class="plan-feature">Recursos intermediários</div>
                                 </div>
-                                <input type="radio" name="plan" value="basic" style="display: none;">
+                                <input type="radio" name="plan" value="basic" hidden>
                             </div>
-                            
+
                             <div class="plan-option" data-plan="premium">
                                 <div class="plan-name">Plano Premium</div>
                                 <div class="plan-price">R$89,90/mês</div>
@@ -348,206 +70,74 @@
                                     <div class="plan-feature">Turmas ilimitadas</div>
                                     <div class="plan-feature">Todos os recursos</div>
                                 </div>
-                                <input type="radio" name="plan" value="premium" style="display: none;">
+                                <input type="radio" name="plan" value="premium" hidden>
                             </div>
                         </div>
                     </div>
-                    
-                    <div style="text-align: right; margin-top: 1.5rem;">
+
+                    <div class="text-right mt-6">
                         <button type="button" class="next-btn" id="step1-next">Continuar</button>
                     </div>
                 </div>
-                
-                <!-- Step 2: Informações pessoais -->
+
+                <!-- Step 2: Informações Pessoais -->
                 <div class="step" id="step-2">
-                    <h2 style="font-size: 1.25rem; font-weight: 600; color: #1e293b; margin-bottom: 1.5rem; text-align: center;">Informações pessoais</h2>
-                    
+                    <h2 class="text-center text-lg font-semibold text-gray-800 mb-6">Informações pessoais</h2>
+
                     <div class="form-group">
                         <label class="form-label">Primeiro Nome</label>
-                        <input type="text" name="first_name" class="form-input" placeholder="Seu primeiro nome" required>
+                        <input type="text" name="first_name" class="auth-input" placeholder="Seu primeiro nome" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label class="form-label">Último Nome</label>
-                        <input type="text" name="last_name" class="form-input" placeholder="Seu último nome" required>
+                        <input type="text" name="last_name" class="auth-input" placeholder="Seu último nome" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label class="form-label">Email</label>
-                        <input type="email" name="email" class="form-input" placeholder="seu@email.com" required>
+                        <input type="email" name="email" class="auth-input" placeholder="seu@email.com" required>
                     </div>
-                    
+
                     <div class="navigation-buttons">
                         <button type="button" class="back-btn" id="step2-back">Voltar</button>
                         <button type="button" class="next-btn" id="step2-next">Continuar</button>
                     </div>
                 </div>
-                
-                <!-- Step 3: Senha e finalização -->
+
+                <!-- Step 3: Senhas -->
                 <div class="step" id="step-3">
-                    <h2 style="font-size: 1.25rem; font-weight: 600; color: #1e293b; margin-bottom: 1.5rem; text-align: center;">Defina sua senha</h2>
-                    
+                    <h2 class="text-center text-lg font-semibold text-gray-800 mb-6">Defina sua senha</h2>
+
                     <div class="form-group">
                         <label class="form-label">Senha</label>
-                        <input type="password" name="password1" class="form-input" placeholder="••••••••" required>
+                        <input type="password" name="password1" class="auth-input" placeholder="••••••••" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label class="form-label">Confirme a Senha</label>
-                        <input type="password" name="password2" class="form-input" placeholder="••••••••" required>
+                        <input type="password" name="password2" class="auth-input" placeholder="••••••••" required>
                     </div>
-                    
-                    <div id="errorMessage" class="error-message"></div>
-                    
+
+                    <div id="errorMessage" class="error-message" style="display: none;"></div>
+
                     <div class="navigation-buttons">
                         <button type="button" class="back-btn" id="step3-back">Voltar</button>
                         <button type="submit" id="submitButton" class="next-btn">Criar Conta</button>
                     </div>
                 </div>
-                
-                <!-- Campo oculto para o plano selecionado -->
+
+                <!-- Hidden input para o plano -->
                 <input type="hidden" id="selectedPlan" name="selected_plan" value="free">
             </form>
         </div>
-        
-        <div class="login-link">
+
+        <div class="auth-link">
             <a href="{% url 'login' %}">Já tem uma conta? Entrar</a>
         </div>
     </div>
 
-    <script src="{% static 'js/main.js' %}"></script>
-    <script type="module">
-        document.addEventListener('DOMContentLoaded', function() {
-            // Elementos de navegação entre steps
-            const steps = document.querySelectorAll('.step');
-            const stepDots = document.querySelectorAll('.step-dot');
-            const planOptions = document.querySelectorAll('.plan-option');
-            const form = document.getElementById('signupForm');
-            const errorMessage = document.getElementById('errorMessage');
-            const submitButton = document.getElementById('submitButton');
-            const selectedPlanInput = document.getElementById('selectedPlan');
-            
-            // Seleção de plano
-            planOptions.forEach(option => {
-                option.addEventListener('click', function() {
-                    // Remover seleção anterior
-                    planOptions.forEach(opt => opt.classList.remove('selected'));
-                    
-                    // Selecionar o plano clicado
-                    this.classList.add('selected');
-                    
-                    // Marcar o radio button correspondente
-                    const radio = this.querySelector('input[type="radio"]');
-                    radio.checked = true;
-                    
-                    // Atualiza o campo hidden com o plano selecionado
-                    selectedPlanInput.value = radio.value;
-                });
-            });
-            
-            // Navegação entre steps
-            document.getElementById('step1-next').addEventListener('click', function() {
-                goToStep(2);
-            });
-            
-            document.getElementById('step2-back').addEventListener('click', function() {
-                goToStep(1);
-            });
-            
-            document.getElementById('step2-next').addEventListener('click', function() {
-                const firstName = form.elements['first_name'].value;
-                const lastName = form.elements['last_name'].value;
-                const email = form.elements['email'].value;
-                
-                if (!firstName || !lastName || !email) {
-                    alert('Por favor, preencha todos os campos');
-                    return;
-                }
-                
-                goToStep(3);
-            });
-            
-            document.getElementById('step3-back').addEventListener('click', function() {
-                goToStep(2);
-            });
-            
-            // Função para navegação entre steps
-            function goToStep(stepNumber) {
-                steps.forEach(step => step.classList.remove('active'));
-                stepDots.forEach(dot => dot.classList.remove('active'));
-                
-                document.getElementById(`step-${stepNumber}`).classList.add('active');
-                document.querySelector(`.step-dot[data-step="${stepNumber}"]`).classList.add('active');
-            }
-            
-            // Submissão do formulário
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                errorMessage.style.display = 'none';
-                
-                const password1 = form.elements['password1'].value;
-                const password2 = form.elements['password2'].value;
-                
-                if (password1 !== password2) {
-                    errorMessage.textContent = 'As senhas não coincidem';
-                    errorMessage.style.display = 'block';
-                    return;
-                }
-                
-                if (password1.length < 6) {
-                    errorMessage.textContent = 'A senha deve ter pelo menos 6 caracteres';
-                    errorMessage.style.display = 'block';
-                    return;
-                }
-                
-                // Verificar se é um plano pago
-                const selectedPlan = selectedPlanInput.value;
-                if (selectedPlan !== 'free') {
-                    // Redirecionar para a página de pagamento
-                    // Aqui você pode adicionar lógica para salvar os dados do usuário em sessão
-                    // e redirecionar para uma página de pagamento
-                    
-                    submitButton.disabled = true;
-                    submitButton.innerHTML = `
-                        <div class="loading-state">
-                            <div class="loading-spinner"></div>
-                            <span>Redirecionando para pagamento...</span>
-                        </div>
-                    `;
-                    
-                    // Simulação do redirecionamento
-                    setTimeout(() => {
-                        alert(`Redirecionando para página de pagamento do plano ${selectedPlan}`);
-                        // Aqui você pode adicionar o redirecionamento real
-                        // window.location.href = '/payment/?plan=' + selectedPlan;
-                    }, 1500);
-                    
-                    return;
-                }
-                
-                // Se for plano free, prosseguir com o cadastro
-                submitButton.disabled = true;
-                submitButton.innerHTML = `
-                    <div class="loading-state">
-                        <div class="loading-spinner"></div>
-                        <span>Criando sua conta...</span>
-                    </div>
-                `;
-                
-                // Aqui você faria o submit do formulário para o backend
-                // Este é apenas um exemplo de simulação
-                setTimeout(() => {
-                    // Em uma aplicação real, aqui você enviaria os dados para o servidor
-                    // e redirecionaria após o sucesso
-                    
-                    alert('Conta criada com sucesso!');
-                    // form.submit(); // Descomente para submeter o formulário realmente
-                    
-                    // Redirecionamento simulado
-                    // window.location.href = '/dashboard/';
-                }, 2000);
-            });
-        });
-    </script>
+    <!-- Scripts -->
+    <script src="{% static 'js/signup.js' %}"></script>
 </body>
 </html>
