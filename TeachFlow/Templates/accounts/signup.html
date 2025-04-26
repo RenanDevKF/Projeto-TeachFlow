@@ -1,0 +1,136 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeachFlow - Cadastro</title>
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* Mesmo estilo usado no login */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f8fafc;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .login-container {
+            max-width: 480px;
+            width: 90%;
+            padding: 2rem;
+        }
+        .logo-container {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .book-icon {
+            background-color: #e6f0fd;
+            color: #4A90E2;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+        .login-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.6);
+            border-radius: 8px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        .login-input {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 0.85rem 1rem;
+            width: 100%;
+            margin-top: 0.5rem;
+            background-color: #f0f5ff;
+            transition: all 0.2s ease;
+        }
+        .login-input:focus {
+            outline: none;
+            border-color: #4A90E2;
+        }
+        .login-btn {
+            background: #4A90E2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0.85rem;
+            width: 100%;
+            font-weight: 500;
+            margin-top: 1.5rem;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            transition: background-color 0.2s;
+        }
+        .login-btn:hover {
+            background: #3a7bc8;
+        }
+        .create-account {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+        .create-account a {
+            color: #4A90E2;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+        .create-account a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo-container">
+            <div class="book-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+            </div>
+            <h1 style="font-size: 2rem; font-weight: 1200; color: #1e293b; margin-bottom: 0.5rem;">TeachFlow</h1>
+            <p style="color: #64748b; font-size: 0.875rem;">Sua plataforma para organização pedagógica</p>
+        </div>
+
+        <div class="login-card">
+            <form method="post">
+                {% csrf_token %}
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="text-sm text-gray-600">Primeiro Nome</label>
+                    {{ form.first_name }}
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="text-sm text-gray-600">Último Nome</label>
+                    {{ form.last_name }}
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="text-sm text-gray-600">Email</label>
+                    {{ form.email }}
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="text-sm text-gray-600">Senha</label>
+                    {{ form.password1 }}
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="text-sm text-gray-600">Confirme a Senha</label>
+                    {{ form.password2 }}
+                </div>
+
+                <button type="submit" class="login-btn">Criar Conta</button>
+            </form>
+        </div>
+
+        <div class="create-account">
+            <a href="{% url 'login' %}">Já tem uma conta? Entrar</a>
+        </div>
+    </div>
+</body>
+</html>
