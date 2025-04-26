@@ -9,6 +9,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const submitButton = document.getElementById('submitButton');
     const selectedPlanInput = document.getElementById('selectedPlan');
 
+    // Função para obter o token CSRF
+    function getCSRFToken() {
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+        return cookieValue || form.querySelector('[name=csrfmiddlewaretoken]')?.value;
+    }
+
     // Selecionar plano
     planOptions.forEach(option => {
         option.addEventListener('click', function() {
@@ -44,11 +53,35 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelector(`.step-dot[data-step="${stepNumber}"]`).classList.add('active');
     }
 
+    // Função para mostrar erros do servidor
+    function displayFormErrors(form, errors) {
+        // Limpa erros anteriores
+        form.querySelectorAll('.error-message').forEach(el => {
+            if (el.id !== 'errorMessage') el.remove();
+        });
+        form.querySelectorAll('.auth-input').forEach(input => {
+            input.classList.remove('error');
+        });
+
+        // Adiciona novos erros
+        for (const [field, messages] of Object.entries(errors)) {
+            const input = form.querySelector(`[name="${field}"]`);
+            if (input) {
+                input.classList.add('error');
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = Array.isArray(messages) ? messages.join(' ') : messages;
+                input.parentNode.insertBefore(errorDiv, input.nextSibling);
+            }
+        }
+    }
+
     // Submeter formulário
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         errorMessage.style.display = 'none';
 
+        // Validação básica do cliente
         const password1 = form.elements['password1'].value;
         const password2 = form.elements['password2'].value;
 
@@ -67,30 +100,58 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedPlan = selectedPlanInput.value;
         submitButton.disabled = true;
 
-        if (selectedPlan !== 'free') {
-            submitButton.innerHTML = `
-                <div class="loading-state">
-                    <div class="loading-spinner"></div>
-                    <span>Redirecionando para pagamento...</span>
-                </div>
-            `;
-            setTimeout(() => {
-                alert(`Redirecionando para pagamento do plano ${selectedPlan}`);
-                // window.location.href = '/payment/?plan=' + selectedPlan;
-            }, 1500);
-            return;
-        }
-
+        // Mostrar estado de carregamento
         submitButton.innerHTML = `
             <div class="loading-state">
                 <div class="loading-spinner"></div>
-                <span>Criando sua conta...</span>
+                <span>${selectedPlan !== 'free' ? 'Redirecionando para pagamento...' : 'Criando sua conta...'}</span>
             </div>
         `;
 
-        setTimeout(() => {
-            alert('Conta criada com sucesso!');
-            // form.submit(); // Em projeto real, descomente aqui
-        }, 2000);
+        // Modifique o bloco try/catch do seu event listener para:
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { 
+                    'X-CSRFToken': getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+        
+            // Verificação EXTRA do content-type
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                throw new Error(`O servidor retornou uma resposta inválida: ${response.status}`);
+            }
+        
+            const data = await response.json();
+            
+            if (!response.ok) {
+                if (data.errors) {
+                    displayFormErrors(form, data.errors);
+                } else {
+                    throw new Error(data.error || 'Erro no cadastro');
+                }
+                return;
+            }
+        
+            if (data.success) {
+                window.location.href = data.redirect_url || "/accounts/login/";
+            }
+        } catch (error) {
+            console.error('Erro completo:', {
+                error: error,
+                response: await response?.text()
+            });
+            
+            errorMessage.textContent = error.message.includes('inválida') ? 
+                'Erro no servidor. Tente novamente.' : error.message;
+            errorMessage.style.display = 'block';
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Criar Conta';
+        }
     });
 });
