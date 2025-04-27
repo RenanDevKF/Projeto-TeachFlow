@@ -57,7 +57,7 @@ def dashboard_view(request):
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     model = ClassGroup
-    template_name = 'core/class_group_list.html'
+    template_name = 'classes/class_group_list.html'
     context_object_name = 'class_groups'
     
     def get_queryset(self):
@@ -104,14 +104,26 @@ class ClassGroupDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
 @method_decorator(csrf_protect, name='dispatch')
 class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     model = Lesson
-    template_name = 'core/lesson_list.html'
+    template_name = 'lessons/lesson_list.html'  # Mantém o mesmo template
     context_object_name = 'lessons'
-    
-    def get_queryset(self):
-        class_group_id = self.kwargs.get('class_group_id')
-        return Lesson.objects.filter(class_group_id=class_group_id, 
-                                     class_group__teacher=self.request.user.teacher_profile)
+    paginate_by = 10  # Adicione paginação se desejar
 
+    def get_queryset(self):
+        queryset = Lesson.objects.filter(
+            class_group__teacher=self.request.user.teacher_profile
+        ).select_related('class_group')
+        
+        # Filtra por turma se o ID foi fornecido
+        class_group_id = self.kwargs.get('class_group_id')
+        if class_group_id:
+            queryset = queryset.filter(class_group_id=class_group_id)
+        
+        return queryset.order_by('-date', 'title')  # Ordenação consistente
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_group'] = self.kwargs.get('class_group_id')
+        return context
 
 @method_decorator(csrf_protect, name='dispatch')
 class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView):
@@ -123,7 +135,7 @@ class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
 @method_decorator(csrf_protect, name='dispatch')
 class LessonCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = Lesson
-    template_name = 'core/lesson_form.html'
+    template_name = 'lessons/lesson_form.html'
     fields = ['date', 'title', 'content', 'performance_notes', 'objectives', 'tags']
     
     def dispatch(self, request, *args, **kwargs):
@@ -166,7 +178,7 @@ class LessonDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
 @method_decorator(csrf_protect, name='dispatch')
 class ExerciseCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = Exercise
-    template_name = 'core/exercise_form.html'
+    template_name = 'exercises/exercise_form.html'
     fields = ['title', 'description', 'duration', 'materials', 'objectives', 'tags']
     
     def dispatch(self, request, *args, **kwargs):
@@ -185,6 +197,17 @@ class ExerciseCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     
     def get_success_url(self):
         return reverse_lazy('lesson-detail', kwargs={'pk': self.lesson.pk})
+    
+@method_decorator(csrf_protect, name='dispatch')
+class ExerciseListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
+    model = Exercise
+    template_name = 'exercises/exercise_list.html'
+    context_object_name = 'exercises'
+    
+    def get_queryset(self):
+        return Exercise.objects.filter(
+            lesson__class_group__teacher=self.request.user.teacher_profile
+        ).select_related('lesson', 'lesson__class_group')
     
 # Learning Objective Views
 @method_decorator(csrf_protect, name='dispatch')
