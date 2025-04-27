@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - TeachFlow{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'lesson_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+    </svg>
+    Nova Aula
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Daily planning section -->
+    <section>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                Planejamento de hoje
+            </h2>
+        </div>
+
+        {% if today_lessons %}
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {% for lesson in today_lessons %}
+                    <div class="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 hover:shadow-md transition duration-200">
+                        <div class="p-4">
+                            <h3 class="font-medium text-lg mb-1">{{ lesson.class_group.name }}</h3>
+                            <p class="text-gray-700 mb-2">{{ lesson.title }}</p>
+                            <div class="flex flex-wrap gap-2 mt-3">
+                                {% for tag in lesson.tags.all %}
+                                    <span class="px-2 py-1 text-xs rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
+                                        {{ tag.name }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="border-t border-gray-200 bg-gray-50 px-4 py-2 text-right">
+                            <a href="{% url 'lesson_detail' lesson.id %}" class="text-primary text-sm hover:underline">Ver detalhes</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="bg-white rounded-lg shadow-sm p-6 text-center border border-gray-200">
+                <p class="text-gray-500">Não há aulas planejadas para hoje.</p>
+                <a href="{% url 'lesson_create' %}" class="inline-flex items-center px-4 py-2 mt-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Planejar uma aula
+                </a>
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- Classes section -->
+    <section>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">Suas turmas</h2>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {% for class_group in class_groups %}
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 hover:shadow-md transition duration-200">
+                    <div class="p-4">
+                        <h3 class="font-medium text-lg mb-2">{{ class_group.name }}</h3>
+                        <p class="text-gray-500 text-sm">Ensino Fundamental</p>
+                        <p class="text-sm text-gray-500 mt-2">{{ class_group.students.count }} alunos</p>
+                    </div>
+                    <div class="border-t border-gray-200 bg-gray-50 px-4 py-2 text-right">
+                        <a href="{% url 'class_group_detail' class_group.id %}" class="text-primary text-sm hover:underline">Ver detalhes</a>
+                    </div>
+                </div>
+            {% endfor %}
+
+            <!-- "New class" card -->
+            <a href="{% url 'class_group_create' %}" class="flex flex-col items-center justify-center p-6 rounded-lg border-2 border-dashed border-gray-300 bg-white text-center hover:border-primary hover:text-primary transition duration-200">
+                <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                <span class="mt-2 text-sm font-medium text-gray-900">Nova turma</span>
+            </a>
+        </div>
+    </section>
+</div>
+{% endblock %}
