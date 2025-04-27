@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Nova Turma - TeachFlow{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'class_group_list' %}" class="text-primary hover:underline">&larr; Voltar para Turmas</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-md">
+    <h1 class="text-2xl font-bold mb-6 text-gray-800">Criar Nova Turma</h1>
+    
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <div>
+            <label class="form-label">Nome da Turma</label>
+            <input type="text" name="name" class="auth-input" required placeholder="Digite o nome da turma">
+        </div>
+
+        <div>
+            <label class="form-label">Descrição</label>
+            <textarea name="description" class="auth-input" rows="4" placeholder="Descreva brevemente a turma"></textarea>
+        </div>
+
+        <div>
+            <label class="form-label">Escola</label>
+            <input type="text" name="school" class="auth-input" placeholder="Nome da escola">
+        </div>
+
+        <div>
+            <label class="form-label">Período</label>
+            <select name="period" class="auth-input" required>
+                <option value="">Selecione o período</option>
+                <option value="Manhã">Manhã</option>
+                <option value="Tarde">Tarde</option>
+                <option value="Noite">Noite</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="form-label">Ano Letivo</label>
+            <input type="number" name="year" class="auth-input" value="{{ current_year }}" min="2020" required>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <input type="checkbox" name="is_active" checked class="rounded border-gray-300 text-primary shadow-sm focus:ring-primary">
+            <label class="text-sm text-gray-700">Ativa</label>
+        </div>
+
+        <button id="submitButton" type="submit" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+            Criar Turma
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/class_group_create.js' %}"></script>
+{% endblock %}
