@@ -61,7 +61,11 @@ class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     context_object_name = 'class_groups'
     
     def get_queryset(self):
-        return ClassGroup.objects.filter(teacher=self.request.user.teacher_profile)
+        return ClassGroup.objects.filter(teacher=self.request.user.teacher_profile).prefetch_related('students', 'lessons')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
     
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView):
@@ -72,20 +76,20 @@ class ClassGroupDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = ClassGroup
-    template_name = 'core/class_group_form.html'
-    fields = ['name', 'description', 'year', 'is_active']
+    template_name = 'classes/class_group_create.html'
+    fields = ['name', 'description', 'scholl', 'period', 'year', 'is_active']
     success_url = reverse_lazy('class-group-list')
     
     def form_valid(self, form):
         form.instance.teacher = self.request.user.teacher_profile
-        messages.success(self.request, "Class group created successfully!")
+        messages.success(self.request, "Turma criada com sucesso!")
         return super().form_valid(form)
     
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, UpdateView):
     model = ClassGroup
-    template_name = 'core/class_group_form.html'
-    fields = ['name', 'description', 'year', 'is_active']
+    template_name = 'calsses/class_group_create.html'
+    fields = ['name', 'description', 'scholl', 'period', 'year', 'is_active']
     
     def get_success_url(self):
         return reverse_lazy('class-group-detail', kwargs={'pk': self.object.pk})
