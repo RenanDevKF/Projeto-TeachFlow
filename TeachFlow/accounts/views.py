@@ -2,16 +2,19 @@
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import CreateView, UpdateView
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.views.decorators.cache import never_cache
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect
 from django.core.exceptions import ValidationError
 from django.contrib import messages
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, authenticate
 from django.db import transaction
 from django.shortcuts import redirect
+from django.http import JsonResponse
 from .models import CustomUser, Subscription
-from core.models import Teacher
+from .forms import CustomUserCreationForm
+from accounts.models import Teacher
 import uuid  # Adicionado para gerar IDs únicos
 
 # Defina os planos no nível do módulo ou em core/models.py
@@ -22,38 +25,63 @@ class SubscriptionPlan:
         (FREE, 'Free'),
         (PRO, 'Pro'),
     ]
-
+@method_decorator(csrf_protect, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
 class SignupView(CreateView):
     model = CustomUser
     template_name = 'accounts/signup.html'
-    fields = ['email', 'first_name', 'last_name', 'password']
-    success_url = reverse_lazy('class-group-list')
+    form_class = CustomUserCreationForm
+    success_url = reverse_lazy('login')
 
     def form_valid(self, form):
-        try:
-            with transaction.atomic():
-                # Criação do usuário
-                user = form.save(commit=False)
-                user.set_password(form.cleaned_data['password'])
-                user.is_teacher = True
-                user.is_active = True
-                user.save()
+        user = form.save(commit=False)
+        user.is_teacher = True
+        user.is_active = True
+        user.save()
+        
+        if not hasattr(user, 'teacher_profile'):
+            Teacher.objects.create(user=user)
 
-                # Criação automática do perfil Teacher
-                Teacher.objects.create(user=user)
+        selected_plan = self.request.POST.get('selected_plan', 'free')
+        if selected_plan == 'basic':
+            pass
+        elif selected_plan == 'premium':
+            pass
+        else:
+            pass
 
-                # Processamento do plano
-                plan = self.request.POST.get('plan', SubscriptionPlan.FREE)
-                self._process_subscription(user, plan)
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': 'Cadastro realizado com sucesso!',
+                'redirect_url': reverse('login')
+            })
+        
+        return redirect('login')
+    
+    
 
-                login(self.request, user)
-                messages.success(self.request, "Account created successfully!")
-                return super().form_valid(form)
+    def form_invalid(self, form):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'error': 'Erro de validação',
+                'errors': {
+                    field: [str(e) for e in errors]
+                    for field, errors in form.errors.items()
+                }
+            }, status=400)
+        return super().form_invalid(form)
 
-        except Exception as e:
-            messages.error(self.request, f"Error during signup: {str(e)}")
-            return self.form_invalid(form)
+    def handle_exception(self, request, exception):
+        """Captura exceções não tratadas"""
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'error': 'Erro interno',
+                'detail': str(exception)
+            }, status=500)
+        raise exception
 
     def _process_subscription(self, user, plan):
         """Integração simulada com gateway de pagamento"""
@@ -63,8 +91,8 @@ class SignupView(CreateView):
         Subscription.objects.create(
             user=user,
             plan=plan,
-            external_id=f'pg_{uuid.uuid4().hex[:12]}',  # ID simulado
-            is_active=(plan == SubscriptionPlan.FREE)  # Planos pagos requerem confirmação
+            external_id=f'pg_{uuid.uuid4().hex[:12]}',
+            is_active=(plan == SubscriptionPlan.FREE)
         )
 
     def get_context_data(self, **kwargs):
@@ -78,7 +106,32 @@ class CustomLoginView(LoginView):
     redirect_authenticated_user = True
     
     def get_success_url(self):
-        return reverse_lazy('dashboard')  # Altere para sua view inicial
+        # Redireciona superusuários diretamente para o admin
+        if self.request.user.is_superuser:
+            return reverse('admin:index')
+        return super().get_success_url()
+
+    def post(self, request, *args, **kwargs):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Lógica para AJAX
+            email = request.POST.get('email')
+            password = request.POST.get('password')
+            user = authenticate(request, username=email, password=password)
+            
+            if user is not None:
+                login(request, user)
+                return JsonResponse({
+                    'success': True,
+                    'redirect_url': self.get_success_url()
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Email ou senha inválidos'
+                }, status=400)
+        
+        # Fallback para comportamento padrão
+        return super().post(request, *args, **kwargs)
 
 @method_decorator(never_cache, name='dispatch')
 class CustomLogoutView(LogoutView):
@@ -94,3 +147,20 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     
     def get_object(self):
         return self.request.user
+    
+    
+ #função isolada para validação de email e username   
+def validate_username_email(request):
+    username = request.GET.get('username', None)
+    email = request.GET.get('email', None)
+    data = {'is_valid': True, 'errors': {}}
+
+    if username and CustomUser.objects.filter(username=username).exists():
+        data['is_valid'] = False
+        data['errors']['username'] = "Este nome de usuário já está em uso."
+
+    if email and CustomUser.objects.filter(email=email).exists():
+        data['is_valid'] = False
+        data['errors']['email'] = "Este email já está em uso."
+
+    return JsonResponse(data)
