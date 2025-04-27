@@ -34,14 +34,21 @@ class OwnershipRequiredMixin:
     
 @login_required
 def dashboard_view(request):
+    # Se for superusuário, redireciona para o admin
+    if request.user.is_superuser:
+        return redirect('admin:index')
+    
+    # Verifica se o usuário tem perfil de professor
     if not hasattr(request.user, 'teacher_profile'):
-        return redirect('login')  # ou renderize uma página de erro personalizada
+        messages.error(request, "Acesso restrito a professores.")
+        logout(request)  # Desloga o usuário para evitar loops
+        return redirect('login')
     
     teacher = request.user.teacher_profile
     today_lessons = Lesson.objects.filter(date=date.today(), class_group__teacher=teacher)
     class_groups = ClassGroup.objects.filter(teacher=teacher)
     
-    return render(request, 'core/home.html', {
+    return render(request, 'dashboard/dashboard.html', {
         'today_lessons': today_lessons,
         'class_groups': class_groups
     })
