@@ -53,6 +53,10 @@ MIDDLEWARE = [
     'django_ratelimit.middleware.RatelimitMiddleware',
 ]
 
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 1209600  # 2 semanas em segundos
+SESSION_SAVE_EVERY_REQUEST = True
+
 ROOT_URLCONF = 'teachflow.urls'
 
 TEMPLATES = [
@@ -76,6 +80,12 @@ LOGIN_REDIRECT_URL = 'dashboard'  # Página após login
 LOGOUT_REDIRECT_URL = 'login'
 
 WSGI_APPLICATION = 'teachflow.wsgi.application'
+
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailOrUsernameBackend',
+    'django.contrib.auth.backends.ModelBackend',  # Deixe também o padrão
+]
+
 
 
 # Database
@@ -140,8 +150,8 @@ SECURE_SSL_REDIRECT = False  # Em produção
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Se atrás de proxy
 
 # Proteção de cookies
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False  # Mude para True em produção
+CSRF_COOKIE_SECURE = False     # Mude para True em produção
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'  # ou 'Strict'
