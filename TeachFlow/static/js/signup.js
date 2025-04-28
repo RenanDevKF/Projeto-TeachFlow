@@ -2,79 +2,48 @@
 
 document.addEventListener('DOMContentLoaded', function () {
     const steps = document.querySelectorAll('.step');
-    const stepDots = document.querySelectorAll('.step-dot');
-    const planOptions = document.querySelectorAll('.plan-option');
     const form = document.getElementById('signupForm');
-    const errorMessage = document.getElementById('errorMessage');
-    const submitButton = document.getElementById('submitButton');
-    const selectedPlanInput = document.getElementById('selectedPlan');
+    const stepIndicator = document.getElementById('step-indicator');
+    const planOptions = document.querySelectorAll('label input[name="plan"]');
+    let currentStep = 1;
+    let isSubmitting = false;
 
-    // Funções Auxiliares
-    function goToStep(stepNumber) {
-        steps.forEach(step => step.classList.remove('active'));
-        stepDots.forEach(dot => dot.classList.remove('active'));
-        document.getElementById(`step-${stepNumber}`).classList.add('active');
-        document.querySelector(`.step-dot[data-step="${stepNumber}"]`).classList.add('active');
-    }
-
-    function validatePassword(password) {
-        const minLength = 8;
-        const hasNumber = /\d/.test(password);
-        const hasUppercase = /[A-Z]/.test(password);
-        const hasLowercase = /[a-z]/.test(password);
-        const hasSpecialChar = /[@$!%*?&]/.test(password);
-
-        if (password.length < minLength) {
-            return "A senha deve ter pelo menos 8 caracteres.";
-        }
-        if (!hasNumber) {
-            return "A senha deve conter pelo menos um número.";
-        }
-        if (!hasUppercase) {
-            return "A senha deve conter pelo menos uma letra maiúscula.";
-        }
-        if (!hasLowercase) {
-            return "A senha deve conter pelo menos uma letra minúscula.";
-        }
-        if (!hasSpecialChar) {
-            return "A senha deve conter pelo menos um caractere especial (@, $, !, %, *, ?, &).";
-        }
-        return null;
-    }
-
-    function getCSRFToken() {
-        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
-        if (csrfInput) return csrfInput.value;
-        
-        // Backup: parse dos cookies
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.startsWith('csrftoken=')) {
-                return cookie.substring('csrftoken='.length);
+    function showStep(step) {
+        steps.forEach((el, idx) => {
+            if (idx === step - 1) {
+                el.classList.remove('hidden');
+            } else {
+                el.classList.add('hidden');
             }
-        }
-        return null;
+        });
+        stepIndicator.textContent = `Etapa ${step} de 3`;
+        currentStep = step;
     }
 
-    // Navegação nos steps
-    document.getElementById('step1-next').addEventListener('click', () => goToStep(2));
-    document.getElementById('step2-back').addEventListener('click', () => goToStep(1));
-    document.getElementById('step2-next').addEventListener('click', async () => {
+    // Navegação
+    document.getElementById('next-1').addEventListener('click', () => {
+        const selectedPlan = document.querySelector('input[name="plan"]:checked');
+        if (!selectedPlan) {
+            alert('Por favor, selecione um plano.');
+            return;
+        }
+        showStep(2);
+    });
+
+    document.getElementById('next-2').addEventListener('click', async () => {
         const username = form.elements['username'].value.trim();
         const firstName = form.elements['first_name'].value.trim();
         const lastName = form.elements['last_name'].value.trim();
         const email = form.elements['email'].value.trim();
 
         if (!username || !firstName || !lastName || !email) {
-            alert('Por favor, preencha todas as informações pessoais.');
+            alert('Por favor, preencha todas as informações.');
             return;
         }
 
         try {
             const response = await fetch('/accounts/validate-username-email/?username=' + encodeURIComponent(username) + '&email=' + encodeURIComponent(email));
             const data = await response.json();
-    
             if (!data.is_valid) {
                 let messages = [];
                 if (data.errors.username) messages.push(data.errors.username);
@@ -82,70 +51,56 @@ document.addEventListener('DOMContentLoaded', function () {
                 alert(messages.join('\n'));
                 return;
             }
-    
-            // Se passar na validação, avança para o Step 3
-            goToStep(3);
+            showStep(3);
         } catch (error) {
-            console.error('Erro ao validar username/email', error);
+            console.error('Erro na validação:', error);
             alert('Erro ao validar informações. Tente novamente.');
         }
     });
 
-    document.getElementById('step3-back').addEventListener('click', () => goToStep(2));
+    document.getElementById('prev-2').addEventListener('click', () => showStep(1));
+    document.getElementById('prev-3').addEventListener('click', () => showStep(2));
 
-    // Seleção de Plano
-    planOptions.forEach(option => {
-        option.addEventListener('click', function () {
-            planOptions.forEach(opt => opt.classList.remove('selected'));
-            this.classList.add('selected');
-            const radio = this.querySelector('input[type="radio"]');
-            radio.checked = true;
-            selectedPlanInput.value = radio.value;
+    // Controle de seleção visual dos cards de plano
+    planOptions.forEach(plan => {
+        plan.addEventListener('change', function () {
+            planOptions.forEach(p => p.parentElement.classList.remove('border-2', 'border-primary', 'bg-blue-50'));
+            this.parentElement.classList.add('border-2', 'border-primary', 'bg-blue-50');
         });
     });
 
-    // Submissão do formulário
-    let isSubmitting = false;
-
+    // Submissão final do formulário
     form.addEventListener('submit', async function (e) {
         e.preventDefault();
-
-        if (isSubmitting) {
-            // Se já está enviando, simplesmente ignora novos cliques
-            return;
-        }
-
-        errorMessage.style.display = 'none';
+        if (isSubmitting) return;
 
         const password1 = form.elements['password1'].value;
         const password2 = form.elements['password2'].value;
 
         if (password1 !== password2) {
-            errorMessage.textContent = 'As senhas não coincidem.';
-            errorMessage.style.display = 'block';
+            alert('As senhas não coincidem.');
             return;
         }
 
         const passwordError = validatePassword(password1);
         if (passwordError) {
-            errorMessage.textContent = passwordError;
-            errorMessage.style.display = 'block';
+            alert(passwordError);
             return;
         }
 
-        submitButton.disabled = true;
-        isSubmitting = true; // Marca que está enviando agora
-        submitButton.innerHTML = `
-            <div class="loading-state">
-                <div class="loading-spinner"></div>
-                <span>Criando conta...</span>
-            </div>
-        `;
+        // Garante que o plano selecionado esteja no FormData
+        const formData = new FormData(form);
+        const selectedPlan = document.querySelector('input[name="plan"]:checked');
+        if (selectedPlan) {
+            formData.set('plan', selectedPlan.value);  // força o valor correto no envio
+        }
+
+        isSubmitting = true;
 
         try {
             const response = await fetch(form.action, {
                 method: 'POST',
-                body: new FormData(form),
+                body: formData,
                 headers: {
                     'X-CSRFToken': getCSRFToken(),
                     'X-Requested-With': 'XMLHttpRequest'
@@ -165,12 +120,38 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error('Erro ao criar a conta.');
             }
         } catch (error) {
-            errorMessage.textContent = error.message;
-            errorMessage.style.display = 'block';
+            console.error(error);
+            alert(error.message);
         } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Criar Conta';
             isSubmitting = false;
         }
     });
+
+    function validatePassword(password) {
+        const minLength = 8;
+        const hasNumber = /\d/.test(password);
+        const hasUppercase = /[A-Z]/.test(password);
+        const hasLowercase = /[a-z]/.test(password);
+        const hasSpecialChar = /[@$!%*?&]/.test(password);
+
+        if (password.length < minLength) return "A senha deve ter pelo menos 8 caracteres.";
+        if (!hasNumber) return "A senha deve conter pelo menos um número.";
+        if (!hasUppercase) return "A senha deve conter pelo menos uma letra maiúscula.";
+        if (!hasLowercase) return "A senha deve conter pelo menos uma letra minúscula.";
+        if (!hasSpecialChar) return "A senha deve conter pelo menos um caractere especial (@, $, !, %, *, ?, &).";
+        return null;
+    }
+
+    function getCSRFToken() {
+        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (csrfInput) return csrfInput.value;
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.startsWith('csrftoken=')) {
+                return cookie.substring('csrftoken='.length);
+            }
+        }
+        return null;
+    }
 });
