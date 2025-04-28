@@ -37,18 +37,19 @@ class SignupView(CreateView):
         user = form.save(commit=False)
         user.is_teacher = True
         user.is_active = True
+        selected_plan = self.request.POST.get('plan', SubscriptionPlan.FREE)
+        user.subscription_plan = selected_plan
         user.save()
         
         if not hasattr(user, 'teacher_profile'):
             Teacher.objects.create(user=user)
 
-        selected_plan = self.request.POST.get('selected_plan', 'free')
-        if selected_plan == 'basic':
-            pass
-        elif selected_plan == 'premium':
-            pass
-        else:
-            pass
+        try:
+            # 🔥 Processa a assinatura conforme o plano selecionado
+            self._process_subscription(user, selected_plan)
+        except ValidationError:
+            # Fallback: Se o plano for inválido, inscreve no gratuito
+            self._process_subscription(user, SubscriptionPlan.FREE)
 
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
@@ -56,7 +57,7 @@ class SignupView(CreateView):
                 'message': 'Cadastro realizado com sucesso!',
                 'redirect_url': reverse('login')
             })
-        
+
         return redirect('login')
     
     
