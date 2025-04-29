@@ -1,60 +1,70 @@
 {% extends 'base.html' %}
 
-{% block title %}Nova Turma - TeachFlow{% endblock %}
-
-{% block header_actions %}
-<a href="{% url 'class_group_list' %}" class="text-primary hover:underline">&larr; Voltar para Turmas</a>
-{% endblock %}
+{% block title %}Nova Turma{% endblock %}
+{% block page_title %}Nova Turma{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-md">
-    <h1 class="text-2xl font-bold mb-6 text-gray-800">Criar Nova Turma</h1>
-    
-    <form method="post" class="space-y-6">
+<div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-md mt-4">
+    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Cadastrar nova turma</h2>
+
+    <form method="post">
         {% csrf_token %}
         
-        <div>
-            <label class="form-label">Nome da Turma</label>
-            <input type="text" name="name" class="auth-input" required placeholder="Digite o nome da turma">
+        <!-- Nome -->
+        <div class="mb-4">
+            <label for="name" class="block text-sm font-medium text-gray-700">Nome da turma</label>
+            <input type="text" name="name" id="name" value="{{ form.name.value|default_if_none:'' }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+            {% if form.name.errors %}
+                <p class="text-red-500 text-sm mt-1">{{ form.name.errors.as_text }}</p>
+            {% endif %}
         </div>
 
-        <div>
-            <label class="form-label">Descrição</label>
-            <textarea name="description" class="auth-input" rows="4" placeholder="Descreva brevemente a turma"></textarea>
+        <!-- Descrição -->
+        <div class="mb-4">
+            <label for="description" class="block text-sm font-medium text-gray-700">Descrição</label>
+            <textarea name="description" id="description" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-blue-400">{{ form.description.value|default_if_none:'' }}</textarea>
+            {% if form.description.errors %}
+                <p class="text-red-500 text-sm mt-1">{{ form.description.errors.as_text }}</p>
+            {% endif %}
         </div>
 
-        <div>
-            <label class="form-label">Escola</label>
-            <input type="text" name="school" class="auth-input" placeholder="Nome da escola">
+        <!-- Escola -->
+        <div class="mb-4">
+            <label for="school" class="block text-sm font-medium text-gray-700">Escola</label>
+            <input type="text" name="school" id="school" value="{{ form.school.value|default_if_none:'' }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            {% if form.school.errors %}
+                <p class="text-red-500 text-sm mt-1">{{ form.school.errors.as_text }}</p>
+            {% endif %}
         </div>
 
-        <div>
-            <label class="form-label">Período</label>
-            <select name="period" class="auth-input" required>
-                <option value="">Selecione o período</option>
-                <option value="Manhã">Manhã</option>
-                <option value="Tarde">Tarde</option>
-                <option value="Noite">Noite</option>
+        <!-- Período -->
+        <div class="mb-4">
+            <label for="period" class="block text-sm font-medium text-gray-700">Período</label>
+            <select name="period" id="period" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="">Selecione</option>
+                {% for value, label in form.fields.period.choices %}
+                    <option value="{{ value }}" {% if form.period.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
             </select>
+            {% if form.period.errors %}
+                <p class="text-red-500 text-sm mt-1">{{ form.period.errors.as_text }}</p>
+            {% endif %}
         </div>
 
-        <div>
-            <label class="form-label">Ano Letivo</label>
-            <input type="number" name="year" class="auth-input" value="{{ current_year }}" min="2020" required>
+        <!-- Ano letivo -->
+        <div class="mb-6">
+            <label for="year" class="block text-sm font-medium text-gray-700">Ano letivo</label>
+            <input type="number" name="year" id="year" value="{{ form.year.value|default_if_none:'' }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            {% if form.year.errors %}
+                <p class="text-red-500 text-sm mt-1">{{ form.year.errors.as_text }}</p>
+            {% endif %}
         </div>
 
-        <div class="flex items-center space-x-3">
-            <input type="checkbox" name="is_active" checked class="rounded border-gray-300 text-primary shadow-sm focus:ring-primary">
-            <label class="text-sm text-gray-700">Ativa</label>
+        <!-- Botões -->
+        <div class="flex justify-end space-x-3">
+            <a href="{% url 'class_group_list' %}" class="px-4 py-2 text-sm rounded border text-gray-700 hover:bg-gray-100">Cancelar</a>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600">Salvar</button>
         </div>
-
-        <button id="submitButton" type="submit" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-            Criar Turma
-        </button>
     </form>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script src="{% static 'js/class_group_create.js' %}"></script>
 {% endblock %}
