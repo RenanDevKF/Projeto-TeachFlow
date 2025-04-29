@@ -5,9 +5,9 @@ urlpatterns = [
     # Class Group URLs
     path('class-groups/', views.ClassGroupListView.as_view(), name='class_group_list'),
     path('class-groups/new/', views.ClassGroupCreateView.as_view(), name='class_group_create'),
-    path('class-groups/<int:pk>/', views.ClassGroupDetailView.as_view(), name='class-group-detail'),
-    path('class-groups/<int:pk>/edit/', views.ClassGroupUpdateView.as_view(), name='class-group-update'),
-    path('class-groups/<int:pk>/delete/', views.ClassGroupDeleteView.as_view(), name='class-group-delete'),
+    path('class-groups/<int:pk>/', views.ClassGroupDetailView.as_view(), name='class_group_detail'),
+    path('class-groups/<int:pk>/edit/', views.ClassGroupUpdateView.as_view(), name='class_group_update'),
+    path('class-groups/<int:pk>/delete/', views.ClassGroupDeleteView.as_view(), name='class_group_delete'),
     
     # Lesson URLs
     path('lessons/', views.LessonListView.as_view(), name='lesson_list'),
