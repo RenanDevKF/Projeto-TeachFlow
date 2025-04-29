@@ -72,15 +72,15 @@ class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView):
     model = ClassGroup
-    template_name = 'core/class_group_detail.html'
+    template_name = 'classes/class_group_detail.html'
     context_object_name = 'class_group'
     
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = ClassGroup
     template_name = 'classes/class_group_create.html'
-    fields = ['name', 'description', 'scholl', 'period', 'year', 'is_active']
-    success_url = reverse_lazy('class-group-list')
+    fields = ['name', 'description', 'school', 'period', 'year', 'is_active']
+    success_url = reverse_lazy('class_group_list')
     
     def form_valid(self, form):
         form.instance.teacher = self.request.user.teacher_profile
@@ -90,17 +90,22 @@ class ClassGroupCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView)
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, UpdateView):
     model = ClassGroup
-    template_name = 'calsses/class_group_create.html'
-    fields = ['name', 'description', 'scholl', 'period', 'year', 'is_active']
+    template_name = 'classes/class_group_create.html'
+    fields = ['name', 'description', 'school', 'period', 'year', 'is_active']
     
     def get_success_url(self):
-        return reverse_lazy('class-group-detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('class_group_detail', kwargs={'pk': self.object.pk})
     
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DeleteView):
     model = ClassGroup
-    template_name = 'core/class_group_confirm_delete.html'
-    success_url = reverse_lazy('class-group-list')
+    template_name = 'classes/class_group_confirm_delete.html'
+    success_url = reverse_lazy('class_group_list')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['class_group'] = self.get_object()  # Garante que o objeto está no contexto
+        return context
     
     def delete(self, request, *args, **kwargs):
         messages.success(request, "Class group deleted successfully.")
