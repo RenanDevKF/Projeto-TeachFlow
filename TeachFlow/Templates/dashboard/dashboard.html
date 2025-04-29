@@ -18,8 +18,9 @@
             <i data-lucide="calendar-check" class="w-6 h-6 text-primary"></i>
             <h2 class="text-lg font-semibold text-gray-800">Planejamento do Dia</h2>
         </div>
-        <a href="{% url 'lesson_create' %}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
-            Nova Aula
+        <a href="{% url 'lesson_create' %}" class="flex items-center gap-2 bg-primary text-white px-4 py-1 rounded-lg hover:bg-blue-600 transition">
+            <i data-lucide="plus" class="w-5 h-5"></i>
+            <span>Nova Aula</span>
         </a>
     </div>
     
@@ -53,11 +54,23 @@
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for turma in class_groups %}
-            <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
-                <h3 class="text-lg font-bold text-primary mb-2">{{ turma.name }}</h3>
-                <p class="text-sm text-gray-600 mb-1">Alunos: {{ turma.students.count }}</p>
-                <p class="text-sm text-gray-600 mb-1">Aulas: {{ turma.lessons.count }}</p>
-                <a href="{% url 'class_group_detail' turma.id %}" class="block mt-4 text-primary hover:underline text-sm">Ver turma</a>
+            <div class="bg-white rounded-xl shadow p-6 hover:shadow-lg transition">
+                <h3 class="text-lg font-semibold text-gray-800">{{ turma.name }}</h3>
+                <p class="text-sm text-gray-600">{{ turma.school }} | {{ turma.year }} | {{ turma.period }}</p>
+                <div class="mt-4 flex gap-4 text-sm text-gray-500">
+                    <div class="flex items-center gap-1">
+                        <i data-lucide="users-round" class="w-4 h-4"></i>
+                        <span>Alunos: {{ turma.students.count }}</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <i data-lucide="book-open" class="w-4 h-4"></i>
+                        <span>Aulas: {{ turma.lessons.count }}</span>
+                    </div>
+                </div>
+                <div class="mt-4 flex gap-3">
+                    <a href="{% url 'class_group_detail' turma.id %}" class="text-blue-600 hover:underline text-sm">Ver Detalhes</a>
+                    <a href="{% url 'lesson_list' %}?class_group={{ turma.id }}" class="text-blue-600 hover:underline text-sm">Ver Aulas</a>
+                </div>
             </div>
             {% empty %}
             <div class="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
