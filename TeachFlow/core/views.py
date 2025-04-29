@@ -9,7 +9,8 @@ from django.views.decorators.csrf import csrf_protect
 from datetime import date
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea
 from django.contrib.auth.decorators import login_required
-
+from django.utils import timezone
+from datetime import date
 
 class TeacherRequiredMixin(UserPassesTestMixin):
     """Ensure that only teachers can access specific views"""
@@ -49,6 +50,7 @@ def dashboard_view(request):
     class_groups = ClassGroup.objects.filter(teacher=teacher)
     
     return render(request, 'dashboard/dashboard.html', {
+        'today': timezone.now(),
         'today_lessons': today_lessons,
         'class_groups': class_groups
     })
