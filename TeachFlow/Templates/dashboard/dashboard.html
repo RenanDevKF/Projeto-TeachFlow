@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - TeachFlow{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+
+    <!-- Saudação e Data -->
+    <div class="text-left">
+        <p class="text-sm text-gray-500">{{ today|date:"l, d \d\e F \d\e Y" }}</p>
+        <h1 class="text-2xl font-bold mt-2">Bem-vindo(a), {{ user.first_name }}!</h1>
+    </div>
+
+    <!-- Planejamento do Dia -->
+    <div class="flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <i data-lucide="calendar-check" class="w-6 h-6 text-primary"></i>
+            <h2 class="text-lg font-semibold text-gray-800">Planejamento do Dia</h2>
+        </div>
+        <a href="{% url 'lesson_create' %}" class="flex items-center gap-2 bg-primary text-white px-4 py-1 rounded-lg hover:bg-blue-600 transition">
+            <i data-lucide="plus" class="w-5 h-5"></i>
+            <span>Nova Aula</span>
+        </a>
+    </div>
+    
+
+    {% if today_lessons %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for lesson in today_lessons %}
+        <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
+            <h3 class="text-lg font-bold text-primary mb-2">{{ lesson.title }}</h3>
+            <p class="text-sm text-gray-600 mb-2">{{ lesson.class_group.name }}</p>
+            <p class="text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }} | {{ lesson.class_group.period }}</p>
+            <a href="{% url 'lesson_detail' lesson.id %}" class="block mt-4 text-primary hover:underline text-sm">Ver detalhes</a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Se não houver aulas -->
+    <div class="flex flex-col items-center mt-10">
+        <svg class="w-20 h-20 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2v-5H3v5a2 2 0 0 0 2 2z"></path>
+        </svg>
+        <p class="mt-4 text-gray-600">Nenhuma aula planejada para hoje. Que tal planejar uma nova?</p>
+    </div>
+    {% endif %}
+
+    <!-- Turmas -->
+    <div class="mt-10">
+        <div class="flex items-center gap-2 mb-6">
+            <i data-lucide="graduation-cap" class="w-6 h-6 text-primary"></i>
+            <h2 class="text-lg font-semibold text-gray-800">Suas Turmas</h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for turma in class_groups %}
+            <div class="bg-white rounded-xl shadow p-6 hover:shadow-lg transition">
+                <h3 class="text-lg font-semibold text-gray-800">{{ turma.name }}</h3>
+                <p class="text-sm text-gray-600">{{ turma.school }} | {{ turma.year }} | {{ turma.period }}</p>
+                <div class="mt-4 flex gap-4 text-sm text-gray-500">
+                    <div class="flex items-center gap-1">
+                        <i data-lucide="users-round" class="w-4 h-4"></i>
+                        <span>Alunos: {{ turma.students.count }}</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <i data-lucide="book-open" class="w-4 h-4"></i>
+                        <span>Aulas: {{ turma.lessons.count }}</span>
+                    </div>
+                </div>
+                <div class="mt-4 flex gap-3">
+                    <a href="{% url 'class_group_detail' turma.id %}" class="text-blue-600 hover:underline text-sm">Ver Detalhes</a>
+                    <a href="{% url 'lesson_list' %}?class_group={{ turma.id }}" class="text-blue-600 hover:underline text-sm">Ver Aulas</a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
+                <p class="text-lg mb-4">Nenhuma turma cadastrada ainda.</p>
+            </div>
+            {% endfor %}
+
+            <!-- Card de nova turma -->
+            <a href="{% url 'class_group_create' %}" class="flex items-center justify-center bg-blue-50 border-2 border-dashed border-primary p-6 rounded-xl hover:bg-blue-100 transition">
+                <span class="text-primary font-bold">+ Nova Turma</span>
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+

@@ -6,8 +6,15 @@ from accounts.models import Teacher
 
 class ClassGroup(models.Model):
     """Represents a class or group of students"""
+    PERIOD_CHOICES = [
+        ('Manhã', 'Manhã'),
+        ('Tarde', 'Tarde'),
+        ('Noite', 'Noite'),
+    ]
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
+    school = models.CharField(max_length=100, blank=True)
+    period = models.CharField(max_length=10, choices=PERIOD_CHOICES, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='class_groups')
     year = models.IntegerField(default=timezone.now().year)
     is_active = models.BooleanField(default=True)

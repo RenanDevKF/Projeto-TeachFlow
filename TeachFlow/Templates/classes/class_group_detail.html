@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhes da Turma{% endblock %}
+{% block page_title %}Detalhes da Turma{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white rounded-xl shadow p-8 mt-6">
+
+    <!-- Cabeçalho da turma -->
+    <div class="flex justify-between items-start mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">{{ class_group.name }}</h2>
+            <p class="text-sm text-gray-500 mt-1">{{ class_group.school }} · {{ class_group.period }} · {{ class_group.year }}</p>
+        </div>
+        <div class="space-x-2">
+            <a href="{% url 'class_group_update' class_group.id %}" class="text-sm text-blue-600 hover:underline">Editar</a>
+            <a href="{% url 'class_group_delete' class_group.id %}" class="text-sm text-red-600 hover:underline">Excluir</a>
+        </div>
+    </div>
+
+    <!-- Descrição -->
+    {% if class_group.description %}
+    <div class="mb-6">
+        <h3 class="font-semibold text-gray-700">Descrição</h3>
+        <p class="text-gray-600 mt-1">{{ class_group.description }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Resumo -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div class="bg-gray-100 p-4 rounded-lg text-center">
+            <p class="text-2xl font-bold text-gray-800">{{ class_group.students.count }}</p>
+            <p class="text-gray-600 text-sm">Alunos cadastrados</p>
+        </div>
+        <div class="bg-gray-100 p-4 rounded-lg text-center">
+            <p class="text-2xl font-bold text-gray-800">{{ class_group.lessons.count }}</p>
+            <p class="text-gray-600 text-sm">Aulas registradas</p>
+        </div>
+    </div>
+
+    <!-- Ações -->
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-gray-700">Alunos</h3>
+        <a href="#" class="text-sm text-primary hover:underline">+ Adicionar aluno</a>
+    </div>
+
+    <!-- Lista de alunos -->
+    {% if class_group.students.all %}
+    <ul class="divide-y divide-gray-200 mb-8">
+        {% for student in class_group.students.all %}
+        <li class="py-2">
+            <span class="text-gray-800">{{ student.first_name }} {{ student.last_name }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-gray-500 mb-8">Nenhum aluno cadastrado ainda.</p>
+    {% endif %}
+
+    <!-- Aulas -->
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-gray-700">Aulas</h3>
+        <a href="{% url 'lesson_list' %}?class_group={{ class_group.id }}" class="text-sm text-primary hover:underline">Ver aulas</a>
+    </div>
+
+</div>
+{% endblock %}
