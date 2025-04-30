@@ -8,7 +8,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from datetime import date
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea
-from .forms import ClassGroupForm
+from .forms import ClassGroupForm, StudentForm
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import date
@@ -286,3 +286,140 @@ class FutureIdeaCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView)
         form.instance.teacher = self.request.user.teacher_profile
         messages.success(self.request, "Future idea created successfully!")
         return super().form_valid(form)
+    
+
+# Student Views
+@method_decorator(csrf_protect, name='dispatch')
+class StudentListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
+    model = Student
+    template_name = 'students/student_list.html'
+    context_object_name = 'students'
+    
+    def get_queryset(self):
+        # Filtra por grupo de classe específico se o parâmetro estiver presente
+        class_group_id = self.kwargs.get('class_group_id')
+        if class_group_id:
+            return Student.objects.filter(
+                class_group_id=class_group_id,
+                class_group__teacher=self.request.user.teacher_profile
+            ).select_related('class_group')
+        else:
+            # Lista todos os alunos deste professor
+            return Student.objects.filter(
+                class_group__teacher=self.request.user.teacher_profile
+            ).select_related('class_group')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        class_group_id = self.kwargs.get('class_group_id')
+        if class_group_id:
+            context['class_group'] = get_object_or_404(
+                ClassGroup, 
+                id=class_group_id,
+                teacher=self.request.user.teacher_profile
+            )
+        return context
+
+@method_decorator(csrf_protect, name='dispatch')
+class StudentDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView):
+    model = Student
+    template_name = 'students/student_detail.html'
+    context_object_name = 'student'
+    
+    def get_queryset(self):
+        # Garante que o professor só veja seus próprios alunos
+        return Student.objects.filter(
+            class_group__teacher=self.request.user.teacher_profile
+        ).select_related('class_group')
+
+@method_decorator(csrf_protect, name='dispatch')
+class StudentCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
+    model = Student
+    form_class = StudentForm
+    template_name = 'students/student_form.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Verifica se a turma pertence a este professor
+        self.class_group = get_object_or_404(
+            ClassGroup, 
+            pk=self.kwargs.get('class_group_id'),
+            teacher=self.request.user.teacher_profile
+        )
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['class_group'] = self.class_group
+        return kwargs
+    
+    def form_valid(self, form):
+        form.instance.class_group = self.class_group
+        messages.success(self.request, "Aluno cadastrado com sucesso!")
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        # Redireciona para a lista de alunos da turma
+        return reverse_lazy('class_group_students', kwargs={'class_group_id': self.class_group.id})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['class_group'] = self.class_group
+        return context
+
+@method_decorator(csrf_protect, name='dispatch')
+class StudentUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
+    model = Student
+    form_class = StudentForm
+    template_name = 'students/student_form.html'
+    
+    def get_queryset(self):
+        # Garante que o professor só edite seus próprios alunos
+        return Student.objects.filter(
+            class_group__teacher=self.request.user.teacher_profile
+        )
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['class_group'] = self.object.class_group
+        return kwargs
+    
+    def form_valid(self, form):
+        messages.success(self.request, "Informações do aluno atualizadas com sucesso!")
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        # Redireciona para os detalhes do aluno
+        return reverse_lazy('student_detail', kwargs={'pk': self.object.pk})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['class_group'] = self.object.class_group
+        return context
+
+@method_decorator(csrf_protect, name='dispatch')
+class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
+    model = Student
+    template_name = 'students/student_confirm_delete.html'
+    
+    def get_queryset(self):
+        # Garante que o professor só exclua seus próprios alunos
+        return Student.objects.filter(
+            class_group__teacher=self.request.user.teacher_profile
+        )
+    
+    def delete(self, request, *args, **kwargs):
+        student = self.get_object()
+        class_group_id = student.class_group.id
+        messages.success(request, "Aluno excluído com sucesso.")
+        return super().delete(request, *args, **kwargs)
+    
+    def get_success_url(self):
+        # Redireciona para a lista de alunos da turma
+        return reverse_lazy('class_group_students', 
+                          kwargs={'class_group_id': self.object.class_group.id})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['student'] = self.get_object()
+        context['class_group'] = self.get_object().class_group
+        return context
