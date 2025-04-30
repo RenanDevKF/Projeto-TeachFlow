@@ -8,6 +8,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from datetime import date
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea
+from .forms import ClassGroupForm
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import date
@@ -79,8 +80,13 @@ class ClassGroupDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
 class ClassGroupCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = ClassGroup
     template_name = 'classes/class_group_create.html'
-    fields = ['name', 'description', 'school', 'period', 'year', 'is_active']
+    form_class = ClassGroupForm
     success_url = reverse_lazy('class_group_list')
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
     
     def form_valid(self, form):
         form.instance.teacher = self.request.user.teacher_profile
@@ -91,10 +97,17 @@ class ClassGroupCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView)
 class ClassGroupUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, UpdateView):
     model = ClassGroup
     template_name = 'classes/class_group_create.html'
-    fields = ['name', 'description', 'school', 'period', 'year', 'is_active']
+    form_class = ClassGroupForm
+    success_url = reverse_lazy('class_group_list')
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
     
     def get_success_url(self):
         return reverse_lazy('class_group_detail', kwargs={'pk': self.object.pk})
+    
     
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DeleteView):
