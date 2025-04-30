@@ -1,0 +1,333 @@
+/* styles.css */
+/* Estilos base e reset */
+:root {
+    --primary: #4A90E2;
+    --primary-dark: #3a7bc8;
+    --secondary: #F5A623;
+    --gray-100: #f7fafc;
+    --gray-200: #edf2f7;
+    --gray-300: #e2e8f0;
+    --gray-400: #cbd5e0;
+    --gray-500: #a0aec0;
+    --gray-600: #718096;
+    --gray-700: #4a5568;
+    --gray-800: #2d3748;
+    --gray-900: #1a202c;
+  }
+  
+
+  .bg-primary {
+    background-color: var(--primary);
+  }
+  
+  .hover\:bg-primary-dark:hover {
+    background-color: var(--primary-dark);
+  }
+  
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    font-family: 'Poppins', sans-serif;
+    line-height: 1.5;
+    color: var(--gray-800);
+    background-color: var(--gray-100);
+  }
+  
+  /* Estilos para mobile first */
+  .container {
+    width: 100%;
+    padding: 0 1rem;
+    margin: 0 auto;
+  }
+  
+  /* Sidebar mobile */
+  @media (max-width: 767px) {
+    .mobile-menu {
+      display: flex;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+    
+    .mobile-menu a {
+      flex: 1;
+      text-align: center;
+      padding: 0.75rem 0;
+      color: var(--gray-600);
+      text-decoration: none;
+      font-size: 0.75rem;
+    }
+    
+    .mobile-menu a:hover,
+    .mobile-menu a.active {
+      color: var(--primary);
+    }
+    
+    .mobile-menu svg {
+      display: block;
+      margin: 0 auto 0.25rem;
+    }
+  }
+  
+  /* Sidebar desktop */
+  @media (min-width: 768px) {
+    .desktop-sidebar {
+      display: flex;
+      width: 16rem;
+      flex-direction: column;
+      height: 100vh;
+      border-right: 1px solid var(--gray-200);
+      background: white;
+    }
+    
+    .desktop-sidebar a {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+      color: var(--gray-700);
+      text-decoration: none;
+      border-radius: 0.5rem;
+    }
+    
+    .desktop-sidebar a:hover {
+      background-color: var(--gray-200);
+    }
+    
+    .desktop-sidebar a.active {
+      background-color: var(--primary);
+      color: white;
+    }
+    
+    .desktop-sidebar svg {
+      margin-right: 0.75rem;
+    }
+  }
+  
+  /* Cards */
+  .card {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--gray-200);
+    transition: all 0.2s ease;
+  }
+  
+  .card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+  
+  .card-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  
+  .card-body {
+    padding: 1.5rem;
+  }
+  
+  /* Forms */
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--gray-700);
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  }
+  
+  .form-control:focus {
+    border-color: var(--primary);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.25);
+  }
+  
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .btn-primary {
+    background-color: var(--primary);
+    color: white;
+    border: 1px solid transparent;
+  }
+  
+  .btn-primary:hover {
+    background-color: var(--primary-dark);
+  }
+  
+  .btn-outline {
+    background-color: white;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+  }
+  
+  .btn-outline:hover {
+    background-color: var(--gray-100);
+  }
+  
+  /* Tabs */
+  .tab-container {
+    border-bottom: 1px solid var(--gray-200);
+  }
+  
+  .tab-button {
+    padding: 1rem 1.5rem;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .tab-button:hover {
+    color: var(--gray-700);
+    border-bottom-color: var(--gray-300);
+  }
+  
+  .tab-button.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+  
+  .tab-content {
+    display: none;
+    padding: 1.5rem;
+  }
+  
+  .tab-content.active {
+    display: block;
+  }
+  
+  /* Tags */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 9999px;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Responsive tables */
+  .table-responsive {
+    overflow-x: auto;
+  }
+  
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .table th,
+  .table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  
+  .table th {
+    font-weight: 600;
+    color: var(--gray-700);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+  
+  /* Empty states */
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+  }
+  
+  .empty-state svg {
+    color: var(--gray-400);
+    margin: 0 auto;
+  }
+  
+  .empty-state h3 {
+    margin-top: 1rem;
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: var(--gray-900);
+  }
+  
+  .empty-state p {
+    margin-top: 0.5rem;
+    color: var(--gray-600);
+  }
+  
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  /* Utility classes */
+  .hidden {
+    display: none;
+  }
+  
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2; /* Adicione essa linha */
+    -webkit-box-orient: vertical;
+    box-orient: vertical; /* Adicione essa linha também para compatibilidade */
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3; /* Adicione essa linha */
+    -webkit-box-orient: vertical;
+    box-orient: vertical; /* Adicione essa linha também para compatibilidade */
+    overflow: hidden;
+  }
+  
+  .whitespace-pre-line {
+    white-space: pre-line;
+  }
+
+  .alert-message {
+    transition: opacity 0.5s ease;
+  }
+  .alert-message.opacity-0 {
+    opacity: 0;
+  }

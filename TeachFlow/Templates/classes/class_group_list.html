@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Turmas{% endblock %}
+{% block page_title %}Turmas{% endblock %}
+
+{% block content %}
+<div class="mx-auto">
+
+    <!-- Busca + Filtros -->
+    <form method="get">
+        <div class="flex items-center bg-white rounded-xl shadow-sm overflow-hidden border">
+            <span class="pl-3 text-gray-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1 0 6.64 6.64a7.5 7.5 0 0 0 10.6 10.6z"/>
+                </svg>
+            </span>
+            <input type="text" name="search" placeholder="Buscar turmas..." class="w-full px-3 py-2 outline-none" />
+            <button type="button" id="toggleFilters" class="px-4 text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h18M4 9h16M5 14h14M6 19h12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Filtros -->
+        <div id="filtersPanel" class="hidden mt-4 bg-white border p-4 rounded-lg shadow-md space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="text" name="school" placeholder="Escola" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+                <input type="number" name="year" placeholder="Ano Letivo" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+                <select name="period" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <option value="">Período</option>
+                    <option value="Manhã">Manhã</option>
+                    <option value="Tarde">Tarde</option>
+                    <option value="Noite">Noite</option>
+                </select>
+            </div>
+            <div class="flex justify-end space-x-2">
+                <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600">Filtrar</button>
+                <a href="{% url 'class_group_list' %}" class="px-4 py-2 text-sm rounded border text-gray-700 hover:bg-gray-100">Limpar</a>
+            </div>
+        </div>
+    </form>
+
+    <!-- Título + Nova Turma -->
+    <div class="flex justify-between items-center mt-8 mb-4">
+        <h2 class="text-2xl font-bold text-gray-800">Lista de Turmas</h2>
+        <a href="{% url 'class_group_create' %}" class="flex items-center gap-2 bg-primary text-white px-4 py-1 rounded-lg hover:bg-blue-600 transition">
+            <i data-lucide="plus" class="w-5 h-5"></i>
+            <span>Nova Turma</span>
+        </a>
+    </div>
+
+    <!-- Cards de Turmas -->
+    {% if class_groups %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for turma in class_groups %}
+        <div class="bg-white rounded-xl shadow p-6 hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold text-gray-800">{{ turma.name }}</h3>
+            <p class="text-sm text-gray-600">{{ turma.school }} | {{ turma.year }} | {{ turma.period }}</p>
+            <p class="mt-2 text-gray-500 text-sm">{{ turma.description|truncatewords:18 }}</p>
+            <div class="mt-4 flex gap-4 text-sm text-gray-500">
+                <div class="flex items-center gap-1">
+                    <i data-lucide="users-round" class="w-4 h-4"></i>
+                    <span>Alunos: {{ turma.students.count }}</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                    <span>Aulas: {{ turma.lessons.count }}</span>
+                </div>
+            </div>
+            <div class="mt-4 flex gap-3">
+                <a href="{% url 'class_group_detail' turma.id %}" class="text-blue-600 hover:underline text-sm">Ver Detalhes</a>
+                <a href="{% url 'lesson_list' %}?class_group={{ turma.id }}" class="text-blue-600 hover:underline text-sm">Ver Aulas</a>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Card de Nova Turma -->
+        <a href="{% url 'class_group_create' %}" class="flex items-center justify-center bg-blue-50 border-2 border-dashed border-primary p-6 rounded-xl hover:bg-blue-100 transition">
+            <span class="text-primary font-bold">+ Nova Turma</span>
+        </a>
+    </div>
+    {% else %}
+    <div class="text-center text-gray-500 mt-12">
+        Nenhuma turma cadastrada ainda.
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Script JS para mostrar/ocultar filtros -->
+<script>
+    document.getElementById('toggleFilters').addEventListener('click', function () {
+        const panel = document.getElementById('filtersPanel');
+        panel.classList.toggle('hidden');
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeachFlow - Login</title>
+
+    <!-- Fonte -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="{% static 'css/build.css' %}" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col justify-center items-center font-sans">
+
+    <!-- Header com Ícone + Título -->
+    <div class="flex flex-col items-center mb-8">
+        <!-- Ícone circular perfeito -->
+        <div class="bg-blue-100 p-2 rounded-full flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#4A90E2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+            </svg>
+        </div>
+
+        <!-- Título e subtítulo -->
+        <h1 class="text-3xl font-extrabold text-gray-800 mt-4">TeachFlow</h1>
+        <p class="text-gray-500 text-sm mt-1">Sua plataforma para organização pedagógica</p>
+    </div>
+
+    <!-- Formulário -->
+    <form id="loginForm" method="post" action="{% url 'login' %}" class="w-full max-w-sm space-y-6">
+        {% csrf_token %}
+
+        <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email ou Nome de Usuário</label>
+            <input id="email" name="email" type="text" placeholder="seu@email.com" required
+                class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none focus:ring-2 transition">
+        </div>
+
+        <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+            <input id="password" name="password" type="password" placeholder="••••••••" required
+                class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none focus:ring-2 transition">
+        </div>
+
+        <div id="errorMessage" class="hidden text-red-500 text-sm text-center"></div>
+
+        <button type="submit" id="submitButton"
+            class="w-full bg-primary hover:bg-blue-600 text-white font-semibold rounded-lg py-3 transition">
+            Entrar
+        </button>
+    </form>
+
+    <!-- Link Criar Conta -->
+    <div class="text-center text-sm mt-6 text-gray-600">
+        Ainda não tem uma conta? 
+        <a href="{% url 'register' %}" class="text-primary hover:underline font-semibold">Criar conta</a>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{% static 'js/login.js' %}"></script>
+</body>
+</html>

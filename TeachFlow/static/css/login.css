@@ -1,0 +1,11 @@
+/* static/css/login.css */
+
+.login-container {
+    max-width: 480px;
+    width: 90%;
+    padding: 2rem;
+}
+
+.login-card {
+    margin-top: 1.5rem;
+}
