@@ -37,7 +37,7 @@ class Student(models.Model):
         return f"{self.first_name} {self.last_name}"
     
     class Meta:
-        ordering = ['last_name', 'first_name']
+        ordering = ['first_name','last_name']
         
 class Tag(models.Model):
     """Tags to categorize lessons, exercises, or learning objectives"""
