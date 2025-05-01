@@ -380,7 +380,7 @@ class StudentCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
 class StudentUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
     model = Student
     form_class = StudentForm
-    template_name = "students/student_form.html"
+    template_name = 'students/student_form.html'
 
     def dispatch(self, request, *args, **kwargs):
         self.class_group = get_object_or_404(
@@ -400,8 +400,11 @@ class StudentUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
         return context
 
     def form_valid(self, form):
+        form.instance.class_group = self.class_group  # Garante que o relacionamento está mantido
+        form.save()
         messages.success(self.request, "Aluno atualizado com sucesso!")
         return redirect(reverse('student_create', kwargs={'class_group_id': self.class_group.pk}))
+
 
 @method_decorator(csrf_protect, name='dispatch')
 class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
