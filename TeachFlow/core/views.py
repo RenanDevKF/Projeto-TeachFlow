@@ -409,7 +409,6 @@ class StudentUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
 @method_decorator(csrf_protect, name='dispatch')
 class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
     model = Student
-    template_name = 'students/student_confirm_delete.html'
     
     def get_queryset(self):
         # Garante que o professor só exclua seus próprios alunos
