@@ -53,8 +53,16 @@
     {% if class_group.students.all %}
     <ul class="divide-y divide-gray-200 mb-8">
         {% for student in class_group.students.all %}
-        <li class="py-2">
-            <span class="text-gray-800">{{ student.first_name }} {{ student.last_name }}</span>
+        <li class="py-2 flex justify-between items-center">
+            <a href="{% url 'student_detail' class_group.id student.id %}" class="text-blue-600 hover:underline">
+                <span class="text-gray-800">{{ student.first_name }} {{ student.last_name }}</span>
+            </a>
+            <a href="{% url 'student_detail' class_group.id student.id %}" class="text-gray-500 hover:text-blue-600 ml-2" title="Ver detalhes">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path d="M12 4.5c-7.5 0-10.5 7.5-10.5 7.5s3 7.5 10.5 7.5 10.5-7.5 10.5-7.5-3-7.5-10.5-7.5z"/>
+                    <circle cx="12" cy="12" r="3" />
+                </svg>
+            </a>
         </li>
         {% endfor %}
     </ul>
