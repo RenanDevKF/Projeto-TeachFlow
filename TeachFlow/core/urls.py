@@ -13,7 +13,7 @@ urlpatterns = [
     path('students/', views.StudentListView.as_view(), name='student_list'),
     path('class-groups/<int:class_group_id>/students/', views.StudentListView.as_view(), name='class_group_students'),
     path('class-groups/<int:class_group_id>/students/new/', views.StudentCreateView.as_view(), name='student_create'),
-    path('students/<int:pk>/', views.StudentDetailView.as_view(), name='student_detail'),
+    path('class-groups/<int:class_group_id>/students/<int:pk>/', views.StudentDetailView.as_view(), name='student_detail'),
     path('class-groups/<int:class_group_id>/students/<int:pk>/edit/', views.StudentUpdateView.as_view(), name='student_update'),
     path('class-groups/<int:class_group_id>/students/<int:pk>/delete/', views.StudentDeleteView.as_view(), name='student_delete'),
     
