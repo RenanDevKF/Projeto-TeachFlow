@@ -18,28 +18,49 @@
                 <h1 class="text-2xl font-extrabold text-primary">TeachFlow</h1>
             </div>
 
+            {% with url_name=request.resolver_match.url_name %}
             <nav class="flex-1 space-y-2 px-4">
-                <a href="{% url 'dashboard' %}" class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition {% if request.resolver_match.url_name == 'dashboard' %}bg-blue-100 text-primary{% endif %}">
+                <!-- Dashboard -->
+                <a href="{% url 'dashboard' %}"
+                class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
+                {% if url_name == 'dashboard' %}bg-blue-100 text-primary{% endif %}">
                     <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
                     Dashboard
                 </a>
-                  <a href="{% url 'class_group_list' %}" class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition {% if request.resolver_match.url_name == 'class_group_list' %}bg-blue-100 text-primary{% endif %}">
+
+                <!-- Turmas -->
+                <a href="{% url 'class_group_list' %}"
+                class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
+                {% if url_name in 'class_group_list class_group_detail class_group_create class_group_update student_create student_detail student_update' %}bg-blue-100 text-primary{% endif %}">
                     <i data-lucide="users-round" class="w-5 h-5"></i>
                     Turmas
-                </a>            
-                <a href="{% url 'lesson_list' %}" class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition {% if request.resolver_match.url_name == 'lesson_list' %}bg-blue-100 text-primary{% endif %}">
+                </a>
+
+                <!-- Aulas -->
+                <a href="{% url 'lesson_list' %}"
+                class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
+                {% if url_name in 'lesson_list lesson_create lesson_detail' %}bg-blue-100 text-primary{% endif %}">
                     <i data-lucide="book-open" class="w-5 h-5"></i>
                     Aulas
-                </a>               
-                <a href="{% url 'exercise_list' %}" class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition {% if request.resolver_match.url_name == 'exercise_list' %}bg-blue-100 text-primary{% endif %}">
+                </a>
+
+                <!-- Exercícios -->
+                <a href="{% url 'exercise_list' %}"
+                class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
+                {% if url_name in 'exercise_list' %}bg-blue-100 text-primary{% endif %}">
                     <i data-lucide="notebook-text" class="w-5 h-5"></i>
                     Exercícios
-                </a>               
-                <a href="{% url 'profile' %}" class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition {% if request.resolver_match.url_name == 'profile' %}bg-blue-100 text-primary{% endif %}">
+                </a>
+
+                <!-- Conta -->
+                <a href="{% url 'profile' %}"
+                class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
+                {% if url_name in 'profile' %}bg-blue-100 text-primary{% endif %}">
                     <i data-lucide="user" class="w-5 h-5"></i>
                     Conta
-                </a>                 
+                </a>
             </nav>
+            {% endwith %}
 
             <div class="p-4 mt-auto">
                 <form method="post" action="{% url 'logout' %}">
