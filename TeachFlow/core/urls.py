@@ -20,10 +20,10 @@ urlpatterns = [
     # Lesson URLs
     path('lessons/', views.LessonListView.as_view(), name='lesson_list'),
     path('class-groups/<int:class_group_id>/lessons/', views.LessonListView.as_view(), name='group_lessons'),
-    path('lessons/new/', views.LessonCreateView.as_view(), name='lesson_create'),
-    path('lessons/<int:pk>/', views.LessonDetailView.as_view(), name='lesson-detail'),
-    path('lessons/<int:pk>/edit/', views.LessonUpdateView.as_view(), name='lesson-update'),
-    path('lessons/<int:pk>/delete/', views.LessonDeleteView.as_view(), name='lesson-delete'),
+    path('lessons/new/', views.LessonCreateView.as_view(), name='lesson_form'),
+    path('lessons/<int:pk>/', views.LessonDetailView.as_view(), name='lesson_detail'),
+    path('lessons/<int:pk>/edit/', views.LessonUpdateView.as_view(), name='lesson_update'),
+    path('lessons/<int:pk>/delete/', views.LessonDeleteView.as_view(), name='lesson_delete'),
     
     # Exercise URLs
     path('exercises/', views.ExerciseListView.as_view(), name='exercise_list'),  # Adicione esta linha
