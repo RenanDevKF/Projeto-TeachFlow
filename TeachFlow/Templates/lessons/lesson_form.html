@@ -89,63 +89,80 @@
       {% endif %}
     </div>
 
-    <div class="flex justify-between items-center mb-2">
-        <label class="block text-sm font-medium text-gray-700">Exercícios</label>
-        <a href="{% url 'exercise_form' %}" target="_blank" 
-           class="text-sm text-blue-600 hover:underline">
-          + Novo Exercício
-        </a>
+    <div class="mb-6 relative">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Exercícios</label>
+      <!-- Campo oculto real do formulário Django -->
+      <select name="{{ form.exercises.name }}" id="id_exercises" multiple class="hidden">
+        {% for exercise in form.exercises.field.queryset %}
+          <option value="{{ exercise.id }}" {% if exercise.id in form.exercises.value|default:'' %}selected{% endif %}>
+            {{ exercise.title }}
+          </option>
+        {% endfor %}
+      </select>
+      
+      <!-- Interface personalizada para seleção de exercícios -->
       <div class="relative">
-        <select name="{{ form.exercises.name }}" multiple
-                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm bg-white min-h-32"
-                id="id_exercises">
-          {% for exercise in form.exercises.field.queryset %}
-            <option value="{{ exercise.id }}" 
-                    {% if exercise.id in form.exercises.value|default:'' %}selected{% endif %}>
-              {{ exercise.title }}
-            </option>
-          {% endfor %}
-        </select>
-        <div class="text-xs text-gray-500 mt-1 flex items-center">
-          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        <!-- Botão de trigger para o dropdown -->
+        <div id="exercise-trigger" class="w-full p-3 border border-gray-300 rounded-lg bg-white cursor-pointer hover:border-blue-500 transition-colors flex justify-between items-center">
+          <span class="text-gray-500">Clique para selecionar exercícios</span>
+          <svg class="w-5 h-5 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="dropdown-arrow">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
           </svg>
-          Segure CTRL (ou Command no Mac) para selecionar múltiplos exercícios
+        </div>
+        
+        <!-- Container para as tags de exercícios selecionados -->
+        <div id="selected-exercises" class="flex flex-wrap gap-2 mt-2 min-h-8 p-2"></div>
+        
+        <!-- Dropdown de seleção de exercícios -->
+        <div id="exercise-dropdown" class="absolute z-10 hidden w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
+          <!-- Cabeçalho com filtro -->
+          <div class="p-4 border-b sticky top-0 bg-white z-10">
+            <div class="relative">
+              <input type="text" 
+                    id="exercise-filter" 
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm pl-9"
+                    placeholder="Filtrar exercícios...">
+              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Lista de exercícios -->
+          <div id="exercise-list" class="divide-y max-h-64 overflow-y-auto">
+            {% for exercise in form.exercises.field.queryset|dictsort:"title" %}
+            <label class="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer">
+              <input type="checkbox" 
+                    value="{{ exercise.id }}"
+                    class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 mr-3"
+                    {% if exercise.id in form.exercises.value|default:'' %}checked{% endif %}
+                    data-exercise-select
+                    data-exercise-title="{{ exercise.title }}">
+              <span class="text-sm text-gray-700">{{ exercise.title }}</span>
+            </label>
+            {% endfor %}
+          </div>
         </div>
       </div>
+      
       {% if form.exercises.errors %}
         <p class="text-red-500 text-sm mt-1">{{ form.exercises.errors.0 }}</p>
       {% endif %}
     </div>
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">Tags</label>
-      <div class="flex flex-wrap gap-2 p-3 border border-gray-300 rounded-lg bg-white min-h-16">
-        {% for tag in form.tags.field.queryset %}
-          <label class="inline-flex items-center bg-gray-100 px-3 py-1 rounded-full hover:bg-gray-200 cursor-pointer">
-            <input type="checkbox" name="{{ form.tags.name }}" value="{{ tag.id }}"
-                   {% if tag.id in form.tags.value|default:'' %}checked{% endif %}
-                   class="form-checkbox h-4 w-4 text-blue-600 mr-2">
-            <span class="text-sm" style="color: {{ tag.color }};">{{ tag.name }}</span>
-          </label>
-        {% endfor %}
-      </div>
-      {% if form.tags.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.tags.errors.0 }}</p>
-      {% endif %}
-    </div>
-
     <div class="flex justify-between pt-6">
       <a href="{% if object %}{% url 'lesson_detail' object.pk %}{% else %}{% url 'lesson_list' %}{% endif %}" 
-         class="px-4 py-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition-all">
-        Cancelar
+          class="px-4 py-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition-all">
+          Cancelar
       </a>
       <div class="flex gap-3">
         {% if object %}
-          <a href="{% url 'duplicate_lesson' object.pk %}" 
-             class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm transition-all">
+        <a href="{% url 'duplicate_lesson' object.pk %}" 
+            class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm transition-all">
             Duplicar Aula
-          </a>
+        </a>
         {% endif %}
         <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-all">
           {% if object %}Atualizar{% else %}Salvar{% endif %}
@@ -154,4 +171,9 @@
     </div>
   </form>
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/lessonForm.js' %}"></script>
 {% endblock %}
