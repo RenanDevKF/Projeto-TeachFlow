@@ -65,6 +65,7 @@ class Lesson(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
     performance_notes = models.TextField(blank=True)
+    exercises = models.ManyToManyField('Exercise', blank=True, related_name='lessons')
     objectives = models.ManyToManyField(LearningObjective, blank=True, related_name='lessons')
     tags = models.ManyToManyField(Tag, blank=True, related_name='lessons')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -77,14 +78,24 @@ class Lesson(models.Model):
         ordering = ['-date']
         
 class Exercise(models.Model):
-    """Activities or exercises applied during a lesson"""
-    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='exercises')
     title = models.CharField(max_length=200)
     description = models.TextField()
     duration = models.IntegerField(help_text="Duration in minutes", null=True, blank=True)
     materials = models.TextField(blank=True)
-    objectives = models. ManyToManyField(LearningObjective, blank=True, related_name='exercises')
+    created_by = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='exercises')
+    objectives = models.ManyToManyField(LearningObjective, blank=True, related_name='exercises')
     tags = models.ManyToManyField(Tag, blank=True, related_name='exercises')
+    is_template = models.BooleanField(default=False, help_text="Exercício modelo para reutilização")
+    
+    class Meta:
+        ordering = ['title']
+        verbose_name = 'Exercício'
+        verbose_name_plural = 'Exercícios'
+        
+    def belongs_to_teacher(self, teacher):
+        return self.created_by == teacher or self.lessons.filter(
+            class_group__teacher=teacher
+        ).exists()
     
     def __str__(self):
         return self.title
