@@ -141,34 +141,54 @@ class LessonAdmin(SecureModelAdmin):
 
 @admin.register(Exercise)
 class ExerciseAdmin(SecureModelAdmin):
-    list_display = ('title', 'lesson_title', 'class_group', 'teacher', 'duration')
-    list_filter = ('lesson__class_group', 'lesson__date')
+    list_display = ('title', 'created_by', 'duration', 'is_template', 'exercises_count', 'tags_list')
+    list_filter = ('created_by', 'is_template', 'tags')
     search_fields = ('title', 'description', 'materials')
     filter_horizontal = ('objectives', 'tags')
-    
-    def lesson_title(self, obj):
-        return obj.lesson.title
-    lesson_title.short_description = "Lesson"
-    
-    def class_group(self, obj):
-        return obj.lesson.class_group
-    class_group.short_description = "Class Group"
-    
-    def teacher(self, obj):
-        return obj.lesson.class_group.teacher
-    teacher.short_description = "Teacher"
+    readonly_fields = ('created_by', 'related_lessons')
     
     fieldsets = (
-        ('Exercise Information', {
-            'fields': ('lesson', 'title', 'description')
+        ('Basic Information', {
+            'fields': ('title', 'description', 'created_by', 'is_template')
         }),
         ('Details', {
             'fields': ('duration', 'materials'),
         }),
-        ('Related Content', {
+        ('Relationships', {
             'fields': ('objectives', 'tags'),
         }),
+        ('Usage', {
+            'fields': ('related_lessons',),
+            'classes': ('collapse',)
+        }),
     )
+
+    def exercises_count(self, obj):
+        return obj.lessons.count()
+    exercises_count.short_description = 'Usado em (aulas)'
+
+    def tags_list(self, obj):
+        return ", ".join([t.name for t in obj.tags.all()])
+    tags_list.short_description = 'Tags'
+
+    def related_lessons(self, obj):
+        lessons = obj.lessons.select_related('class_group').all()
+        return mark_safe("<br>".join(
+            f'<a href="{reverse("admin:core_lesson_change", args=[l.id])}">{l.title} ({l.date} - {l.class_group.name})</a>'
+            for l in lessons
+        ))
+    related_lessons.short_description = 'Aulas que usam este exercício'
+
+    def get_list_filter(self, request):
+        list_filter = super().get_list_filter(request)
+        if request.user.is_superuser:
+            list_filter += ('created_by',)
+        return list_filter
+
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:  # Se for criação
+            obj.created_by = request.user.teacher_profile
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Tag)
