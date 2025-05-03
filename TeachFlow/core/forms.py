@@ -1,6 +1,6 @@
 # core/forms.py
 from django import forms
-from .models import ClassGroup, Student
+from .models import *
 
 class ClassGroupForm(forms.ModelForm):
     class Meta:
@@ -55,3 +55,44 @@ class StudentForm(forms.ModelForm):
                 raise forms.ValidationError("Já existe um aluno com este nome nesta turma.")
         
         return cleaned_data
+    
+class LessonForm(forms.ModelForm):
+    class Meta:
+        model = Lesson
+        fields = ['class_group', 'date', 'title', 'content', 'performance_notes', 'exercises', 'tags']
+        widgets = {
+            'date': forms.DateInput(attrs={'class': 'form-input'}),
+            'title': forms.TextInput(attrs={'class': 'form-input'}),
+            'content': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 4}),
+            'performance_notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
+            'exercises': forms.SelectMultiple(attrs={'class': 'form-multiselect'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        teacher = kwargs.pop('teacher', None)
+        super().__init__(*args, **kwargs)
+        
+        if teacher:
+            self.fields['exercises'].queryset = Exercise.objects.filter(created_by=teacher)
+            self.fields['class_group'].queryset = ClassGroup.objects.filter(teacher=teacher)
+            self.fields['tags'].queryset = Tag.objects.filter(teacher=teacher)
+            
+class ExerciseForm(forms.ModelForm):
+    class Meta:
+        model = Exercise
+        fields = ['title', 'description', 'duration', 'materials', 'objectives', 'tags', 'is_template']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-input'}),
+            'description': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 4}),
+            'duration': forms.NumberInput(attrs={'class': 'form-input'}),
+            'materials': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
+            'objectives': forms.SelectMultiple(attrs={'class': 'form-multiselect'}),
+            'tags': forms.SelectMultiple(attrs={'class': 'form-multiselect'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        teacher = kwargs.pop('teacher', None)
+        super().__init__(*args, **kwargs)
+        if teacher:
+            self.fields['objectives'].queryset = LearningObjective.objects.filter(teacher=teacher)
+            self.fields['tags'].queryset = Tag.objects.filter(teacher=teacher)
