@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views import DuplicateLessonView
 
 urlpatterns = [
     # Class Group URLs
@@ -21,13 +22,17 @@ urlpatterns = [
     path('lessons/', views.LessonListView.as_view(), name='lesson_list'),
     path('class-groups/<int:class_group_id>/lessons/', views.LessonListView.as_view(), name='group_lessons'),
     path('lessons/new/', views.LessonCreateView.as_view(), name='lesson_form'),
+    path('lessons/<int:pk>/duplicate/', views.DuplicateLessonView.as_view(), name='duplicate_lesson'),
     path('lessons/<int:pk>/', views.LessonDetailView.as_view(), name='lesson_detail'),
     path('lessons/<int:pk>/edit/', views.LessonUpdateView.as_view(), name='lesson_update'),
     path('lessons/<int:pk>/delete/', views.LessonDeleteView.as_view(), name='lesson_delete'),
     
     # Exercise URLs
-    path('exercises/', views.ExerciseListView.as_view(), name='exercise_list'),  # Adicione esta linha
-    path('lessons/<int:lesson_id>/exercises/new/', views.ExerciseCreateView.as_view(), name='exercise-create'),
+    path('exercises/', views.ExerciseListView.as_view(), name='exercise_list'),
+    path('exercises/new/', views.ExerciseCreateView.as_view(), name='exercise_form'),
+    path('exercises/<int:pk>/', views.ExerciseDetailView.as_view(), name='exercise_detail'),
+    path('exercises/<int:pk>/edit/', views.ExerciseUpdateView.as_view(), name='exercise_update'),
+    path('exercises/<int:pk>/delete/', views.ExerciseDeleteView.as_view(), name='exercise_delete'),
     
     # Learning Objective URLs
     path('objectives/', views.LearningObjectiveListView.as_view(), name='objective-list'),
