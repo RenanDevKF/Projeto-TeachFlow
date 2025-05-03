@@ -152,7 +152,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Se atrás de pr
 # Proteção de cookies
 SESSION_COOKIE_SECURE = False  # Mude para True em produção
 CSRF_COOKIE_SECURE = False     # Mude para True em produção
-CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'  # ou 'Strict'
 

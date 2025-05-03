@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Aulas - TeachFlow{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'lesson_create' %}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark">
+    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor"><path d="M12 4v16m8-8H4"/></svg>
+    Nova Aula
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <h1 class="text-2xl font-bold text-gray-900">Aulas</h1>
+    {% if lessons %}
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {% for lesson in lessons %}
+        <div class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md border border-gray-200">
+            <div class="text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }}</div>
+            <h2 class="font-semibold text-lg text-gray-800">{{ lesson.title }}</h2>
+            <p class="text-gray-600 mt-1 line-clamp-2">{{ lesson.content|truncatewords:20 }}</p>
+            <div class="mt-2 flex gap-1 flex-wrap">
+                {% for tag in lesson.tags.all %}
+                <span class="text-xs px-2 py-1 rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">{{ tag.name }}</span>
+                {% endfor %}
+            </div>
+            <a href="{% url 'lesson_detail' lesson.id %}" class="text-sm text-primary mt-2 inline-block">Ver detalhes</a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-gray-500">Nenhuma aula registrada.</p>
+    {% endif %}
+</div>
+{% endblock %}
