@@ -1,15 +1,17 @@
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.urls import reverse_lazy
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
+from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib import messages
 from django.db.models import Q
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
+from django.http import JsonResponse
 from datetime import date
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea
-from .forms import ClassGroupForm
-from django.contrib.auth.decorators import login_required
+from .forms import *
 from django.utils import timezone
 from datetime import date
 
@@ -152,75 +154,107 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
 @method_decorator(csrf_protect, name='dispatch')
 class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView):
     model = Lesson
-    template_name = 'core/lesson_detail.html'
+    template_name = 'lessons/lesson_detail.html'
     context_object_name = 'lesson'
 
 
 @method_decorator(csrf_protect, name='dispatch')
 class LessonCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = Lesson
+    form_class = LessonForm
     template_name = 'lessons/lesson_form.html'
-    fields = ['date', 'title', 'content', 'performance_notes', 'objectives', 'tags']
-    
-    def dispatch(self, request, *args, **kwargs):
-        # Security check: verify class group belongs to this teacher
-        self.class_group = get_object_or_404(
-            ClassGroup, 
-            pk=self.kwargs.get('class_group_id'),
-            teacher=self.request.user.teacher_profile
-        )
-        return super().dispatch(request, *args, **kwargs)
-    
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
+
     def form_valid(self, form):
-        form.instance.class_group = self.class_group
-        messages.success(self.request, "Lesson created successfully!")
-        return super().form_valid(form)
-    
+        response = super().form_valid(form)
+        messages.success(self.request, "Aula criada com sucesso!")
+        return response
+
     def get_success_url(self):
-        return reverse_lazy('lesson-detail', kwargs={'pk': self.object.pk})
+        return reverse('lesson_detail', kwargs={'pk': self.object.pk})
 
 
 @method_decorator(csrf_protect, name='dispatch')
 class LessonUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, UpdateView):
     model = Lesson
-    template_name = 'core/lesson_form.html'
-    fields = ['date', 'title', 'content', 'performance_notes', 'objectives', 'tags']
-    
+    form_class = LessonForm
+    template_name = 'lessons/lesson_form.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
+
     def get_success_url(self):
-        return reverse_lazy('lesson-detail', kwargs={'pk': self.object.pk})
+        return reverse('lesson_detail', kwargs={'pk': self.object.pk})
 
 
 @method_decorator(csrf_protect, name='dispatch')
 class LessonDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DeleteView):
     model = Lesson
-    template_name = 'core/lesson_confirm_delete.html'
+    template_name = 'lessons/lesson_confirm_delete.html'
     
     def get_success_url(self):
         return reverse_lazy('lesson-list', kwargs={'class_group_id': self.object.class_group_id})
+    
+@method_decorator(csrf_protect, name='dispatch')
+class DuplicateLessonView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    def get(self, request, pk):
+        original_lesson = get_object_or_404(
+            Lesson, 
+            pk=pk, 
+            class_group__teacher=request.user.teacher_profile
+        )
+        
+        new_lesson = Lesson.objects.create(
+            title=f"Cópia de {original_lesson.title}",
+            date=original_lesson.date,
+            content=original_lesson.content,
+            performance_notes=original_lesson.performance_notes,
+            class_group=original_lesson.class_group,
+        )
+        
+        # Copia relacionamentos ManyToMany
+        new_lesson.tags.set(original_lesson.tags.all())
+        new_lesson.objectives.set(original_lesson.objectives.all())
+        
+        # Copia exercícios (se necessário)
+        for exercise in original_lesson.exercises.all():
+            Exercise.objects.create(
+                lesson=new_lesson,
+                title=exercise.title,
+                description=exercise.description,
+                duration=exercise.duration,
+                materials=exercise.materials
+            )
+        
+        messages.success(request, "Aula duplicada com sucesso!")
+        return redirect('lesson_update', pk=new_lesson.pk)
     
 # Exercise Views
 @method_decorator(csrf_protect, name='dispatch')
 class ExerciseCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = Exercise
+    form_class = ExerciseForm  # Usando o formulário personalizado
     template_name = 'exercises/exercise_form.html'
-    fields = ['title', 'description', 'duration', 'materials', 'objectives', 'tags']
     
-    def dispatch(self, request, *args, **kwargs):
-        # Security check: verify lesson belongs to this teacher
-        self.lesson = get_object_or_404(
-            Lesson, 
-            pk=self.kwargs.get('lesson_id'),
-            class_group__teacher=self.request.user.teacher_profile
-        )
-        return super().dispatch(request, *args, **kwargs)
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
     
     def form_valid(self, form):
-        form.instance.lesson = self.lesson
-        messages.success(self.request, "Exercise added successfully!")
+        form.instance.created_by = self.request.user.teacher_profile
+        messages.success(self.request, "Exercício criado com sucesso!")
         return super().form_valid(form)
     
     def get_success_url(self):
-        return reverse_lazy('lesson-detail', kwargs={'pk': self.lesson.pk})
+        # Redireciona de volta à lista de exercícios
+        return reverse('exercise_list')
     
 @method_decorator(csrf_protect, name='dispatch')
 class ExerciseListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
@@ -230,8 +264,47 @@ class ExerciseListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     
     def get_queryset(self):
         return Exercise.objects.filter(
-            lesson__class_group__teacher=self.request.user.teacher_profile
-        ).select_related('lesson', 'lesson__class_group')
+        Q(created_by=self.request.user.teacher_profile) |
+        Q(lessons__class_group__teacher=self.request.user.teacher_profile)
+    ).distinct().select_related('created_by')
+        
+@method_decorator(csrf_protect, name='dispatch')
+class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView):
+    model = Exercise
+    template_name = 'exercises/exercise_detail.html'
+    context_object_name = 'exercise'
+
+    def get_queryset(self):
+        # Filtra para mostrar apenas exercícios do professor
+        return Exercise.objects.filter(
+            Q(created_by=self.request.user.teacher_profile) |
+            Q(lessons__class_group__teacher=self.request.user.teacher_profile)
+        ).distinct()
+        
+@method_decorator(csrf_protect, name='dispatch')
+class ExerciseUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
+    model = Exercise
+    form_class = ExerciseForm
+    template_name = 'exercises/exercise_form.html'
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
+    
+    def get_success_url(self):
+        messages.success(self.request, "Exercício atualizado com sucesso!")
+        return reverse('exercise_detail', kwargs={'pk': self.object.pk})
+
+@method_decorator(csrf_protect, name='dispatch')
+class ExerciseDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
+    model = Exercise
+    template_name = 'exercises/exercise_confirm_delete.html'
+    success_url = reverse_lazy('exercise_list')
+    
+    def get_queryset(self):
+        # Só permite deletar exercícios que o professor criou
+        return Exercise.objects.filter(created_by=self.request.user.teacher_profile)
     
 # Learning Objective Views
 @method_decorator(csrf_protect, name='dispatch')
@@ -286,3 +359,150 @@ class FutureIdeaCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView)
         form.instance.teacher = self.request.user.teacher_profile
         messages.success(self.request, "Future idea created successfully!")
         return super().form_valid(form)
+    
+
+# Student Views
+@method_decorator(csrf_protect, name='dispatch')
+class StudentListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
+    model = Student
+    template_name = 'students/student_list.html'
+    context_object_name = 'students'
+    
+    def get_queryset(self):
+        # Filtra por grupo de classe específico se o parâmetro estiver presente
+        class_group_id = self.kwargs.get('class_group_id')
+        if class_group_id:
+            return Student.objects.filter(
+                class_group_id=class_group_id,
+                class_group__teacher=self.request.user.teacher_profile
+            ).select_related('class_group')
+        else:
+            # Lista todos os alunos deste professor
+            return Student.objects.filter(
+                class_group__teacher=self.request.user.teacher_profile
+            ).select_related('class_group')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        class_group_id = self.kwargs.get('class_group_id')
+        if class_group_id:
+            context['class_group'] = get_object_or_404(
+                ClassGroup, 
+                id=class_group_id,
+                teacher=self.request.user.teacher_profile
+            )
+        return context
+
+@method_decorator(csrf_protect, name='dispatch')
+class StudentDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView):
+    model = Student
+    template_name = 'students/student_detail.html'
+    context_object_name = 'student'
+    
+    def get_queryset(self):
+        # Garante que o professor só veja seus próprios alunos
+        return Student.objects.filter(
+            class_group__teacher=self.request.user.teacher_profile
+        ).select_related('class_group')
+
+@method_decorator(csrf_protect, name='dispatch')
+class StudentCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
+    model = Student
+    form_class = StudentForm
+    template_name = 'students/student_form.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Verifica se a turma pertence a este professor
+        self.class_group = get_object_or_404(
+            ClassGroup, 
+            pk=self.kwargs.get('class_group_id'),
+            teacher=self.request.user.teacher_profile
+        )
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['class_group'] = self.class_group
+        return kwargs
+    
+    def form_valid(self, form):
+        if not self.class_group:
+            return self.form_invalid(form)
+
+        # Set manualmente no momento certo
+        instance = form.save(commit=False)
+        instance.class_group = self.class_group
+        instance.save()
+        messages.success(self.request, "Aluno cadastrado com sucesso!")
+        return redirect(reverse('student_create', kwargs={'class_group_id': self.class_group.pk}))
+    
+    def get_success_url(self):
+        # Redireciona para a lista de alunos da turma
+        return reverse_lazy('class_group_students', kwargs={'class_group_id': self.class_group.id})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['class_group'] = self.class_group
+        context['students'] = Student.objects.filter(
+            class_group=self.class_group
+        ).order_by('first_name', 'last_name')
+        return context
+
+@method_decorator(csrf_protect, name='dispatch')
+class StudentUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
+    model = Student
+    form_class = StudentForm
+    template_name = 'students/student_form.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.class_group = get_object_or_404(
+            ClassGroup,
+            pk=self.kwargs.get('class_group_id'),
+            teacher=self.request.user.teacher_profile
+        )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return Student.objects.filter(class_group=self.class_group)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['class_group'] = self.class_group
+        context['students'] = Student.objects.filter(class_group=self.class_group).order_by('last_name')
+        return context
+
+    def form_valid(self, form):
+        form.instance.class_group = self.class_group  # Garante que o relacionamento está mantido
+        form.save()
+        messages.success(self.request, "Aluno atualizado com sucesso!")
+        return redirect(reverse('student_create', kwargs={'class_group_id': self.class_group.pk}))
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
+    model = Student
+    
+    def get_queryset(self):
+        # Garante que o professor só exclua seus próprios alunos
+        return Student.objects.filter(
+            class_group__teacher=self.request.user.teacher_profile
+        )
+    
+    def delete(self, request, *args, **kwargs):
+        student = self.get_object()
+        class_group_id = student.class_group.id
+        student.delete()
+
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': True})
+
+        messages.success(request, "Aluno excluído com sucesso.")
+        return redirect(reverse_lazy('student_create', kwargs={'class_group_id': class_group_id}))
+    
+    def get_success_url(self):
+        return reverse_lazy('student_create', kwargs={'class_group_id': self.object.class_group.id})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['class_group'] = self.get_object().class_group
+        return context

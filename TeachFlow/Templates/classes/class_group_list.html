@@ -54,28 +54,40 @@
     {% if class_groups %}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for turma in class_groups %}
-        <div class="bg-white rounded-xl shadow p-6 hover:shadow-lg transition">
-            <h3 class="text-lg font-semibold text-gray-800">{{ turma.name }}</h3>
-            <p class="text-sm text-gray-600">{{ turma.school }} | {{ turma.year }} | {{ turma.period }}</p>
-            <p class="mt-2 text-gray-500 text-sm">{{ turma.description|truncatewords:18 }}</p>
-            <div class="mt-4 flex gap-4 text-sm text-gray-500">
-                <div class="flex items-center gap-1">
-                    <i data-lucide="users-round" class="w-4 h-4"></i>
-                    <span>Alunos: {{ turma.students.count }}</span>
+        <div class="group relative bg-white rounded-xl shadow hover:shadow-lg transition">
+            <!-- Link principal que cobre todo o card -->
+            <a href="{% url 'class_group_detail' turma.id %}" class="absolute inset-0 z-10"></a>
+            
+            <div class="p-6">
+                <h3 class="text-lg font-semibold text-gray-800 group-hover:text-primary transition">{{ turma.name }}</h3>
+                <p class="text-sm text-gray-600">{{ turma.school }} | {{ turma.year }} | {{ turma.period }}</p>
+                <p class="mt-2 text-gray-500 text-sm">{{ turma.description|truncatewords:18 }}</p>
+                
+                <div class="mt-4 flex gap-4 text-sm text-gray-500">
+                    <div class="flex items-center gap-1">
+                        <i data-lucide="users-round" class="w-4 h-4"></i>
+                        <span>Alunos: {{ turma.students.count }}</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <i data-lucide="book-open" class="w-4 h-4"></i>
+                        <span>Aulas: {{ turma.lessons.count }}</span>
+                    </div>
                 </div>
-                <div class="flex items-center gap-1">
-                    <i data-lucide="book-open" class="w-4 h-4"></i>
-                    <span>Aulas: {{ turma.lessons.count }}</span>
+                
+                <!-- Links internos - adicionamos relative z-20 para ficarem acima do link principal -->
+                <div class="mt-4 flex gap-3 relative z-20">
+                    <a href="{% url 'class_group_students' class_group_id=turma.pk %}" class="mt-2 inline-flex items-center px-2 py-1 border border-blue-500 text-blue-500 font-medium rounded-lg hover:bg-blue-500 hover:text-white transition-colors duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 1.657-1.343 3-3 3S6 12.657 6 11s1.343-3 3-3 3 1.343 3 3zm0 0c0 1.657 1.343 3 3 3s3-1.343 3-3-1.343-3-3-3-3 1.343-3 3zM6 16.5A5.978 5.978 0 0112 14c1.657 0 3.156.672 4.242 1.758A5.978 5.978 0 0118 20.5H6a5.978 5.978 0 010-4z"/>
+                        </svg>
+                        Ver Alunos
+                      </a>
                 </div>
-            </div>
-            <div class="mt-4 flex gap-3">
-                <a href="{% url 'class_group_detail' turma.id %}" class="text-blue-600 hover:underline text-sm">Ver Detalhes</a>
-                <a href="{% url 'lesson_list' %}?class_group={{ turma.id }}" class="text-blue-600 hover:underline text-sm">Ver Aulas</a>
             </div>
         </div>
         {% endfor %}
 
-        <!-- Card de Nova Turma -->
+        <!-- Card de Nova Turma (mantido como estava) -->
         <a href="{% url 'class_group_create' %}" class="flex items-center justify-center bg-blue-50 border-2 border-dashed border-primary p-6 rounded-xl hover:bg-blue-100 transition">
             <span class="text-primary font-bold">+ Nova Turma</span>
         </a>

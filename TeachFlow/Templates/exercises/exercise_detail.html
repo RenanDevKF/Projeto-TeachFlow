@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ exercise.title }} - TeachFlow{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'exercise_edit' exercise.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+    </svg>
+    Editar
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-white shadow-sm rounded-lg overflow-hidden">
+        <div class="p-6">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-gray-900">{{ exercise.title }}</h1>
+            </div>
+            
+            <div class="mt-6">
+                <h3 class="text-md font-medium text-gray-900">Descrição</h3>
+                <p class="mt-2 text-gray-600 whitespace-pre-line">{{ exercise.description }}</p>
+            </div>
+            
+            {% if exercise.materials %}
+            <div class="mt-6">
+                <h3 class="text-md font-medium text-gray-900">Materiais Necessários</h3>
+                <p class="mt-2 text-gray-600 whitespace-pre-line">{{ exercise.materials }}</p>
+            </div>
+            {% endif %}
+            
+            {% if exercise.duration %}
+            <div class="mt-6">
+                <h3 class="text-md font-medium text-gray-900">Duração</h3>
+                <p class="mt-2 text-gray-600">{{ exercise.duration }} minutos</p>
+            </div>
+            {% endif %}
+            
+            {% if exercise.objectives.all %}
+            <div class="mt-6">
+                <h3 class="text-md font-medium text-gray-900">Objetivos de Aprendizagem</h3>
+                <ul class="mt-2 space-y-2">
+                    {% for objective in exercise.objectives.all %}
+                    <li class="text-gray-600">{{ objective.title }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            {% if exercise.tags.all %}
+            <div class="mt-6">
+                <h3 class="text-md font-medium text-gray-900">Tags</h3>
+                <div class="flex flex-wrap gap-2 mt-2">
+                    {% for tag in exercise.tags.all %}
+                    <span class="px-2 py-1 text-xs rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
+                        {{ tag.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="bg-white shadow-sm rounded-lg overflow-hidden">
+        <div class="p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Aulas que usaram este exercício</h2>
+            
+            {% if exercise.lesson_set.all %}
+            <div class="space-y-4">
+                {% for lesson in exercise.lesson_set.all %}
+                <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="font-medium">{{ lesson.title }}</h3>
+                            <p class="text-sm text-gray-500">{{ lesson.class_group.name }} - {{ lesson.date|date:"d/m/Y" }}</p>
+                        </div>
+                        <a href="{% url 'lesson_detail' lesson.id %}" class="text-primary text-sm hover:underline">Ver aula</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-gray-500">
+                Este exercício ainda não foi usado em nenhuma aula.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
