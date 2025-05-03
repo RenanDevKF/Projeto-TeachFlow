@@ -31,7 +31,7 @@
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">Turma</label>
         <select name="{{ form.class_group.name }}" 
-                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm bg-white">
+                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 shadow-sm text-sm bg-white">
           {% for choice in form.class_group.field.choices %}
             <option value="{{ choice.0 }}" {% if form.class_group.value == choice.0 %}selected{% endif %}>
               {{ choice.1 }}
@@ -47,7 +47,7 @@
         <label class="block text-sm font-medium text-gray-700 mb-2">Data</label>
         <div class="relative">
           <input type="date" name="{{ form.date.name }}" value="{{ form.date.value|date:'Y-m-d'|default:'' }}"
-                 class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm"
+                 class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm appearance-none"
                  placeholder="dd/mm/aaaa">
           <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
             <svg class="w-5 h-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" 
@@ -68,7 +68,7 @@
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-2">Título da Aula</label>
       <input type="text" name="{{ form.title.name }}" value="{{ form.title.value|default:'' }}"
-             class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm"
+             class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm"
              placeholder="Insira o título da aula">
       {% if form.title.errors %}
         <p class="text-red-500 text-sm mt-1">{{ form.title.errors.0 }}</p>
@@ -78,7 +78,7 @@
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-2">Conteúdo</label>
       <textarea name="{{ form.content.name }}" rows="6"
-                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm"
+                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm"
                 placeholder="Descreva o conteúdo da aula...">{{ form.content.value|default:'' }}</textarea>
       {% if form.content.errors %}
         <p class="text-red-500 text-sm mt-1">{{ form.content.errors.0 }}</p>
@@ -88,7 +88,7 @@
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-2">Observações de Desempenho</label>
       <textarea name="{{ form.performance_notes.name }}" rows="4"
-                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm"
+                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm"
                 placeholder="Notas sobre o desempenho dos alunos...">{{ form.performance_notes.value|default:'' }}</textarea>
       {% if form.performance_notes.errors %}
         <p class="text-red-500 text-sm mt-1">{{ form.performance_notes.errors.0 }}</p>
@@ -109,7 +109,7 @@
       <!-- Interface personalizada para seleção de exercícios -->
       <div class="relative">
         <!-- Botão de trigger para o dropdown com tags incorporadas -->
-        <div id="exercise-trigger" class="w-full min-h-12 p-3 border border-gray-300 rounded-lg bg-white cursor-pointer hover:border-blue-500 transition-colors flex flex-wrap items-center gap-2">
+        <div id="exercise-trigger" class="w-full min-h-12 p-3 border border-gray-300 rounded-lg bg-white cursor-pointer hover:border-blue-500 focus:border-blue-500 transition-colors flex flex-wrap items-center gap-2">
           <!-- Container para as tags de exercícios selecionados (agora dentro do trigger) -->
           <div id="selected-exercises" class="flex flex-wrap gap-2 items-center">
             <span class="text-gray-500" id="exercises-placeholder">Clique para selecionar exercícios</span>
@@ -126,7 +126,7 @@
             <div class="relative">
               <input type="text" 
                     id="exercise-filter" 
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm pl-9 focus:border-blue-500 focus:ring-blue-500"
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm pl-9 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none"
                     placeholder="Filtrar exercícios...">
               <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                 <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,7 +173,7 @@
       <!-- Interface personalizada para seleção de tags -->
       <div class="relative">
         <!-- Botão de trigger para o dropdown com tags incorporadas -->
-        <div id="tag-trigger" class="w-full min-h-12 p-3 border border-gray-300 rounded-lg bg-white cursor-pointer hover:border-blue-500 transition-colors flex flex-wrap items-center gap-2">
+        <div id="tag-trigger" class="w-full min-h-12 p-3 border border-gray-300 rounded-lg bg-white cursor-pointer hover:border-blue-500 focus:border-blue-500 transition-colors flex flex-wrap items-center gap-2">
           <!-- Container para as tags selecionadas (dentro do trigger) -->
           <div id="selected-tags" class="flex flex-wrap gap-2 items-center">
             <span class="text-gray-500" id="tags-placeholder">Clique para selecionar tags</span>
@@ -190,7 +190,7 @@
             <div class="relative">
               <input type="text" 
                     id="tag-filter" 
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm pl-9 focus:border-blue-500 focus:ring-blue-500"
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm pl-9 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none"
                     placeholder="Filtrar tags...">
               <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                 <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
