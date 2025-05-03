@@ -1,6 +1,13 @@
 {% extends 'base.html' %}
 {% block title %}Aulas - TeachFlow{% endblock %}
 
+{% block page_title %}
+<span class="inline-flex items-center gap-2">
+    <i data-lucide="book-open-check" class="w-6 h-6 text-primary"></i>
+    <span>Aulas</span>
+</span>
+{% endblock %}
+
 {% block header_actions %}
 <a href="{% url 'lesson_create' %}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark">
     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor"><path d="M12 4v16m8-8H4"/></svg>
@@ -10,7 +17,6 @@
 
 {% block content %}
 <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">Aulas</h1>
     {% if lessons %}
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {% for lesson in lessons %}
