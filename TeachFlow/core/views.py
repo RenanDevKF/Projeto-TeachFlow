@@ -137,18 +137,29 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     def get_queryset(self):
         queryset = Lesson.objects.filter(
             class_group__teacher=self.request.user.teacher_profile
-        ).select_related('class_group')
+        ).select_related('class_group').prefetch_related('tags')
         
-        # Filtra por turma se o ID foi fornecido
-        class_group_id = self.kwargs.get('class_group_id')
+        # Filtros
+        class_group_id = self.request.GET.get('class')
+        tag_id = self.request.GET.get('tag')
+        date_filter = self.request.GET.get('date')
+        
         if class_group_id:
             queryset = queryset.filter(class_group_id=class_group_id)
         
-        return queryset.order_by('-date', 'title')  # Ordenação consistente
+        if tag_id:
+            queryset = queryset.filter(tags__id=tag_id)
+        
+        if date_filter:
+            queryset = queryset.filter(date=date_filter)
+        
+        return queryset.order_by('-date', 'title')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['current_group'] = self.kwargs.get('class_group_id')
+        teacher = self.request.user.teacher_profile
+        context['class_groups'] = ClassGroup.objects.filter(teacher=teacher)
+        context['tags'] = Tag.objects.filter(teacher=teacher)
         return context
 
 @method_decorator(csrf_protect, name='dispatch')
