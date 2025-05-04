@@ -66,10 +66,41 @@ class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     context_object_name = 'class_groups'
     
     def get_queryset(self):
-        return ClassGroup.objects.filter(teacher=self.request.user.teacher_profile).prefetch_related('students', 'lessons')
+        queryset = ClassGroup.objects.filter(
+            teacher=self.request.user.teacher_profile
+        ).prefetch_related('students', 'lessons')
+        
+        # Adicione os filtros aqui
+        search = self.request.GET.get('search')
+        school = self.request.GET.get('school')
+        year = self.request.GET.get('year')
+        period = self.request.GET.get('period')
+        
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(description__icontains=search) |
+                Q(school__icontains=search)
+            )
+        
+        if school:
+            queryset = queryset.filter(school__icontains=school)
+            
+        if year:
+            queryset = queryset.filter(year=year)
+            
+        if period:
+            queryset = queryset.filter(period=period)
+            
+        return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        # Adicione os valores atuais dos filtros ao contexto
+        context['search'] = self.request.GET.get('search', '')
+        context['school'] = self.request.GET.get('school', '')
+        context['year'] = self.request.GET.get('year', '')
+        context['period'] = self.request.GET.get('period', '')
         return context
     
 @method_decorator(csrf_protect, name='dispatch')
