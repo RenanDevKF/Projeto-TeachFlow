@@ -1,40 +1,44 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Elementos do dropdown
+    // Elementos do dropdown genérico
     const dropdownButton = document.getElementById('filter-dropdown-button');
     const dropdownContent = document.getElementById('filter-dropdown-content');
     const dropdownArrow = document.getElementById('filter-arrow');
 
-    // Alternar dropdown
-    dropdownButton.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const isOpen = dropdownContent.classList.toggle('hidden');
-        dropdownArrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
-    });
+    // Lógica do dropdown (funciona para qualquer página)
+    if (dropdownButton && dropdownContent) {
+        dropdownButton.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isOpen = dropdownContent.classList.toggle('hidden');
+            if (dropdownArrow) {
+                dropdownArrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+            }
+        });
 
-    // Fechar dropdown ao clicar fora
-    document.addEventListener('click', function() {
-        dropdownContent.classList.add('hidden');
-        dropdownArrow.style.transform = 'rotate(0deg)';
-    });
+        document.addEventListener('click', function() {
+            dropdownContent.classList.add('hidden');
+            if (dropdownArrow) {
+                dropdownArrow.style.transform = 'rotate(0deg)';
+            }
+        });
 
-    // Evitar que o dropdown feche ao clicar dentro dele
-    dropdownContent.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
+        dropdownContent.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
 
-    // Função para aplicar filtros
+    // Função genérica para aplicar filtros
     function applyFilters() {
-        const classId = document.getElementById('filter-class').value;
-        const tagId = document.getElementById('filter-tag').value;
-        const date = document.getElementById('filter-date').value;
+        const form = document.querySelector('#filter-dropdown-content form');
+        if (!form) return;
         
-        let url = window.location.pathname + '?';
-        if (classId) url += `class=${classId}&`;
-        if (tagId) url += `tag=${tagId}&`;
-        if (date) url += `date=${date}&`;
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
         
-        url = url.endsWith('&') ? url.slice(0, -1) : url;
-        window.location.href = url;
+        formData.forEach((value, key) => {
+            if (value) params.append(key, value);
+        });
+        
+        window.location.href = window.location.pathname + '?' + params.toString();
     }
     
     // Função para resetar filtros
@@ -42,12 +46,12 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = window.location.pathname;
     }
     
-    // Event listeners para os botões
+    // Event listeners genéricos
     document.getElementById('apply-filters')?.addEventListener('click', applyFilters);
     document.getElementById('reset-filters')?.addEventListener('click', resetFilters);
     
-    // Aplicar filtros com Enter
-    const filterInputs = document.querySelectorAll('#filter-class, #filter-tag, #filter-date');
+    // Aplicar filtros com Enter em qualquer input dentro do form
+    const filterInputs = document.querySelectorAll('#filter-dropdown-content input, #filter-dropdown-content select');
     filterInputs.forEach(input => {
         input.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
