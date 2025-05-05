@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from .views import DuplicateLessonView
+from .views import QuickAddTagView, TagListView
 
 urlpatterns = [
     # Class Group URLs
@@ -43,5 +44,10 @@ urlpatterns = [
     path('ideas/new/', views.FutureIdeaCreateView.as_view(), name='idea-create'),
     
     path('dashboard/', views.dashboard_view, name='dashboard'),
+    
+    path('tags/', views.TagListView.as_view(), name='tag_list'),
+    path('tags/new/', views.TagCreateView.as_view(), name='tag_create'),
+    path('tags/<int:pk>/edit/', views.TagUpdateView.as_view(), name='tag_update'),
+    path('tags/add/<str:model_type>/<int:model_id>/', QuickAddTagView.as_view(), name='quick_add_tag'),
     
 ]
