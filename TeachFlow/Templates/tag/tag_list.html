@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}
+<span class="inline-flex items-center gap-2">
+    <i data-lucide="tags" class="w-6 h-6 text-primary"></i>
+    <span>Gerenciar Tags</span>
+</span>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div class="flex gap-3">
+            <a href="{% url 'tag_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark">
+                <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+                Nova Tag
+            </a>
+            
+            <!-- Filtro por tipo -->
+            <div class="relative">
+                <select id="tag-type-filter" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                    <option value="">Todas as tags</option>
+                    {% for type, name in type_choices %}
+                    <option value="{{ type }}" {% if request.GET.type == type %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                    <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white shadow-sm rounded-lg overflow-hidden">
+        <div class="divide-y divide-gray-200">
+            {% for tag in tags %}
+            <div class="p-4 hover:bg-gray-50 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <span class="px-2 py-1 text-xs rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
+                        {{ tag.get_type_display }}
+                    </span>
+                    <span class="font-medium">{{ tag.name }}</span>
+                </div>
+                <div class="flex gap-2">
+                    <a href="#" class="text-primary hover:text-primary-dark text-sm">
+                        <i data-lucide="edit" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-6 text-center text-gray-500">
+                Nenhuma tag cadastrada ainda.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // Filtro por tipo
+    document.getElementById('tag-type-filter').addEventListener('change', function() {
+        const type = this.value;
+        const url = new URL(window.location.href);
+        
+        if (type) {
+            url.searchParams.set('type', type);
+        } else {
+            url.searchParams.delete('type');
+        }
+        
+        window.location.href = url.toString();
+    });
+</script>
+{% endblock %}
