@@ -41,9 +41,16 @@ class Student(models.Model):
         
 class Tag(models.Model):
     """Tags to categorize lessons, exercises, or learning objectives"""
+    TYPE_CHOICES = [
+        ('lesson', 'Aula'),
+        ('exercise', 'Exercício'),
+        ('general', 'Geral')
+    ]
+    
     name = models.CharField(max_length=50)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='tags')
     color = models.CharField(max_length=7, default="#007bff")  # Hex color code
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES, default='general')
     
     def __str__(self):
         return self.name
