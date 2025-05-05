@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404, HttpResponseRedirect
 from datetime import date
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea
 from .forms import *
@@ -218,6 +218,14 @@ class LessonCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse('lesson_detail', kwargs={'pk': self.object.pk})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object:  # Para update view
+            context['selected_tags'] = self.object.tags.values_list('id', flat=True)
+        else:  # Para create view
+            context['selected_tags'] = []
+        return context
 
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -233,6 +241,14 @@ class LessonUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
 
     def get_success_url(self):
         return reverse('lesson_detail', kwargs={'pk': self.object.pk})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object:  # Para update view
+            context['selected_tags'] = self.object.tags.values_list('id', flat=True)
+        else:  # Para create view
+            context['selected_tags'] = []
+        return context
 
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -548,3 +564,135 @@ class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
         context = super().get_context_data(**kwargs)
         context['class_group'] = self.get_object().class_group
         return context
+ 
+ 
+@method_decorator(csrf_protect, name='dispatch')
+class TagCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
+    model = Tag
+    fields = ['name', 'type', 'color']
+    template_name = 'tag/tag_form.html'
+    
+    def form_valid(self, form):
+        form.instance.teacher = self.request.user.teacher_profile
+        messages.success(self.request, "Tag criada com sucesso!")
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('tag_list')
+    
+@method_decorator(csrf_protect, name='dispatch')    
+class TagListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
+    model = Tag
+    template_name = 'tag/tag_list.html'
+    context_object_name = 'tags'
+    
+    def get_queryset(self):
+        # Filtra tags apenas do professor logado
+        queryset = Tag.objects.filter(teacher=self.request.user.teacher_profile)
+        
+        # Filtro por tipo (opcional)
+        tag_type = self.request.GET.get('type')
+        if tag_type:
+            queryset = queryset.filter(type=tag_type)
+            
+        return queryset.order_by('name')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['type_choices'] = Tag.TYPE_CHOICES
+        return context
+
+@method_decorator(csrf_protect, name='dispatch')
+class TagCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
+    model = Tag
+    fields = ['name', 'type', 'color']
+    template_name = 'core/tag_form.html'
+    
+    def form_valid(self, form):
+        form.instance.teacher = self.request.user.teacher_profile
+        messages.success(self.request, "Tag criada com sucesso!")
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('tag_list')
+
+@method_decorator(csrf_protect, name='dispatch')
+class TagUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
+    model = Tag
+    fields = ['name', 'type', 'color']
+    template_name = 'core/tag_form.html'
+    
+    def get_queryset(self):
+        return Tag.objects.filter(teacher=self.request.user.teacher_profile)
+    
+    def form_valid(self, form):
+        messages.success(self.request, "Tag atualizada com sucesso!")
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('tag_list')
+       
+@method_decorator(csrf_protect, name='dispatch')
+class QuickAddTagView(LoginRequiredMixin, View):
+    def post(self, request, model_type=None, model_id=None):
+        tag_name = request.POST.get('tag_name', '').strip()
+        color = request.POST.get('color', '#6b7280')  # Novo campo de cor com valor padrão
+        
+        if not tag_name:
+            messages.error(request, "O nome da tag não pode estar vazio")
+            return self.get_redirect_response(model_type, model_id)
+            
+        # Verifica se a tag já existe para este professor
+        existing_tag = Tag.objects.filter(
+            name__iexact=tag_name,
+            teacher=request.user.teacher_profile
+        ).first()
+        
+        if existing_tag:
+            tag = existing_tag
+            messages.info(request, f'Tag existente "{tag_name}" foi utilizada')
+        else:
+            # Cria nova tag apenas se não existir
+            tag = Tag.objects.create(
+                name=tag_name,
+                teacher=request.user.teacher_profile,
+                type=model_type if model_type else 'general',
+                color=color  # Usa a cor selecionada
+            )
+            messages.success(request, f'Nova tag "{tag_name}" criada com sucesso!')
+        
+        # Associa ao modelo se fornecido (mantendo sua lógica original)
+        if model_type and model_id:
+            try:
+                if model_type == 'lesson':
+                    model = get_object_or_404(
+                        Lesson, 
+                        id=model_id, 
+                        class_group__teacher=request.user.teacher_profile
+                    )
+                elif model_type == 'exercise':
+                    model = get_object_or_404(
+                        Exercise, 
+                        id=model_id, 
+                        created_by=request.user.teacher_profile
+                    )
+                else:
+                    raise Http404("Tipo de modelo inválido")
+                
+                model.tags.add(tag)
+                messages.success(request, f'Tag "{tag_name}" associada com sucesso!')
+                
+            except Exception as e:
+                messages.error(request, f"Erro ao associar tag: {str(e)}")
+        
+        return self.get_redirect_response(model_type, model_id)
+    
+    def get_redirect_response(self, model_type, model_id):
+        """Retorna um HttpResponseRedirect apropriado - Mantendo seu método original"""
+        if not model_type or not model_id:
+            return HttpResponseRedirect(reverse('tag_list'))
+            
+        return HttpResponseRedirect(reverse(
+            f'{model_type}_detail', 
+            kwargs={'pk': model_id}
+        ))
