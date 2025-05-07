@@ -65,7 +65,8 @@ class LessonForm(forms.ModelForm):
             'title': forms.TextInput(attrs={'class': 'form-input'}),
             'content': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 4}),
             'performance_notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
-            'exercises': forms.SelectMultiple(attrs={'class': 'form-multiselect'}),
+            'exercises': forms.SelectMultiple(attrs={'class': 'hidden'}),  # Nosso custom widget vai cuidar disso
+            'tags': forms.SelectMultiple(attrs={'class': 'hidden'}),  # Nosso custom widget vai cuidar disso
         }
 
     def __init__(self, *args, **kwargs):
@@ -75,7 +76,11 @@ class LessonForm(forms.ModelForm):
         if teacher:
             self.fields['exercises'].queryset = Exercise.objects.filter(created_by=teacher)
             self.fields['class_group'].queryset = ClassGroup.objects.filter(teacher=teacher)
-            self.fields['tags'].queryset = Tag.objects.filter(teacher=teacher)
+            # Filtra tags apenas do tipo 'lesson' ou 'general'
+            self.fields['tags'].queryset = Tag.objects.filter(
+                teacher=teacher,
+                type__in=['lesson', 'general']
+            ).distinct()
             
 class ExerciseForm(forms.ModelForm):
     class Meta:
@@ -86,8 +91,8 @@ class ExerciseForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 4}),
             'duration': forms.NumberInput(attrs={'class': 'form-input'}),
             'materials': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
-            'objectives': forms.SelectMultiple(attrs={'class': 'form-multiselect'}),
-            'tags': forms.SelectMultiple(attrs={'class': 'form-multiselect'}),
+            'objectives': forms.SelectMultiple(attrs={'class': 'hidden'}),  # Custom widget
+            'tags': forms.SelectMultiple(attrs={'class': 'hidden'}),  # Custom widget
         }
 
     def __init__(self, *args, **kwargs):
@@ -95,4 +100,9 @@ class ExerciseForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if teacher:
             self.fields['objectives'].queryset = LearningObjective.objects.filter(teacher=teacher)
-            self.fields['tags'].queryset = Tag.objects.filter(teacher=teacher)
+            # Filtra tags apenas do tipo 'exercise' ou 'general'
+            self.fields['tags'].queryset = Tag.objects.filter(
+                teacher=teacher,
+                type__in=['exercise', 'general']
+            ).distinct()
+    
