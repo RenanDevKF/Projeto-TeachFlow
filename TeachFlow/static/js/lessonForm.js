@@ -115,7 +115,6 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedContainer.innerHTML = '';
             const selectedOptions = Array.from(select.selectedOptions);
             
-            // Mostra/esconde o placeholder conforme seleção
             if (selectedOptions.length === 0) {
                 placeholder.textContent = config.placeholderText;
                 placeholder.classList.remove('hidden');
@@ -124,10 +123,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 placeholder.classList.add('hidden');
             }
             
-            // Cria tags para cada item selecionado
             selectedOptions.forEach((option, index) => {
-                const colorClass = colors[index % colors.length];
+                // Para tags, verifica se tem cor específica
+                if (config.dataAttributePrefix === 'tag') {
+                    const checkbox = document.querySelector(`[data-tag-select][value="${option.value}"]`);
+                    if (checkbox && checkbox.dataset.tagColor) {
+                        const tagElement = document.createElement('span');
+                        tagElement.className = 'px-2 py-1 text-xs rounded-full flex items-center';
+                        tagElement.style.backgroundColor = `${checkbox.dataset.tagColor}20`;
+                        tagElement.style.color = checkbox.dataset.tagColor;
+                        tagElement.innerHTML = `
+                            <span>${option.text}</span>
+                            <button type="button" class="ml-1 text-current hover:text-red-600 focus:outline-none"
+                                    data-remove-tag="${option.value}">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        `;
+                        selectedContainer.appendChild(tagElement);
+                        return;
+                    }
+                }
                 
+                // Estilo padrão para exercícios e outros
+                const colorClass = colors[index % colors.length];
                 const tag = document.createElement('div');
                 tag.className = `${colorClass} px-3 py-1 rounded-full text-sm font-medium flex items-center shadow-sm`;
                 tag.innerHTML = `
