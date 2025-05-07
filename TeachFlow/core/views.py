@@ -635,64 +635,54 @@ class TagUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
 @method_decorator(csrf_protect, name='dispatch')
 class QuickAddTagView(LoginRequiredMixin, View):
     def post(self, request, model_type=None, model_id=None):
-        tag_name = request.POST.get('tag_name', '').strip()
-        color = request.POST.get('color', '#6b7280')  # Novo campo de cor com valor padrão
+        tag_name = request.POST.get('tag_name', '').strip().lower()  # Normaliza para minúsculas
+        colors = [choice[0] for choice in Tag.COLOR_CHOICES]
+        color = random.choice(colors)
         
         if not tag_name:
             messages.error(request, "O nome da tag não pode estar vazio")
             return self.get_redirect_response(model_type, model_id)
-            
-        # Verifica se a tag já existe para este professor
+        
+        # Tipos válidos (protegendo contra valores inválidos)
+        valid_types = ['lesson', 'exercise']
+        if model_type and model_type not in valid_types:
+            raise Http404("Tipo de modelo inválido")
+        
+        # Verifica se tag já existe para este professor
         existing_tag = Tag.objects.filter(
             name__iexact=tag_name,
             teacher=request.user.teacher_profile
         ).first()
         
         if existing_tag:
+            # Verifica se a tag existente é do mesmo tipo
+            if model_type and existing_tag.type != model_type:
+                messages.warning(request, 
+                    f'Tag "{tag_name}" já existe como tipo {existing_tag.get_type_display()}. '
+                    f'Crie uma tag específica para {model_type}.')
+                return self.get_redirect_response(model_type, model_id)
+                
+            messages.info(request, f'Tag "{tag_name}" já existe e está disponível para uso')
             tag = existing_tag
-            messages.info(request, f'Tag existente "{tag_name}" foi utilizada')
         else:
-            # Cria nova tag apenas se não existir
+            # Cria nova tag com o tipo específico
             tag = Tag.objects.create(
                 name=tag_name,
                 teacher=request.user.teacher_profile,
                 type=model_type if model_type else 'general',
-                color=color  # Usa a cor selecionada
+                color=color
             )
             messages.success(request, f'Nova tag "{tag_name}" criada com sucesso!')
         
-        # Associa ao modelo se fornecido (mantendo sua lógica original)
-        if model_type and model_id:
-            try:
-                if model_type == 'lesson':
-                    model = get_object_or_404(
-                        Lesson, 
-                        id=model_id, 
-                        class_group__teacher=request.user.teacher_profile
-                    )
-                elif model_type == 'exercise':
-                    model = get_object_or_404(
-                        Exercise, 
-                        id=model_id, 
-                        created_by=request.user.teacher_profile
-                    )
-                else:
-                    raise Http404("Tipo de modelo inválido")
-                
-                model.tags.add(tag)
-                messages.success(request, f'Tag "{tag_name}" associada com sucesso!')
-                
-            except Exception as e:
-                messages.error(request, f"Erro ao associar tag: {str(e)}")
-        
+        # Remove a associação automática que estava aqui
         return self.get_redirect_response(model_type, model_id)
-    
+
     def get_redirect_response(self, model_type, model_id):
-        """Retorna um HttpResponseRedirect apropriado - Mantendo seu método original"""
+        """Redireciona para lugar apropriado sem associar a tag"""
         if not model_type or not model_id:
             return HttpResponseRedirect(reverse('tag_list'))
             
-        return HttpResponseRedirect(reverse(
-            f'{model_type}_detail', 
-            kwargs={'pk': model_id}
-        ))
+        if model_type == 'lesson':
+            return HttpResponseRedirect(reverse('lesson_detail', kwargs={'pk': model_id}))
+        elif model_type == 'exercise':
+            return HttpResponseRedirect(reverse('exercise_detail', kwargs={'pk': model_id}))
