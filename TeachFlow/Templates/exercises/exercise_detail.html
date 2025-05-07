@@ -1,40 +1,65 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}{{ exercise.title }} - TeachFlow{% endblock %}
-
-{% block header_actions %}
-<a href="{% url 'exercise_edit' exercise.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-    </svg>
-    Editar
-</a>
+{% block page_title %}
+<span class="inline-flex items-center gap-2">
+    <i data-lucide="notebook-text" class="w-6 h-6 text-primary"></i>
+    <span>Detalhe Exercício - {{ exercise.title }}</span>
+</span>
 {% endblock %}
 
 {% block content %}
 <div class="space-y-6">
+    <!-- Botões de ação -->
+    <div class="flex justify-end gap-3">
+        <a href="{% url 'exercise_update' exercise.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark">
+            <i data-lucide="edit" class="w-4 h-4 mr-2"></i>
+            Editar Exercício
+        </a>
+        
+        <a href="#" id="add-tags-btn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700">
+            <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+            Tags para Exercício
+        </a>
+
+        {% if exercise.created_by == request.user.teacher_profile %}
+        <a href="{% url 'exercise_delete' exercise.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700">
+            <i data-lucide="trash-2" class="w-4 h-4 mr-2"></i>
+            Excluir
+        </a>
+        {% endif %}
+    </div>
+
     <div class="bg-white shadow-sm rounded-lg overflow-hidden">
         <div class="p-6">
             <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-bold text-gray-900">{{ exercise.title }}</h1>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-2xl font-bold text-gray-900">{{ exercise.title }}</h1>
+                        {% if exercise.is_template %}
+                        <span class="bg-blue-100 text-blue-800 px-2 py-1 text-xs rounded-full">Modelo</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-gray-500 mt-1">Criado por: {{ exercise.created_by.user.first_name }} {{ exercise.created_by.user.last_name }}</p>
+                </div>
+                
+                {% if exercise.duration %}
+                <div class="bg-gray-100 px-3 py-2 rounded-lg flex items-center gap-2">
+                    <i data-lucide="clock" class="w-5 h-5 text-gray-600"></i>
+                    <span class="text-gray-700">{{ exercise.duration }} minutos</span>
+                </div>
+                {% endif %}
             </div>
             
             <div class="mt-6">
                 <h3 class="text-md font-medium text-gray-900">Descrição</h3>
-                <p class="mt-2 text-gray-600 whitespace-pre-line">{{ exercise.description }}</p>
+                <div class="mt-2 text-gray-600 whitespace-pre-line">{{ exercise.description }}</div>
             </div>
             
             {% if exercise.materials %}
             <div class="mt-6">
                 <h3 class="text-md font-medium text-gray-900">Materiais Necessários</h3>
-                <p class="mt-2 text-gray-600 whitespace-pre-line">{{ exercise.materials }}</p>
-            </div>
-            {% endif %}
-            
-            {% if exercise.duration %}
-            <div class="mt-6">
-                <h3 class="text-md font-medium text-gray-900">Duração</h3>
-                <p class="mt-2 text-gray-600">{{ exercise.duration }} minutos</p>
+                <div class="mt-2 text-gray-600 whitespace-pre-line">{{ exercise.materials }}</div>
             </div>
             {% endif %}
             
@@ -43,7 +68,10 @@
                 <h3 class="text-md font-medium text-gray-900">Objetivos de Aprendizagem</h3>
                 <ul class="mt-2 space-y-2">
                     {% for objective in exercise.objectives.all %}
-                    <li class="text-gray-600">{{ objective.title }}</li>
+                    <li class="flex items-start gap-2">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-green-500 shrink-0"></i>
+                        <span class="text-gray-600">{{ objective.title }}</span>
+                    </li>
                     {% endfor %}
                 </ul>
             </div>
@@ -64,18 +92,19 @@
         </div>
     </div>
     
+    <!-- Aulas Section -->
     <div class="bg-white shadow-sm rounded-lg overflow-hidden">
         <div class="p-6">
-            <h2 class="text-lg font-medium text-gray-900 mb-4">Aulas que usaram este exercício</h2>
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Aulas em que este exercício foi aplicado</h2>
             
-            {% if exercise.lesson_set.all %}
+            {% if exercise.lessons.all %}
             <div class="space-y-4">
-                {% for lesson in exercise.lesson_set.all %}
+                {% for lesson in exercise.lessons.all %}
                 <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
                     <div class="flex justify-between items-center">
                         <div>
+                            <div class="text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }} - {{ lesson.class_group.name }}</div>
                             <h3 class="font-medium">{{ lesson.title }}</h3>
-                            <p class="text-sm text-gray-500">{{ lesson.class_group.name }} - {{ lesson.date|date:"d/m/Y" }}</p>
                         </div>
                         <a href="{% url 'lesson_detail' lesson.id %}" class="text-primary text-sm hover:underline">Ver aula</a>
                     </div>
@@ -84,10 +113,69 @@
             </div>
             {% else %}
             <div class="text-center py-4 text-gray-500">
-                Este exercício ainda não foi usado em nenhuma aula.
+                Este exercício ainda não foi aplicado em nenhuma aula.
             </div>
             {% endif %}
         </div>
     </div>
 </div>
+
+<!-- Modal de Tags (parte do formulário) -->
+<div id="tag-modal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+        <form method="POST" action="{% url 'quick_add_tag' 'exercise' exercise.id %}" id="tag-form">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <div>
+                    <label for="tag_name" class="block text-sm font-medium text-gray-700 mb-1">Nome da Tag</label>
+                    <input type="text" name="tag_name" id="tag_name"
+                           class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                           required autofocus>
+                </div>
+                
+                <div class="pt-4 flex justify-between items-center">
+                    <a href="{% url 'tag_list' %}" class="text-sm text-primary hover:underline">
+                        Ver todas as tags
+                    </a>
+                    
+                    <div class="flex gap-3">
+                        <button type="button" id="cancel-tag-modal" 
+                                class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit" id="submit-tag-btn"
+                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark">
+                            Salvar Tag
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Modal de tag
+    const tagModal = document.getElementById('tag-modal');
+    const addTagsBtn = document.getElementById('add-tags-btn');
+    const cancelTagModal = document.getElementById('cancel-tag-modal');
+
+    if (addTagsBtn) {
+        addTagsBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            tagModal.classList.remove('hidden');
+        });
+    }
+
+    if (cancelTagModal) {
+        cancelTagModal.addEventListener('click', function() {
+            tagModal.classList.add('hidden');
+        });
+    }
+});
+</script>
 {% endblock %}
