@@ -112,7 +112,7 @@ class ClassGroupDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = ClassGroup
-    template_name = 'classes/class_group_create.html'
+    template_name = 'classes/class_group_form.html'
     form_class = ClassGroupForm
     success_url = reverse_lazy('class_group_list')
     
@@ -129,7 +129,7 @@ class ClassGroupCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView)
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, UpdateView):
     model = ClassGroup
-    template_name = 'classes/class_group_create.html'
+    template_name = 'classes/class_group_form.html'
     form_class = ClassGroupForm
     success_url = reverse_lazy('class_group_list')
     
