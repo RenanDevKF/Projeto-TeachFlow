@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if object %}Editar Turma{% else %}Nova Turma{% endif %}{% endblock %}
+{% block page_title %}{% if object %}Editar Turma{% else %}Nova Turma{% endif %}{% endblock %}
+
+{% block content %}
+<!-- Cabeçalho da página -->
+<div class="max-w-3xl mx-auto mt-1 mb-4 px-6 flex items-center">
+  <h1 class="text-2xl font-semibold text-gray-800 flex items-center gap-2">
+    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
+         viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+      <circle cx="9" cy="7" r="4"></circle>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </svg>
+    {% if object %}Editar Turma{% else %}Nova Turma{% endif %}
+  </h1>
+</div>
+
+<!-- Formulário de turma -->
+<div class="max-w-3xl mx-auto px-6 py-2 bg-white rounded-xl shadow border border-gray-200">
+  <form method="POST" class="space-y-6">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Nome da Turma</label>
+      <input type="text" name="{{ form.name.name }}" value="{{ form.name.value|default:'' }}"
+             class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm"
+             placeholder="Insira o nome da turma">
+      {% if form.name.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ form.name.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+      <textarea name="{{ form.description.name }}" rows="3"
+                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm"
+                placeholder="Descreva a turma...">{{ form.description.value|default:'' }}</textarea>
+      {% if form.description.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ form.description.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Escola</label>
+        <input type="text" name="{{ form.school.name }}" value="{{ form.school.value|default:'' }}"
+               class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm"
+               placeholder="Nome da escola">
+        {% if form.school.errors %}
+          <p class="text-red-500 text-sm mt-1">{{ form.school.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Período</label>
+        <select name="{{ form.period.name }}"
+                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 shadow-sm text-sm bg-white">
+          {% for choice in form.period.field.choices %}
+            <option value="{{ choice.0 }}" {% if form.period.value == choice.0 %}selected{% endif %}>
+              {{ choice.1 }}
+            </option>
+          {% endfor %}
+        </select>
+        {% if form.period.errors %}
+          <p class="text-red-500 text-sm mt-1">{{ form.period.errors.0 }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Ano Letivo</label>
+      <input type="number" name="{{ form.year.name }}" value="{{ form.year.value|default:'' }}"
+             class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm"
+             placeholder="Ano letivo">
+      {% if form.year.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ form.year.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    <div class="flex items-center">
+      <input type="checkbox" name="{{ form.is_active.name }}" id="id_is_active" {% if form.is_active.value %}checked{% endif %}
+             class="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500">
+      <label for="id_is_active" class="ml-3 text-sm text-gray-700">Turma ativa</label>
+      {% if form.is_active.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ form.is_active.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    <div class="flex justify-between pt-6">
+      <a href="{% if object %}{% url 'class_group_detail' object.pk %}{% else %}{% url 'class_group_list' %}{% endif %}" 
+          class="px-4 py-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition-all">
+          Cancelar
+      </a>
+      <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-all">
+        {% if object %}Atualizar{% else %}Salvar{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
