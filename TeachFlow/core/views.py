@@ -492,7 +492,7 @@ class StudentCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
         instance.class_group = self.class_group
         instance.save()
         messages.success(self.request, "Aluno cadastrado com sucesso!")
-        return redirect(reverse('student_create', kwargs={'class_group_id': self.class_group.pk}))
+        return redirect(reverse('student_form', kwargs={'class_group_id': self.class_group.pk}))
     
     def get_success_url(self):
         # Redireciona para a lista de alunos da turma
@@ -533,7 +533,7 @@ class StudentUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
         form.instance.class_group = self.class_group  # Garante que o relacionamento está mantido
         form.save()
         messages.success(self.request, "Aluno atualizado com sucesso!")
-        return redirect(reverse('student_create', kwargs={'class_group_id': self.class_group.pk}))
+        return redirect(reverse('student_form', kwargs={'class_group_id': self.class_group.pk}))
 
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -555,10 +555,10 @@ class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
             return JsonResponse({'success': True})
 
         messages.success(request, "Aluno excluído com sucesso.")
-        return redirect(reverse_lazy('student_create', kwargs={'class_group_id': class_group_id}))
+        return redirect(reverse_lazy('student_form', kwargs={'class_group_id': class_group_id}))
     
     def get_success_url(self):
-        return reverse_lazy('student_create', kwargs={'class_group_id': self.object.class_group.id})
+        return reverse_lazy('student_form', kwargs={'class_group_id': self.object.class_group.id})
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
