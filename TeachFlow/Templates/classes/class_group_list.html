@@ -1,7 +1,12 @@
 {% extends 'base.html' %}
 
 {% block title %}Turmas{% endblock %}
-{% block page_title %}Turmas{% endblock %}
+{% block page_title %}
+<span class="inline-flex items-center gap-2">
+    <i data-lucide="graduation-cap" class="w-6 h-6 text-primary"></i>
+    <span>Turmas</span>
+</span>
+{% endblock %}
 
 {% block content %}
 <div class="mx-auto">
@@ -78,7 +83,7 @@
     
     <!-- Botão Nova Turma -->
     <div class="flex-shrink-0">
-        <a href="{% url 'class_group_create' %}" class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition whitespace-nowrap">
+        <a href="{% url 'class_group_form' %}" class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition whitespace-nowrap">
             <i data-lucide="plus" class="w-5 h-5"></i>
             <span>Nova Turma</span>
         </a>
@@ -123,7 +128,7 @@
         {% endfor %}
 
         <!-- Card de Nova Turma (mantido como estava) -->
-        <a href="{% url 'class_group_create' %}" class="flex items-center justify-center bg-blue-50 border-2 border-dashed border-primary p-6 rounded-xl hover:bg-blue-100 transition">
+        <a href="{% url 'class_group_form' %}" class="flex items-center justify-center bg-blue-50 border-2 border-dashed border-primary p-6 rounded-xl hover:bg-blue-100 transition">
             <span class="text-primary font-bold">+ Nova Turma</span>
         </a>
     </div>
