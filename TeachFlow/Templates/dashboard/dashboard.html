@@ -1,7 +1,12 @@
 {% extends 'base.html' %}
 
 {% block title %}Dashboard - TeachFlow{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+{% block page_title %}
+<span class="inline-flex items-center gap-2">
+    <i data-lucide="layout-dashboard" class="w-6 h-6 text-primary"></i>
+    <span>Dashboard - TeachFlow</span>
+</span>
+{% endblock %}
 
 {% block content %}
 <div class="space-y-8">
@@ -79,7 +84,7 @@
             {% endfor %}
 
             <!-- Card de nova turma -->
-            <a href="{% url 'class_group_create' %}" class="flex items-center justify-center bg-blue-50 border-2 border-dashed border-primary p-6 rounded-xl hover:bg-blue-100 transition">
+            <a href="{% url 'class_group_form' %}" class="flex items-center justify-center bg-blue-50 border-2 border-dashed border-primary p-6 rounded-xl hover:bg-blue-100 transition">
                 <span class="text-primary font-bold">+ Nova Turma</span>
             </a>
         </div>
