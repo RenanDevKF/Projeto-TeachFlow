@@ -16,11 +16,15 @@ class ClassGroup(models.Model):
     description = models.TextField(blank=True)
     school = models.CharField(max_length=100, blank=True)
     period = models.CharField(max_length=10, choices=PERIOD_CHOICES, blank=True)
+    schedule = models.CharField(max_length=50, blank=True, null=True, verbose_name="Horário")  # NOVA LINHA
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='class_groups')
     year = models.IntegerField(default=timezone.now().year)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:  # NOVA SEÇÃO
+        ordering = ['period', 'schedule', 'name']
     
     def __str__(self):
         return f"{self.name} ({self.teacher})"
