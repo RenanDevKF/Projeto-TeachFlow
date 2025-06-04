@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.admin.models import LogEntry
 from accounts.models import Teacher
+import random
 
 
 class ClassGroup(models.Model):
@@ -15,11 +16,15 @@ class ClassGroup(models.Model):
     description = models.TextField(blank=True)
     school = models.CharField(max_length=100, blank=True)
     period = models.CharField(max_length=10, choices=PERIOD_CHOICES, blank=True)
+    schedule = models.CharField(max_length=50, blank=True, null=True, verbose_name="Horário")  # NOVA LINHA
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='class_groups')
     year = models.IntegerField(default=timezone.now().year)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:  # NOVA SEÇÃO
+        ordering = ['period', 'schedule', 'name']
     
     def __str__(self):
         return f"{self.name} ({self.teacher})"
@@ -28,6 +33,7 @@ class Student(models.Model):
     """Student model with basic information"""
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
+    birth_date = models.DateField(blank=True, null=True, verbose_name="Data de Nascimento")  # NOVA LINHA
     class_group = models.ForeignKey(ClassGroup, on_delete=models.CASCADE, related_name='students')
     notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
@@ -40,13 +46,37 @@ class Student(models.Model):
         ordering = ['first_name','last_name']
         
 class Tag(models.Model):
-    """Tags to categorize lessons, exercises, or learning objectives"""
+    TYPE_CHOICES = [
+        ('lesson', 'Aula'),
+        ('exercise', 'Exercício'),
+        ('general', 'Geral')
+    ]
+    
+    # Cores pré-definidas (cores Tailwind CSS)
+    COLOR_CHOICES = [
+        ('#3B82F6', 'Azul'),       # bg-blue-500
+        ('#10B981', 'Verde'),      # bg-green-500
+        ('#F59E0B', 'Amarelo'),    # bg-yellow-500
+        ('#8B5CF6', 'Roxo'),       # bg-purple-500
+        ('#EC4899', 'Rosa'),       # bg-pink-500
+        ('#6366F1', 'Índigo'),     # bg-indigo-500
+        ('#EF4444', 'Vermelho'),   # bg-red-500
+        ('#14B8A6', 'Turquesa'),   # bg-teal-500
+    ]
+    
     name = models.CharField(max_length=50)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='tags')
-    color = models.CharField(max_length=7, default="#007bff")  # Hex color code
+    color = models.CharField(max_length=7, choices=COLOR_CHOICES, default='#3B82F6')
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES, default='general')
     
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.color:
+            # Atribui uma cor aleatória se não tiver definida
+            self.color = random.choice(self.COLOR_CHOICES)[0]
+        super().save(*args, **kwargs)
     
 class LearningObjective(models.Model):
     """Learning objectives defined by curriculum or teacher"""

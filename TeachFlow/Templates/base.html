@@ -13,12 +13,12 @@
     <div class="flex min-h-screen">
 
         <!-- Sidebar -->
-        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col">
+        <aside class="w-52 bg-white border-r border-gray-200 flex flex-col">
             <div class="p-6">
                 <h1 class="text-2xl font-extrabold text-primary">TeachFlow</h1>
             </div>
 
-            {% with url_name=request.resolver_match.url_name %}
+            {% with url_name=request.resolver_match.url_name url_path=request.path %}
             <nav class="flex-1 space-y-2 px-4">
                 <!-- Dashboard -->
                 <a href="{% url 'dashboard' %}"
@@ -31,15 +31,15 @@
                 <!-- Turmas -->
                 <a href="{% url 'class_group_list' %}"
                 class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
-                {% if url_name in 'class_group_list class_group_detail class_group_create class_group_update student_create student_detail student_update' %}bg-blue-100 text-primary{% endif %}">
-                    <i data-lucide="users-round" class="w-5 h-5"></i>
+                {% if 'class-group' in url_path or 'student' in url_path %}bg-blue-100 text-primary{% endif %}">
+                    <i data-lucide="graduation-cap" class="w-5 h-5"></i>
                     Turmas
                 </a>
 
                 <!-- Aulas -->
                 <a href="{% url 'lesson_list' %}"
                 class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
-                {% if url_name in 'lesson_list lesson_create lesson_detail' %}bg-blue-100 text-primary{% endif %}">
+                {% if 'lesson' in url_name or 'lessons' in url_path %}bg-blue-100 text-primary{% endif %}">
                     <i data-lucide="book-open" class="w-5 h-5"></i>
                     Aulas
                 </a>
@@ -47,7 +47,7 @@
                 <!-- Exercícios -->
                 <a href="{% url 'exercise_list' %}"
                 class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
-                {% if url_name in 'exercise_list' %}bg-blue-100 text-primary{% endif %}">
+                {% if 'exercise' in url_name %}bg-blue-100 text-primary{% endif %}">
                     <i data-lucide="notebook-text" class="w-5 h-5"></i>
                     Exercícios
                 </a>
@@ -55,7 +55,7 @@
                 <!-- Conta -->
                 <a href="{% url 'profile' %}"
                 class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
-                {% if url_name in 'profile' %}bg-blue-100 text-primary{% endif %}">
+                {% if url_name == 'profile' %}bg-blue-100 text-primary{% endif %}">
                     <i data-lucide="user" class="w-5 h-5"></i>
                     Conta
                 </a>
@@ -89,6 +89,8 @@
 
 <script src="https://unpkg.com/lucide@latest" defer></script>
 <script src="{% static 'js/delete_student_modal.js' %}" defer></script>
+<script src="{% static 'js/filters.js' %}"></script>
+<script src="{% static 'js/tagModal.js' %}"></script>
 <script>
     window.addEventListener("DOMContentLoaded", () => {
         lucide.createIcons();

@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404, HttpResponseRedirect
 from datetime import date
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea
 from .forms import *
@@ -66,10 +66,41 @@ class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     context_object_name = 'class_groups'
     
     def get_queryset(self):
-        return ClassGroup.objects.filter(teacher=self.request.user.teacher_profile).prefetch_related('students', 'lessons')
+        queryset = ClassGroup.objects.filter(
+            teacher=self.request.user.teacher_profile
+        ).prefetch_related('students', 'lessons')
+        
+        # Adicione os filtros aqui
+        search = self.request.GET.get('search')
+        school = self.request.GET.get('school')
+        year = self.request.GET.get('year')
+        period = self.request.GET.get('period')
+        
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(description__icontains=search) |
+                Q(school__icontains=search)
+            )
+        
+        if school:
+            queryset = queryset.filter(school__icontains=school)
+            
+        if year:
+            queryset = queryset.filter(year=year)
+            
+        if period:
+            queryset = queryset.filter(period=period)
+            
+        return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        # Adicione os valores atuais dos filtros ao contexto
+        context['search'] = self.request.GET.get('search', '')
+        context['school'] = self.request.GET.get('school', '')
+        context['year'] = self.request.GET.get('year', '')
+        context['period'] = self.request.GET.get('period', '')
         return context
     
 @method_decorator(csrf_protect, name='dispatch')
@@ -81,7 +112,7 @@ class ClassGroupDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = ClassGroup
-    template_name = 'classes/class_group_create.html'
+    template_name = 'classes/class_group_form.html'
     form_class = ClassGroupForm
     success_url = reverse_lazy('class_group_list')
     
@@ -98,7 +129,7 @@ class ClassGroupCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView)
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, UpdateView):
     model = ClassGroup
-    template_name = 'classes/class_group_create.html'
+    template_name = 'classes/class_group_form.html'
     form_class = ClassGroupForm
     success_url = reverse_lazy('class_group_list')
     
@@ -137,18 +168,29 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     def get_queryset(self):
         queryset = Lesson.objects.filter(
             class_group__teacher=self.request.user.teacher_profile
-        ).select_related('class_group')
+        ).select_related('class_group').prefetch_related('tags')
         
-        # Filtra por turma se o ID foi fornecido
-        class_group_id = self.kwargs.get('class_group_id')
+        # Filtros
+        class_group_id = self.request.GET.get('class')
+        tag_id = self.request.GET.get('tag')
+        date_filter = self.request.GET.get('date')
+        
         if class_group_id:
             queryset = queryset.filter(class_group_id=class_group_id)
         
-        return queryset.order_by('-date', 'title')  # Ordenação consistente
+        if tag_id:
+            queryset = queryset.filter(tags__id=tag_id)
+        
+        if date_filter:
+            queryset = queryset.filter(date=date_filter)
+        
+        return queryset.order_by('-date', 'title')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['current_group'] = self.kwargs.get('class_group_id')
+        teacher = self.request.user.teacher_profile
+        context['class_groups'] = ClassGroup.objects.filter(teacher=teacher)
+        context['tags'] = Tag.objects.filter(teacher=teacher)
         return context
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -176,6 +218,14 @@ class LessonCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse('lesson_detail', kwargs={'pk': self.object.pk})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object:  # Para update view
+            context['selected_tags'] = self.object.tags.values_list('id', flat=True)
+        else:  # Para create view
+            context['selected_tags'] = []
+        return context
 
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -191,6 +241,14 @@ class LessonUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
 
     def get_success_url(self):
         return reverse('lesson_detail', kwargs={'pk': self.object.pk})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object:  # Para update view
+            context['selected_tags'] = self.object.tags.values_list('id', flat=True)
+        else:  # Para create view
+            context['selected_tags'] = []
+        return context
 
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -434,7 +492,7 @@ class StudentCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
         instance.class_group = self.class_group
         instance.save()
         messages.success(self.request, "Aluno cadastrado com sucesso!")
-        return redirect(reverse('student_create', kwargs={'class_group_id': self.class_group.pk}))
+        return redirect(reverse('student_form', kwargs={'class_group_id': self.class_group.pk}))
     
     def get_success_url(self):
         # Redireciona para a lista de alunos da turma
@@ -475,7 +533,7 @@ class StudentUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
         form.instance.class_group = self.class_group  # Garante que o relacionamento está mantido
         form.save()
         messages.success(self.request, "Aluno atualizado com sucesso!")
-        return redirect(reverse('student_create', kwargs={'class_group_id': self.class_group.pk}))
+        return redirect(reverse('student_form', kwargs={'class_group_id': self.class_group.pk}))
 
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -497,12 +555,134 @@ class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
             return JsonResponse({'success': True})
 
         messages.success(request, "Aluno excluído com sucesso.")
-        return redirect(reverse_lazy('student_create', kwargs={'class_group_id': class_group_id}))
+        return redirect(reverse_lazy('student_form', kwargs={'class_group_id': class_group_id}))
     
     def get_success_url(self):
-        return reverse_lazy('student_create', kwargs={'class_group_id': self.object.class_group.id})
+        return reverse_lazy('student_form', kwargs={'class_group_id': self.object.class_group.id})
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['class_group'] = self.get_object().class_group
         return context
+ 
+ 
+@method_decorator(csrf_protect, name='dispatch')
+class TagCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
+    model = Tag
+    fields = ['name', 'type', 'color']
+    template_name = 'tag/tag_form.html'
+    
+    def form_valid(self, form):
+        form.instance.teacher = self.request.user.teacher_profile
+        messages.success(self.request, "Tag criada com sucesso!")
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('tag_list')
+    
+@method_decorator(csrf_protect, name='dispatch')    
+class TagListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
+    model = Tag
+    template_name = 'tag/tag_list.html'
+    context_object_name = 'tags'
+    
+    def get_queryset(self):
+        # Filtra tags apenas do professor logado
+        queryset = Tag.objects.filter(teacher=self.request.user.teacher_profile)
+        
+        # Filtro por tipo (opcional)
+        tag_type = self.request.GET.get('type')
+        if tag_type:
+            queryset = queryset.filter(type=tag_type)
+            
+        return queryset.order_by('name')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['type_choices'] = Tag.TYPE_CHOICES
+        return context
+
+@method_decorator(csrf_protect, name='dispatch')
+class TagCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
+    model = Tag
+    fields = ['name', 'type', 'color']
+    template_name = 'core/tag_form.html'
+    
+    def form_valid(self, form):
+        form.instance.teacher = self.request.user.teacher_profile
+        messages.success(self.request, "Tag criada com sucesso!")
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('tag_list')
+
+@method_decorator(csrf_protect, name='dispatch')
+class TagUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
+    model = Tag
+    fields = ['name', 'type', 'color']
+    template_name = 'core/tag_form.html'
+    
+    def get_queryset(self):
+        return Tag.objects.filter(teacher=self.request.user.teacher_profile)
+    
+    def form_valid(self, form):
+        messages.success(self.request, "Tag atualizada com sucesso!")
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('tag_list')
+       
+@method_decorator(csrf_protect, name='dispatch')
+class QuickAddTagView(LoginRequiredMixin, View):
+    def post(self, request, model_type=None, model_id=None):
+        tag_name = request.POST.get('tag_name', '').strip().lower()  # Normaliza para minúsculas
+        colors = [choice[0] for choice in Tag.COLOR_CHOICES]
+        color = random.choice(colors)
+        
+        if not tag_name:
+            messages.error(request, "O nome da tag não pode estar vazio")
+            return self.get_redirect_response(model_type, model_id)
+        
+        # Tipos válidos (protegendo contra valores inválidos)
+        valid_types = ['lesson', 'exercise']
+        if model_type and model_type not in valid_types:
+            raise Http404("Tipo de modelo inválido")
+        
+        # Verifica se tag já existe para este professor
+        existing_tag = Tag.objects.filter(
+            name__iexact=tag_name,
+            teacher=request.user.teacher_profile
+        ).first()
+        
+        if existing_tag:
+            # Verifica se a tag existente é do mesmo tipo
+            if model_type and existing_tag.type != model_type:
+                messages.warning(request, 
+                    f'Tag "{tag_name}" já existe como tipo {existing_tag.get_type_display()}. '
+                    f'Crie uma tag específica para {model_type}.')
+                return self.get_redirect_response(model_type, model_id)
+                
+            messages.info(request, f'Tag "{tag_name}" já existe e está disponível para uso')
+            tag = existing_tag
+        else:
+            # Cria nova tag com o tipo específico
+            tag = Tag.objects.create(
+                name=tag_name,
+                teacher=request.user.teacher_profile,
+                type=model_type if model_type else 'general',
+                color=color
+            )
+            messages.success(request, f'Nova tag "{tag_name}" criada com sucesso!')
+        
+        # Remove a associação automática que estava aqui
+        return self.get_redirect_response(model_type, model_id)
+
+    def get_redirect_response(self, model_type, model_id):
+        """Redireciona para lugar apropriado sem associar a tag"""
+        if not model_type or not model_id:
+            return HttpResponseRedirect(reverse('tag_list'))
+            
+        if model_type == 'lesson':
+            return HttpResponseRedirect(reverse('lesson_detail', kwargs={'pk': model_id}))
+        elif model_type == 'exercise':
+            return HttpResponseRedirect(reverse('exercise_detail', kwargs={'pk': model_id}))

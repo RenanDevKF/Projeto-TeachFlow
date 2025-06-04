@@ -12,27 +12,46 @@
   </p>
 
   <form method="post" class="space-y-6"
-      action="{% if form.instance.pk %}{% url 'student_update' class_group.id form.instance.pk %}{% else %}{% url 'student_create' class_group.id %}{% endif %}">
+      action="{% if form.instance.pk %}{% url 'student_form' class_group.id form.instance.pk %}{% else %}{% url 'student_form' class_group.id %}{% endif %}">
 
     {% csrf_token %}
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">Primeiro Nome</label>
-      <input type="text" name="first_name" value="{{ form.first_name.value|default_if_none:'' }}"
-             class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm"
-             placeholder="Ex: Ana" required>
-      {% if form.first_name.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.first_name.errors.0 }}</p>
-      {% endif %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Primeiro Nome</label>
+        <input type="text" name="first_name" value="{{ form.first_name.value|default_if_none:'' }}"
+               class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm"
+               placeholder="Ex: Ana" required>
+        {% if form.first_name.errors %}
+          <p class="text-red-500 text-sm mt-1">{{ form.first_name.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Último Nome</label>
+        <input type="text" name="last_name" value="{{ form.last_name.value|default_if_none:'' }}"
+               class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm"
+               placeholder="Ex: Silva" required>
+        {% if form.last_name.errors %}
+          <p class="text-red-500 text-sm mt-1">{{ form.last_name.errors.0 }}</p>
+        {% endif %}
+      </div>
     </div>
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">Último Nome</label>
-      <input type="text" name="last_name" value="{{ form.last_name.value|default_if_none:'' }}"
-             class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm"
-             placeholder="Ex: Silva" required>
-      {% if form.last_name.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.last_name.errors.0 }}</p>
+    <div style="position: relative; z-index: 1;">
+      <label for="birth_date_input" class="block text-sm font-medium text-gray-700 mb-2">
+        Data de Nascimento <span class="text-gray-400 text-xs">(opcional)</span>
+      </label>
+      <div class="relative">
+        <input type="date" 
+               name="birth_date" 
+               id="birth_date_input"
+               value="{{ form.birth_date.value|date:'Y-m-d'|default_if_none:'' }}"
+               class="w-full md:w-1/2 rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm"
+               style="position: relative; z-index: auto;">
+      </div>
+      {% if form.birth_date.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ form.birth_date.errors.0 }}</p>
       {% endif %}
     </div>
 
@@ -69,16 +88,19 @@
       {% for student in students %}
       <li id="student-row-{{ student.id }}" class="py-4 flex items-center justify-between">
           <div>
-            <a href="{% url 'student_update' class_group.id student.id %}" class="text-sm font-medium text-blue-600 hover:underline">
+            <a href="{% url 'student_form' class_group.id student.id %}" class="text-sm font-medium text-blue-600 hover:underline">
                 {{ student.first_name }} {{ student.last_name }}
-            </a>              
+            </a>
+            {% if student.birth_date %}
+              <p class="text-xs text-gray-400">Nascimento: {{ student.birth_date|date:"d/m/Y" }}</p>
+            {% endif %}            
             <p class="text-xs text-gray-500">{{ student.notes|default:"Sem observações." }}</p>
           </div>
           <div class="flex items-center space-x-4">
             <span class="text-sm {% if student.is_active %}text-green-600{% else %}text-red-500{% endif %} font-medium">
               {% if student.is_active %}Ativo{% else %}Inativo{% endif %}
             </span>
-            <a href="{% url 'student_update' class_group.id student.id %}"
+            <a href="{% url 'student_form' class_group.id student.id %}"
             class="text-blue-500 hover:text-blue-700 text-sm flex items-center space-x-1">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" stroke="currentColor"
                 viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -114,8 +136,118 @@
         </button>
       </div>
     </div>
-  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const birthDateInput = document.getElementById('birth_date_input');
+    
+    // Remove qualquer foco automático
+    if (document.activeElement && document.activeElement !== document.body) {
+        document.activeElement.blur();
+    }
+    
+    // Força o campo de data a perder o foco quando outros elementos são clicados
+    document.addEventListener('click', function(e) {
+        // Se o clique não foi no campo de data ou em seu calendário
+        if (!e.target.closest('#birth_date_input') && 
+            !e.target.closest('.datepicker') && 
+            !e.target.closest('[data-date]')) {
+            
+            if (document.activeElement === birthDateInput) {
+                birthDateInput.blur();
+                // Força o fechamento do calendário
+                birthDateInput.setAttribute('readonly', true);
+                setTimeout(() => {
+                    birthDateInput.removeAttribute('readonly');
+                }, 10);
+            }
+        }
+    });
+    
+    // Adiciona evento específico para quando o campo perde o foco
+    birthDateInput.addEventListener('blur', function() {
+        // Força o fechamento de qualquer calendário que possa estar aberto
+        this.setAttribute('readonly', true);
+        setTimeout(() => {
+            this.removeAttribute('readonly');
+        }, 10);
+    });
+    
+    // Previne que o campo mantenha foco indefinidamente
+    birthDateInput.addEventListener('change', function() {
+        setTimeout(() => {
+            this.blur();
+        }, 100);
+    });
+    
+    // Event listener para ESC key fechar o calendário
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.activeElement === birthDateInput) {
+            birthDateInput.blur();
+        }
+    });
+});
+
+// Função para confirmar exclusão de estudante
+function confirmStudentDeletion(studentId, studentName, classGroupId) {
+    // Força o campo de data a perder foco antes de abrir o modal
+    const birthDateInput = document.getElementById('birth_date_input');
+    if (document.activeElement === birthDateInput) {
+        birthDateInput.blur();
+    }
+    
+    const modal = document.getElementById('deleteModal');
+    const modalText = document.getElementById('deleteModalText');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    
+    modalText.textContent = `Tem certeza que deseja excluir o aluno "${studentName}"? Esta ação não pode ser desfeita.`;
+    
+    confirmBtn.onclick = function() {
+        deleteStudent(studentId, classGroupId);
+    };
+    
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function deleteStudent(studentId, classGroupId) {
+    fetch(`/student/${studentId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => {
+        if (response.ok) {
+            // Remove a linha do estudante da lista
+            const studentRow = document.getElementById(`student-row-${studentId}`);
+            if (studentRow) {
+                studentRow.remove();
+            }
+            closeDeleteModal();
+        } else {
+            alert('Erro ao excluir o aluno. Tente novamente.');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao excluir o aluno. Tente novamente.');
+    });
+}
+
+// Previne propagação de eventos no modal
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeDeleteModal();
+    }
+});
+</script>
 {% endblock %}
-
-
-  
