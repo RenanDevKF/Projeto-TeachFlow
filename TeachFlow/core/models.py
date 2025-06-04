@@ -33,6 +33,7 @@ class Student(models.Model):
     """Student model with basic information"""
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
+    birth_date = models.DateField(blank=True, null=True, verbose_name="Data de Nascimento")  # NOVA LINHA
     class_group = models.ForeignKey(ClassGroup, on_delete=models.CASCADE, related_name='students')
     notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
