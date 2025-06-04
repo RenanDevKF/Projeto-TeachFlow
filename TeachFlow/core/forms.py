@@ -29,10 +29,15 @@ class ClassGroupForm(forms.ModelForm):
 class StudentForm(forms.ModelForm):
     class Meta:
         model = Student
-        fields = ['first_name', 'last_name', 'notes', 'is_active']
+        fields = ['first_name', 'last_name', 'birth_date', 'notes', 'is_active']  # Adicionado birth_date
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-input'}),
             'last_name': forms.TextInput(attrs={'class': 'form-input'}),
+            'birth_date': forms.DateInput(attrs={
+                'class': 'form-input', 
+                'type': 'date',
+                'placeholder': 'dd/mm/aaaa'
+            }),  # NOVO WIDGET
             'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }
