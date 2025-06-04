@@ -5,12 +5,13 @@ from .models import *
 class ClassGroupForm(forms.ModelForm):
     class Meta:
         model = ClassGroup
-        fields = ['name', 'description', 'school', 'period', 'year', 'is_active']
+        fields = ['name', 'description', 'school', 'period', 'schedule', 'year', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-input'}),
             'description': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
             'school': forms.TextInput(attrs={'class': 'form-input'}),
             'period': forms.Select(attrs={'class': 'form-select'}),
+            'schedule': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Ex: 07:30 - 08:20'}),
             'year': forms.NumberInput(attrs={'class': 'form-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }
