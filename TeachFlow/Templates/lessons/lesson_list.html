@@ -28,16 +28,23 @@
     {% if lessons %}
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {% for lesson in lessons %}
-        <div class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md border border-gray-200">
-            <div class="text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }}</div>
-            <h2 class="font-semibold text-lg text-gray-800">{{ lesson.title }}</h2>
-            <p class="text-gray-600 mt-1 line-clamp-2">{{ lesson.content|truncatewords:20 }}</p>
-            <div class="mt-2 flex gap-1 flex-wrap">
-                {% for tag in lesson.tags.all %}
-                <span class="text-xs px-2 py-1 rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">{{ tag.name }}</span>
-                {% endfor %}
+        <div class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md border border-gray-200 flex flex-col h-full">
+            <!-- Conteúdo que cresce -->
+            <div class="flex-grow">
+                <div class="text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }}</div>
+                <h2 class="font-semibold text-lg text-gray-800">{{ lesson.title }}</h2>
+                <p class="text-gray-600 mt-1 line-clamp-2">{{ lesson.content|truncatewords:20 }}</p>
+                <div class="mt-2 flex gap-1 flex-wrap">
+                    {% for tag in lesson.tags.all %}
+                    <span class="text-xs px-2 py-1 rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">{{ tag.name }}</span>
+                    {% endfor %}
+                </div>
             </div>
-            <a href="{% url 'lesson_detail' lesson.id %}" class="text-sm text-primary mt-2 inline-block">Ver detalhes</a>
+            
+            <!-- Link fixo na base -->
+            <div class="mt-auto">
+                <a href="{% url 'lesson_detail' lesson.id %}" class="text-sm text-primary inline-block hover:underline mt-4 pt-2 border-t border-gray-100 w-full">Ver detalhes</a>
+            </div>
         </div>
         {% endfor %}
     </div>
