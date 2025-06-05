@@ -31,14 +31,38 @@
         <div class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md border border-gray-200 flex flex-col h-full">
             <!-- Conteúdo que cresce -->
             <div class="flex-grow">
-                <div class="text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }}</div>
-                <h2 class="font-semibold text-lg text-gray-800">{{ lesson.title }}</h2>
-                <p class="text-gray-600 mt-1 line-clamp-2">{{ lesson.content|truncatewords:20 }}</p>
-                <div class="mt-2 flex gap-1 flex-wrap">
+                <!-- Header com data e turma -->
+                <div class="flex justify-between items-start mb-3">
+                    <div class="text-sm text-gray-500">
+                        <i data-lucide="calendar" class="w-4 h-4 inline mr-1"></i>
+                        {{ lesson.date|date:"d/m/Y" }}
+                    </div>
+                    {% if lesson.class_group %}
+                    <div class="text-sm bg-blue-50 text-blue-700 px-2 py-1 rounded-md">
+                        <i data-lucide="users" class="w-4 h-4 inline mr-1"></i>
+                        {{ lesson.class_group.name }}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Título da aula -->
+                <h2 class="font-semibold text-lg text-gray-800 mb-2">{{ lesson.title }}</h2>
+                
+                <!-- Descrição/Conteúdo -->
+                {% if lesson.content %}
+                <p class="text-gray-600 text-sm mb-3 line-clamp-3">{{ lesson.content|truncatewords:25 }}</p>
+                {% endif %}
+                
+                <!-- Tags -->
+                {% if lesson.tags.all %}
+                <div class="flex gap-1 flex-wrap">
                     {% for tag in lesson.tags.all %}
-                    <span class="text-xs px-2 py-1 rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">{{ tag.name }}</span>
+                    <span class="text-xs px-2 py-1 rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
+                        {{ tag.name }}
+                    </span>
                     {% endfor %}
                 </div>
+                {% endif %}
             </div>
             
             <!-- Link fixo na base -->
