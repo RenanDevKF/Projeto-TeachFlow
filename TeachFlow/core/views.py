@@ -14,6 +14,7 @@ from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjectiv
 from .forms import *
 from django.utils import timezone
 from datetime import date
+from collections import defaultdict
 
 class TeacherRequiredMixin(UserPassesTestMixin):
     """Ensure that only teachers can access specific views"""
@@ -570,7 +571,7 @@ class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
 class TagCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = Tag
     fields = ['name', 'type', 'color']
-    template_name = 'tag/tag_form.html'
+    template_name = 'core/tag_form.html'  # Unifiquei o template
     
     def form_valid(self, form):
         form.instance.teacher = self.request.user.teacher_profile
@@ -579,7 +580,7 @@ class TagCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     
     def get_success_url(self):
         return reverse('tag_list')
-    
+
 @method_decorator(csrf_protect, name='dispatch')    
 class TagListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     model = Tag
@@ -600,21 +601,25 @@ class TagListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['type_choices'] = Tag.TYPE_CHOICES
+        
+        # Se não há filtro específico, organiza tags por categoria
+        if not self.request.GET.get('type'):
+            all_tags = Tag.objects.filter(
+                teacher=self.request.user.teacher_profile
+            ).order_by('name')
+            
+            # Organiza as tags por categoria
+            tags_by_type = defaultdict(list)
+            for tag in all_tags:
+                tags_by_type[tag.type].append(tag)
+            
+            # Converte para dict normal
+            context['tags_by_type'] = dict(tags_by_type)
+        else:
+            # Se há filtro, não precisamos organizar por categoria
+            context['tags_by_type'] = {}
+            
         return context
-
-@method_decorator(csrf_protect, name='dispatch')
-class TagCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
-    model = Tag
-    fields = ['name', 'type', 'color']
-    template_name = 'core/tag_form.html'
-    
-    def form_valid(self, form):
-        form.instance.teacher = self.request.user.teacher_profile
-        messages.success(self.request, "Tag criada com sucesso!")
-        return super().form_valid(form)
-    
-    def get_success_url(self):
-        return reverse('tag_list')
 
 @method_decorator(csrf_protect, name='dispatch')
 class TagUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
@@ -631,7 +636,7 @@ class TagUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
     
     def get_success_url(self):
         return reverse('tag_list')
-       
+
 @method_decorator(csrf_protect, name='dispatch')
 class QuickAddTagView(LoginRequiredMixin, View):
     def post(self, request, model_type=None, model_id=None):
@@ -674,7 +679,6 @@ class QuickAddTagView(LoginRequiredMixin, View):
             )
             messages.success(request, f'Nova tag "{tag_name}" criada com sucesso!')
         
-        # Remove a associação automática que estava aqui
         return self.get_redirect_response(model_type, model_id)
 
     def get_redirect_response(self, model_type, model_id):
