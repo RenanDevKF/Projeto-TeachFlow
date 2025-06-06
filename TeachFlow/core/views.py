@@ -162,9 +162,9 @@ class ClassGroupDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
 @method_decorator(csrf_protect, name='dispatch')
 class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     model = Lesson
-    template_name = 'lessons/lesson_list.html'  # Mantém o mesmo template
+    template_name = 'lessons/lesson_list.html'
     context_object_name = 'lessons'
-    paginate_by = 10  # Adicione paginação se desejar
+    paginate_by = 10
 
     def get_queryset(self):
         queryset = Lesson.objects.filter(
@@ -185,15 +185,33 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         if date_filter:
             queryset = queryset.filter(date=date_filter)
         
-        return queryset.order_by('-date', 'title')
+        return queryset.order_by('date', 'title')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         teacher = self.request.user.teacher_profile
+        
+        # Filtros para o template
         context['class_groups'] = ClassGroup.objects.filter(teacher=teacher)
         context['tags'] = Tag.objects.filter(teacher=teacher)
+        
+        # Separar aulas por data
+        today = date.today()
+        all_lessons = self.get_queryset()
+        
+        # Aulas futuras (ordenadas da mais próxima para a mais distante)
+        future_lessons = all_lessons.filter(date__gte=today).order_by('date', 'title')
+        
+        # Aulas passadas (ordenadas da mais recente para a mais antiga)
+        past_lessons = all_lessons.filter(date__lt=today).order_by('-date', 'title')
+        
+        context['future_lessons'] = future_lessons
+        context['past_lessons'] = past_lessons
+        context['today'] = today
+        
         return context
 
+# Suas outras views permanecem iguais...
 @method_decorator(csrf_protect, name='dispatch')
 class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView):
     model = Lesson
@@ -222,9 +240,9 @@ class LessonCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if self.object:  # Para update view
+        if self.object:
             context['selected_tags'] = self.object.tags.values_list('id', flat=True)
-        else:  # Para create view
+        else:
             context['selected_tags'] = []
         return context
 
@@ -245,9 +263,9 @@ class LessonUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if self.object:  # Para update view
+        if self.object:
             context['selected_tags'] = self.object.tags.values_list('id', flat=True)
-        else:  # Para create view
+        else:
             context['selected_tags'] = []
         return context
 
