@@ -32,29 +32,131 @@
         </div>
     </div>
 
-    <div class="bg-white shadow-sm rounded-lg overflow-hidden">
-        <div class="divide-y divide-gray-200">
-            {% for tag in tags %}
-            <div class="p-4 hover:bg-gray-50 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <span class="px-2 py-1 text-xs rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
-                        {{ tag.get_type_display }}
-                    </span>
-                    <span class="font-medium">{{ tag.name }}</span>
+    <!-- Contadores por categoria -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-blue-100 rounded-lg">
+                    <i data-lucide="book-open" class="w-5 h-5 text-blue-600"></i>
                 </div>
-                <div class="flex gap-2">
-                    <a href="#" class="text-primary hover:text-primary-dark text-sm">
-                        <i data-lucide="edit" class="w-4 h-4"></i>
-                    </a>
+                <div>
+                    <p class="text-sm text-gray-600">Tags de Aulas</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ tags_by_type.lesson|length|default:0 }}</p>
                 </div>
             </div>
-            {% empty %}
-            <div class="p-6 text-center text-gray-500">
-                Nenhuma tag cadastrada ainda.
+        </div>
+        
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-green-100 rounded-lg">
+                    <i data-lucide="notebook-text" class="w-5 h-5 text-green-600"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Tags de Exercícios</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ tags_by_type.exercise|length|default:0 }}</p>
+                </div>
             </div>
-            {% endfor %}
+        </div>
+        
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-purple-100 rounded-lg">
+                    <i data-lucide="tag" class="w-5 h-5 text-purple-600"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Tags Gerais</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ tags_by_type.general|length|default:0 }}</p>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Tags organizadas por categoria -->
+    {% if request.GET.type %}
+        <!-- Mostra apenas a categoria filtrada -->
+        <div class="bg-white shadow-sm rounded-lg overflow-hidden">
+            <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                <h3 class="text-sm font-medium text-gray-900">
+                    {% for type, name in type_choices %}
+                        {% if type == request.GET.type %}{{ name }}{% endif %}
+                    {% endfor %}
+                </h3>
+            </div>
+            <div class="divide-y divide-gray-200">
+                {% for tag in tags %}
+                <div class="p-4 hover:bg-gray-50 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <span class="px-3 py-1 text-xs font-medium rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
+                            {{ tag.name }}
+                        </span>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="{% url 'tag_form' tag.pk %}" class="text-primary hover:text-primary-dark text-sm">
+                            <i data-lucide="edit" class="w-4 h-4"></i>
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="p-6 text-center text-gray-500">
+                    Nenhuma tag encontrada para esta categoria.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <!-- Mostra todas as categorias organizadas -->
+        {% for category, category_tags in tags_by_type.items %}
+            {% if category_tags %}
+            <div class="bg-white shadow-sm rounded-lg overflow-hidden">
+                <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                    <div class="flex items-center gap-2">
+                        {% if category == 'lesson' %}
+                            <i data-lucide="book-open" class="w-4 h-4 text-blue-600"></i>
+                            <h3 class="text-sm font-medium text-gray-900">Tags de Aulas</h3>
+                        {% elif category == 'exercise' %}
+                            <i data-lucide="notebook-text" class="w-4 h-4 text-green-600"></i>
+                            <h3 class="text-sm font-medium text-gray-900">Tags de Exercícios</h3>
+                        {% elif category == 'general' %}
+                            <i data-lucide="tag" class="w-4 h-4 text-purple-600"></i>
+                            <h3 class="text-sm font-medium text-gray-900">Tags Gerais</h3>
+                        {% endif %}
+                        <span class="ml-auto text-xs text-gray-500">{{ category_tags|length }} tag{{ category_tags|length|pluralize }}</span>
+                    </div>
+                </div>
+                <div class="divide-y divide-gray-200">
+                    {% for tag in category_tags %}
+                    <div class="p-4 hover:bg-gray-50 flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 text-xs font-medium rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
+                                {{ tag.name }}
+                            </span>
+                        </div>
+                        <div class="flex gap-2">
+                            <a href="{% url 'tag_form' tag.pk %}" class="text-primary hover:text-primary-dark text-sm" title="Editar tag">
+                                <i data-lucide="edit" class="w-4 h-4"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+        
+        {% if not tags_by_type.lesson and not tags_by_type.exercise and not tags_by_type.general %}
+        <div class="bg-white shadow-sm rounded-lg p-6">
+            <div class="text-center text-gray-500">
+                <i data-lucide="tag" class="w-12 h-12 mx-auto mb-4 text-gray-300"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Nenhuma tag cadastrada</h3>
+                <p class="text-gray-500 mb-4">Comece criando sua primeira tag para organizar suas aulas e exercícios.</p>
+                <a href="{% url 'tag_form' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark">
+                    <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+                    Criar primeira tag
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
 </div>
 
 <script>
