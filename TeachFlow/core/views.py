@@ -701,61 +701,85 @@ class CheckTagAPIView(LoginRequiredMixin, View):
             }, status=500)
 
 # Versão melhorada da QuickAddTagView
-@method_decorator(csrf_protect, name='dispatch')
+@method_decorator(csrf_exempt, name='dispatch')
 class QuickAddTagView(LoginRequiredMixin, View):
     def post(self, request, model_type=None, model_id=None):
-        tag_name = request.POST.get('tag_name', '').strip()
-        
-        if not tag_name:
-            messages.error(request, "O nome da tag não pode estar vazio")
-            return self.get_redirect_response(model_type, model_id)
-        
-        # Validações adicionais
-        if len(tag_name) < 2:
-            messages.error(request, "O nome da tag deve ter pelo menos 2 caracteres")
-            return self.get_redirect_response(model_type, model_id)
-            
-        if len(tag_name) > 50:
-            messages.error(request, "O nome da tag deve ter no máximo 50 caracteres")
-            return self.get_redirect_response(model_type, model_id)
-        
-        # Validação de caracteres permitidos
-        if not re.match(r'^[a-zA-ZÀ-ÿ0-9\s\-_]+$', tag_name):
-            messages.error(request, "O nome da tag pode conter apenas letras, números, espaços, hífens e underscores")
-            return self.get_redirect_response(model_type, model_id)
-        
-        # Normaliza o nome da tag
-        tag_name_normalized = tag_name.lower()
-        
-        # Verifica se tag já existe para este professor
-        existing_tag = Tag.objects.filter(
-            name__iexact=tag_name_normalized,
-            teacher=request.user.teacher_profile
-        ).first()
-        
-        if existing_tag:
-            # Se a tag já existe, verifica se é do tipo correto
-            if model_type and existing_tag.type != model_type:
-                messages.warning(request, 
-                    f'Tag "{tag_name}" já existe como tipo {existing_tag.get_type_display()}. '
-                    f'Para usar em {model_type}, crie uma tag específica.')
-            else:
-                # Adiciona a tag existente ao modelo
-                model = self.get_model_instance(model_type, model_id)
-                if model and hasattr(model, 'tags'):
-                    model.tags.add(existing_tag)
-                    messages.success(request, f'Tag "{tag_name}" adicionada com sucesso!')
+        try:
+            tag_name = ''
+
+            # Compatível com form-data e JSON
+            if request.method == 'POST':
+                if request.content_type == 'application/json':
+                    try:
+                        data = json.loads(request.body)
+                        tag_name = data.get('tag_name', '').strip()
+                    except json.JSONDecodeError:
+                        tag_name = ''
                 else:
-                    messages.error(request, 'Não foi possível adicionar a tag')
-            
-            return self.get_redirect_response(model_type, model_id)
-            
-        # Restante do código para criar nova tag...
-    
+                    tag_name = request.POST.get('tag_name', '').strip()
+
+            # Validações básicas
+            if not tag_name:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'O nome da tag não pode estar vazio'
+                }, status=400)
+
+            if len(tag_name) < 2:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'O nome da tag deve ter pelo menos 2 caracteres'
+                }, status=400)
+
+            if not re.match(r'^[\w\sÀ-ÿ\-]+$', tag_name):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Use apenas letras, números, espaços, hífens e underscores'
+                }, status=400)
+
+            # Verifica se a tag já existe (case-insensitive)
+            existing_tag = Tag.objects.filter(
+                name__iexact=tag_name,
+                teacher=request.user.teacher_profile
+            ).first()
+
+            if existing_tag:
+                tag = existing_tag
+                created = False
+            else:
+                tag = Tag.objects.create(
+                    name=tag_name,
+                    teacher=request.user.teacher_profile,
+                    type=model_type if model_type else 'general',
+                    color=Tag.generate_random_color()
+                )
+                created = True
+
+            # Associa a tag ao modelo
+            model = self.get_model_instance(model_type, model_id)
+            if model and hasattr(model, 'tags'):
+                model.tags.add(tag)
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Tag "{tag_name}" {"criada e adicionada" if created else "já existia e foi associada"} com sucesso!',
+                'tag': {
+                    'id': tag.id,
+                    'name': tag.name,
+                    'color': tag.color
+                }
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Erro interno: {str(e)}'
+            }, status=500)
+
     def get_model_instance(self, model_type, model_id):
         if not model_type or not model_id:
             return None
-            
+
         try:
             if model_type == 'lesson':
                 return Lesson.objects.get(
