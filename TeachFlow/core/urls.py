@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 from .views import DuplicateLessonView
-from .views import QuickAddTagView, TagListView
+from .views import QuickAddTagView, TagListView, CheckTagAPIView
 
 urlpatterns = [
     # Class Group URLs
@@ -49,5 +49,11 @@ urlpatterns = [
     path('tags/new/', views.TagCreateView.as_view(), name='tag_form'),
     path('tags/<int:pk>/edit/', views.TagUpdateView.as_view(), name='tag_update'),
     path('tags/add/<str:model_type>/<int:model_id>/', QuickAddTagView.as_view(), name='quick_add_tag'),
+    
+    # API para verificar se tag existe
+    path('api/check-tag/', CheckTagAPIView.as_view(), name='check_tag_api'),
+    
+    # Quick add tag (se ainda não existir)
+    path('quick-add-tag/<str:model_type>/<int:model_id>/', QuickAddTagView.as_view(), name='quick_add_tag'),
     
 ]
