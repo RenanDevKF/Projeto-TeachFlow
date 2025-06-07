@@ -45,15 +45,13 @@ urlpatterns = [
     
     path('dashboard/', views.dashboard_view, name='dashboard'),
     
+    # Tags
     path('tags/', views.TagListView.as_view(), name='tag_list'),
     path('tags/new/', views.TagCreateView.as_view(), name='tag_form'),
     path('tags/<int:pk>/edit/', views.TagUpdateView.as_view(), name='tag_update'),
-    path('tags/add/<str:model_type>/<int:model_id>/', QuickAddTagView.as_view(), name='quick_add_tag'),
+    path('tags/add/<str:model_type>/<int:model_id>/', views.QuickAddTagView.as_view(), name='quick_add_tag'),
     
-    # API para verificar se tag existe
-    path('api/check-tag/', CheckTagAPIView.as_view(), name='check_tag_api'),
-    
-    # Quick add tag (se ainda não existir)
-    path('quick-add-tag/<str:model_type>/<int:model_id>/', QuickAddTagView.as_view(), name='quick_add_tag'),
+    # API para verificar se tag existe (se ainda for necessário)
+    path('api/check-tag/', views.CheckTagAPIView.as_view(), name='check_tag_api'),
     
 ]
