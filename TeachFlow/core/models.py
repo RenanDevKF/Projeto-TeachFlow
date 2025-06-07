@@ -77,6 +77,11 @@ class Tag(models.Model):
             # Atribui uma cor aleatória se não tiver definida
             self.color = random.choice(self.COLOR_CHOICES)[0]
         super().save(*args, **kwargs)
+        
+    @staticmethod
+    def generate_random_color():
+        return random.choice([color[0] for color in Tag.COLOR_CHOICES])
+
     
 class LearningObjective(models.Model):
     """Learning objectives defined by curriculum or teacher"""
