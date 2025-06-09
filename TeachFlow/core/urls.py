@@ -27,6 +27,9 @@ urlpatterns = [
     path('lessons/<int:pk>/', views.LessonDetailView.as_view(), name='lesson_detail'),
     path('lessons/<int:pk>/edit/', views.LessonUpdateView.as_view(), name='lesson_form'),
     path('lessons/<int:pk>/delete/', views.LessonDeleteView.as_view(), name='lesson_delete'),
+    path('lessons/<int:lesson_id>/exercises/<int:exercise_id>/toggle-applied/', 
+         views.toggle_exercise_applied, 
+         name='toggle_exercise_applied'),
     
     # Exercise URLs
     path('exercises/', views.ExerciseListView.as_view(), name='exercise_list'),
