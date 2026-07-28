@@ -4,6 +4,8 @@ from django.contrib.admin.models import LogEntry
 from accounts.models import Teacher
 import random
 
+def current_year():
+    return timezone.now().year
 
 class ClassGroup(models.Model):
     """Represents a class or group of students"""
@@ -18,7 +20,7 @@ class ClassGroup(models.Model):
     period = models.CharField(max_length=10, choices=PERIOD_CHOICES, blank=True)
     schedule = models.CharField(max_length=50, blank=True, null=True, verbose_name="Horário")  # NOVA LINHA
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='class_groups')
-    year = models.IntegerField(default=timezone.now().year)
+    year = models.IntegerField(default=current_year)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
