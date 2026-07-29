@@ -116,7 +116,21 @@
                         </span>
                     {% endif %}
                 </div>
-                <p class="text-sm text-gray-600">{{ turma.school }} | {{ turma.year }} | {{ turma.period }}</p>
+                <p class="text-sm text-gray-600">
+                    {% if turma.school %}
+                        {{ turma.school }} |
+                    {% endif %}
+
+                    {{ turma.year }}
+
+                    {% if turma.period %}
+                        | {{ turma.period }}
+                    {% endif %}
+
+                    {% if turma.schedule %}
+                        | {{ turma.schedule }}
+                    {% endif %}
+                </p>
                 <p class="mt-2 text-gray-500 text-sm">{{ turma.description|truncatewords:18 }}</p>
                 
                 <div class="mt-auto pt-4">
