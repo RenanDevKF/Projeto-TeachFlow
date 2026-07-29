@@ -73,6 +73,7 @@ class Teacher(models.Model):
     bio = models.TextField(blank=True)
     subject_area = models.CharField(max_length=100, blank=True)
     phone = models.CharField(max_length=20, blank=True)
+    display_name = models.CharField(max_length=100, blank=True)
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"

@@ -7,13 +7,17 @@ from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib import messages
 from django.db.models import Q
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_protect
-from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse, Http404, HttpResponseRedirect
 from datetime import date
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea
 from .forms import *
 from django.utils import timezone
 from datetime import date
+from collections import defaultdict
+import json
+import re
 
 class TeacherRequiredMixin(UserPassesTestMixin):
     """Ensure that only teachers can access specific views"""
@@ -66,10 +70,41 @@ class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     context_object_name = 'class_groups'
     
     def get_queryset(self):
-        return ClassGroup.objects.filter(teacher=self.request.user.teacher_profile).prefetch_related('students', 'lessons')
+        queryset = ClassGroup.objects.filter(
+            teacher=self.request.user.teacher_profile
+        ).prefetch_related('students', 'lessons')
+        
+        # Adicione os filtros aqui
+        search = self.request.GET.get('search')
+        school = self.request.GET.get('school')
+        year = self.request.GET.get('year')
+        period = self.request.GET.get('period')
+        
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(description__icontains=search) |
+                Q(school__icontains=search)
+            )
+        
+        if school:
+            queryset = queryset.filter(school__icontains=school)
+            
+        if year:
+            queryset = queryset.filter(year=year)
+            
+        if period:
+            queryset = queryset.filter(period=period)
+            
+        return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        # Adicione os valores atuais dos filtros ao contexto
+        context['search'] = self.request.GET.get('search', '')
+        context['school'] = self.request.GET.get('school', '')
+        context['year'] = self.request.GET.get('year', '')
+        context['period'] = self.request.GET.get('period', '')
         return context
     
 @method_decorator(csrf_protect, name='dispatch')
@@ -81,7 +116,7 @@ class ClassGroupDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = ClassGroup
-    template_name = 'classes/class_group_create.html'
+    template_name = 'classes/class_group_form.html'
     form_class = ClassGroupForm
     success_url = reverse_lazy('class_group_list')
     
@@ -98,7 +133,7 @@ class ClassGroupCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView)
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, UpdateView):
     model = ClassGroup
-    template_name = 'classes/class_group_create.html'
+    template_name = 'classes/class_group_form.html'
     form_class = ClassGroupForm
     success_url = reverse_lazy('class_group_list')
     
@@ -130,32 +165,71 @@ class ClassGroupDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
 @method_decorator(csrf_protect, name='dispatch')
 class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     model = Lesson
-    template_name = 'lessons/lesson_list.html'  # Mantém o mesmo template
+    template_name = 'lessons/lesson_list.html'
     context_object_name = 'lessons'
-    paginate_by = 10  # Adicione paginação se desejar
+    paginate_by = 10
 
     def get_queryset(self):
         queryset = Lesson.objects.filter(
             class_group__teacher=self.request.user.teacher_profile
-        ).select_related('class_group')
+        ).select_related('class_group').prefetch_related('tags')
         
-        # Filtra por turma se o ID foi fornecido
-        class_group_id = self.kwargs.get('class_group_id')
+        # Filtros
+        class_group_id = self.request.GET.get('class')
+        tag_id = self.request.GET.get('tag')
+        date_filter = self.request.GET.get('date')
+        
         if class_group_id:
             queryset = queryset.filter(class_group_id=class_group_id)
         
-        return queryset.order_by('-date', 'title')  # Ordenação consistente
+        if tag_id:
+            queryset = queryset.filter(tags__id=tag_id)
+        
+        if date_filter:
+            queryset = queryset.filter(date=date_filter)
+        
+        return queryset.order_by('date', 'title')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['current_group'] = self.kwargs.get('class_group_id')
+        teacher = self.request.user.teacher_profile
+        
+        # Filtros para o template
+        context['class_groups'] = ClassGroup.objects.filter(teacher=teacher)
+        context['tags'] = Tag.objects.filter(teacher=teacher)
+        
+        # Separar aulas por data
+        today = date.today()
+        all_lessons = self.get_queryset()
+        
+        # Aulas futuras (ordenadas da mais próxima para a mais distante)
+        future_lessons = all_lessons.filter(date__gte=today).order_by('date', 'title')
+        
+        # Aulas passadas (ordenadas da mais recente para a mais antiga)
+        past_lessons = all_lessons.filter(date__lt=today).order_by('-date', 'title')
+        
+        context['future_lessons'] = future_lessons
+        context['past_lessons'] = past_lessons
+        context['today'] = today
+        
         return context
 
+# Suas outras views permanecem iguais...
 @method_decorator(csrf_protect, name='dispatch')
 class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView):
     model = Lesson
     template_name = 'lessons/lesson_detail.html'
     context_object_name = 'lesson'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Adicionar informações sobre exercícios aplicados
+        applied_exercises_key = f'applied_exercises_lesson_{self.object.id}'
+        applied_exercises = self.request.session.get(applied_exercises_key, [])
+        context['applied_exercises'] = applied_exercises
+        
+        return context
 
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -176,6 +250,14 @@ class LessonCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse('lesson_detail', kwargs={'pk': self.object.pk})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object:
+            context['selected_tags'] = self.object.tags.values_list('id', flat=True)
+        else:
+            context['selected_tags'] = []
+        return context
 
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -191,6 +273,14 @@ class LessonUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
 
     def get_success_url(self):
         return reverse('lesson_detail', kwargs={'pk': self.object.pk})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object:
+            context['selected_tags'] = self.object.tags.values_list('id', flat=True)
+        else:
+            context['selected_tags'] = []
+        return context
 
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -305,6 +395,67 @@ class ExerciseDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
     def get_queryset(self):
         # Só permite deletar exercícios que o professor criou
         return Exercise.objects.filter(created_by=self.request.user.teacher_profile)
+    
+    
+@require_POST
+@csrf_protect
+@login_required
+def toggle_exercise_applied(request, lesson_id, exercise_id):
+    """
+    Marca/desmarca um exercício como aplicado em uma aula específica
+    """
+    try:
+        # Verificar se o professor tem acesso à aula
+        lesson = get_object_or_404(
+            Lesson, 
+            pk=lesson_id, 
+            class_group__teacher=request.user.teacher_profile
+        )
+        
+        # Verificar se o exercício existe e está relacionado à aula
+        exercise = get_object_or_404(Exercise, pk=exercise_id)
+        
+        # Verificar se o exercício já está na aula
+        if exercise in lesson.exercises.all():
+            # Se já está, verificar se está marcado como aplicado
+            # Vamos usar um campo personalizado ou relacionamento
+            # Primeiro, vamos verificar se existe um modelo intermediário
+            
+            # Como não há um modelo intermediário explícito, vamos usar
+            # a abordagem de adicionar/remover da lista de exercícios aplicados
+            
+            # Vamos criar um campo separado para exercícios aplicados
+            # Por enquanto, usando a abordagem com session ou cache
+            
+            applied_exercises_key = f'applied_exercises_lesson_{lesson_id}'
+            applied_exercises = request.session.get(applied_exercises_key, [])
+            
+            if exercise_id in applied_exercises:
+                applied_exercises.remove(exercise_id)
+                is_applied = False
+            else:
+                applied_exercises.append(exercise_id)
+                is_applied = True
+                
+            request.session[applied_exercises_key] = applied_exercises
+            request.session.modified = True
+            
+            return JsonResponse({
+                'success': True,
+                'is_applied': is_applied,
+                'message': 'Exercício marcado como aplicado' if is_applied else 'Exercício desmarcado'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Exercício não está relacionado a esta aula'
+            })
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao processar solicitação: {str(e)}'
+        })
     
 # Learning Objective Views
 @method_decorator(csrf_protect, name='dispatch')
@@ -434,7 +585,7 @@ class StudentCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
         instance.class_group = self.class_group
         instance.save()
         messages.success(self.request, "Aluno cadastrado com sucesso!")
-        return redirect(reverse('student_create', kwargs={'class_group_id': self.class_group.pk}))
+        return redirect(reverse('student_form', kwargs={'class_group_id': self.class_group.pk}))
     
     def get_success_url(self):
         # Redireciona para a lista de alunos da turma
@@ -475,7 +626,7 @@ class StudentUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
         form.instance.class_group = self.class_group  # Garante que o relacionamento está mantido
         form.save()
         messages.success(self.request, "Aluno atualizado com sucesso!")
-        return redirect(reverse('student_create', kwargs={'class_group_id': self.class_group.pk}))
+        return redirect(reverse('student_form', kwargs={'class_group_id': self.class_group.pk}))
 
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -497,12 +648,220 @@ class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
             return JsonResponse({'success': True})
 
         messages.success(request, "Aluno excluído com sucesso.")
-        return redirect(reverse_lazy('student_create', kwargs={'class_group_id': class_group_id}))
+        return redirect(reverse_lazy('student_form', kwargs={'class_group_id': class_group_id}))
     
     def get_success_url(self):
-        return reverse_lazy('student_create', kwargs={'class_group_id': self.object.class_group.id})
+        return reverse_lazy('student_form', kwargs={'class_group_id': self.object.class_group.id})
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['class_group'] = self.get_object().class_group
         return context
+ 
+ 
+@method_decorator(csrf_protect, name='dispatch')
+class TagCreateView(LoginRequiredMixin, CreateView):  # Removido TeacherRequiredMixin temporariamente
+    model = Tag
+    fields = ['name', 'type', 'color']
+    template_name = 'core/tag_form.html'
+    
+    def form_valid(self, form):
+        form.instance.teacher = self.request.user.teacher_profile
+        messages.success(self.request, "Tag criada com sucesso!")
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('tag_list')
+
+@method_decorator(csrf_protect, name='dispatch')    
+class TagListView(LoginRequiredMixin, ListView):  # Removido TeacherRequiredMixin temporariamente
+    model = Tag
+    template_name = 'tag/tag_list.html'
+    context_object_name = 'tags'
+    
+    def get_queryset(self):
+        # Filtra tags apenas do professor logado
+        queryset = Tag.objects.filter(teacher=self.request.user.teacher_profile)
+        
+        # Filtro por tipo (opcional)
+        tag_type = self.request.GET.get('type')
+        if tag_type:
+            queryset = queryset.filter(type=tag_type)
+            
+        return queryset.order_by('name')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Adiciona TYPE_CHOICES se existir no modelo
+        if hasattr(Tag, 'TYPE_CHOICES'):
+            context['type_choices'] = Tag.TYPE_CHOICES
+        
+        # Se não há filtro específico, organiza tags por categoria
+        if not self.request.GET.get('type'):
+            all_tags = Tag.objects.filter(
+                teacher=self.request.user.teacher_profile
+            ).order_by('name')
+            
+            # Organiza as tags por categoria
+            tags_by_type = defaultdict(list)
+            for tag in all_tags:
+                tags_by_type[tag.type].append(tag)
+            
+            # Converte para dict normal
+            context['tags_by_type'] = dict(tags_by_type)
+        else:
+            # Se há filtro, não precisamos organizar por categoria
+            context['tags_by_type'] = {}
+            
+        return context
+
+@method_decorator(csrf_protect, name='dispatch')
+class TagUpdateView(LoginRequiredMixin, UpdateView):  # Removido TeacherRequiredMixin temporariamente
+    model = Tag
+    fields = ['name', 'type', 'color']
+    template_name = 'core/tag_form.html'
+    
+    def get_queryset(self):
+        return Tag.objects.filter(teacher=self.request.user.teacher_profile)
+    
+    def form_valid(self, form):
+        messages.success(self.request, "Tag atualizada com sucesso!")
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('tag_list')
+
+@method_decorator(csrf_exempt, name='dispatch')
+class CheckTagAPIView(LoginRequiredMixin, View):
+    """
+    API endpoint para verificar se uma tag já existe
+    """
+    
+    def get(self, request):
+        try:
+            tag_name = request.GET.get('name', '').strip().lower()
+            
+            if not tag_name:
+                return JsonResponse({
+                    'exists': False,
+                    'error': 'Nome da tag não fornecido'
+                }, status=400)
+            
+            # Verifica se a tag já existe para este professor
+            tag_exists = Tag.objects.filter(
+                name__iexact=tag_name,
+                teacher=request.user.teacher_profile
+            ).exists()
+            
+            return JsonResponse({
+                'exists': tag_exists,
+                'tag_name': tag_name
+            })
+            
+        except AttributeError:
+            # Usuário não tem teacher_profile
+            return JsonResponse({
+                'exists': False,
+                'error': 'Perfil de professor não encontrado'
+            }, status=403)
+            
+        except Exception as e:
+            return JsonResponse({
+                'exists': False,
+                'error': f'Erro interno: {str(e)}'
+            }, status=500)
+
+# Versão melhorada da QuickAddTagView
+@method_decorator(csrf_exempt, name='dispatch')
+class QuickAddTagView(LoginRequiredMixin, View):
+    def post(self, request, model_type=None, model_id=None):
+        try:
+            tag_name = ''
+
+            # Compatível com form-data e JSON
+            if request.method == 'POST':
+                if request.content_type == 'application/json':
+                    try:
+                        data = json.loads(request.body)
+                        tag_name = data.get('tag_name', '').strip()
+                    except json.JSONDecodeError:
+                        tag_name = ''
+                else:
+                    tag_name = request.POST.get('tag_name', '').strip()
+
+            # Validações básicas
+            if not tag_name:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'O nome da tag não pode estar vazio'
+                }, status=400)
+
+            if len(tag_name) < 2:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'O nome da tag deve ter pelo menos 2 caracteres'
+                }, status=400)
+
+            if not re.match(r'^[\w\sÀ-ÿ\-]+$', tag_name):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Use apenas letras, números, espaços, hífens e underscores'
+                }, status=400)
+
+            # Verifica se a tag já existe (case-insensitive)
+            existing_tag = Tag.objects.filter(
+                name__iexact=tag_name,
+                teacher=request.user.teacher_profile
+            ).first()
+
+            if existing_tag:
+                tag = existing_tag
+                created = False
+            else:
+                tag = Tag.objects.create(
+                    name=tag_name,
+                    teacher=request.user.teacher_profile,
+                    type=model_type if model_type else 'general',
+                    color=Tag.generate_random_color()
+                )
+                created = True
+
+            # Associa a tag ao modelo
+            model = self.get_model_instance(model_type, model_id)
+            if model and hasattr(model, 'tags'):
+                model.tags.add(tag)
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Tag "{tag_name}" {"criada e adicionada" if created else "já existia e foi associada"} com sucesso!',
+                'tag': {
+                    'id': tag.id,
+                    'name': tag.name,
+                    'color': tag.color
+                }
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Erro interno: {str(e)}'
+            }, status=500)
+
+    def get_model_instance(self, model_type, model_id):
+        if not model_type or not model_id:
+            return None
+
+        try:
+            if model_type == 'lesson':
+                return Lesson.objects.get(
+                    pk=model_id,
+                    class_group__teacher=self.request.user.teacher_profile
+                )
+            elif model_type == 'exercise':
+                return Exercise.objects.get(
+                    pk=model_id,
+                    lessons__class_group__teacher=self.request.user.teacher_profile
+                )
+        except (Lesson.DoesNotExist, Exercise.DoesNotExist):
+            return None

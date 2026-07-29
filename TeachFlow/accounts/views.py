@@ -1,16 +1,17 @@
 # accounts/views.py
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import CreateView, UpdateView
+from django.contrib.auth.forms import PasswordChangeForm
+from django.views.generic import CreateView, UpdateView, View
 from django.urls import reverse_lazy, reverse
 from django.views.decorators.cache import never_cache
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.core.exceptions import ValidationError
 from django.contrib import messages
-from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.db import transaction
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.http import JsonResponse
 from .models import CustomUser, Subscription
 from .forms import CustomUserCreationForm
@@ -140,14 +141,74 @@ class CustomLogoutView(LogoutView):
 
 # View de perfil
 @method_decorator(never_cache, name='dispatch')
-class ProfileUpdateView(LoginRequiredMixin, UpdateView):
-    model = CustomUser
-    fields = ['first_name', 'last_name', 'email']
+class ProfileView(LoginRequiredMixin, View):
     template_name = 'accounts/profile.html'
-    success_url = reverse_lazy('profile')
     
-    def get_object(self):
-        return self.request.user
+    def get(self, request):
+        return render(request, self.template_name)
+    
+    def post(self, request):
+        form_type = request.POST.get('form_type')
+        
+        if form_type == 'profile_info':
+            # Atualizar informações do perfil
+            user = request.user
+            user.first_name = request.POST.get('first_name')
+            user.last_name = request.POST.get('last_name')
+            user.email = request.POST.get('email')
+            user.save()
+            
+            # Atualizar perfil do professor
+            teacher_profile = user.teacher_profile
+            teacher_profile.display_name = request.POST.get('display_name')
+            teacher_profile.phone = request.POST.get('phone')
+            teacher_profile.subject_area = request.POST.get('subject_area')
+            teacher_profile.bio = request.POST.get('bio')
+            teacher_profile.save()
+            
+            messages.success(request, 'Informações atualizadas com sucesso!')
+            
+        elif form_type == 'password_change':
+            # Atualizar senha
+            form = PasswordChangeForm(request.user, request.POST)
+            if form.is_valid():
+                user = form.save()
+                update_session_auth_hash(request, user)  # Importante para manter a sessão ativa
+                messages.success(request, 'Senha alterada com sucesso!')
+            else:
+                for error in form.errors.values():
+                    messages.error(request, error[0])
+                
+        elif form_type == 'subscription_change':
+            # Atualizar plano de assinatura
+            plan = request.POST.get('plan')
+            if plan in [choice[0] for choice in SubscriptionPlan.CHOICES]:
+                user = request.user
+                
+                # Atualizar plano no perfil do usuário
+                user.subscription_plan = plan
+                user.save()
+                
+                # Atualizar ou criar registro de assinatura
+                subscription, created = Subscription.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        'plan': plan,
+                        'external_id': f'pg_{uuid.uuid4().hex[:12]}',
+                        'is_active': True
+                    }
+                )
+                
+                if not created:
+                    subscription.plan = plan
+                    subscription.is_active = True
+                    subscription.save()
+                
+                messages.success(request, f'Plano atualizado para {dict(SubscriptionPlan.CHOICES)[plan]}!')
+            else:
+                messages.error(request, 'Plano inválido!')
+                
+        return redirect('profile')
     
     
  #função isolada para validação de email e username   

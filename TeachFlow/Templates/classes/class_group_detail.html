@@ -13,7 +13,7 @@
             <p class="text-sm text-gray-500 mt-1">{{ class_group.school }} · {{ class_group.period }} · {{ class_group.year }}</p>
         </div>
         <div class="space-x-2">
-            <a href="{% url 'class_group_update' class_group.id %}" class="text-sm text-blue-600 hover:underline">Editar</a>
+            <a href="{% url 'class_group_form' class_group.id %}" class="text-sm text-blue-600 hover:underline">Editar</a>
             <a href="{% url 'class_group_delete' class_group.id %}" class="text-sm text-red-600 hover:underline">Excluir</a>
         </div>
     </div>
@@ -41,7 +41,7 @@
     <!-- Ações -->
     <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-semibold text-gray-700">Alunos</h3>
-        <a href="{% url 'student_create' class_group.id %}" class="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-700 transition">
+        <a href="{% url 'student_form' class_group.id %}" class="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-700 transition">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -73,8 +73,39 @@
     <!-- Aulas -->
     <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-semibold text-gray-700">Aulas</h3>
-        <a href="{% url 'lesson_list' %}?class_group={{ class_group.id }}" class="text-sm text-primary hover:underline">Ver aulas</a>
+        <div class="space-x-2">
+            <a href="{% url 'lesson_list' %}?class_group={{ class_group.id }}" class="text-sm text-primary hover:underline">Ver todas</a>
+            <a href="{% url 'lesson_form' %}?class_group={{ class_group.id }}" class="text-sm text-blue-600 hover:underline">Nova aula</a>
+        </div>
     </div>
+
+    {% if class_group.lessons.all %}
+    <ul class="divide-y divide-gray-200 mb-8">
+        {% for lesson in class_group.lessons.all|slice:":5" %}
+        <li class="py-3">
+            <div class="flex justify-between items-start">
+                <div>
+                    <a href="{% url 'lesson_detail' lesson.id %}" class="text-blue-600 hover:underline font-medium">{{ lesson.title }}</a>
+                    <p class="text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }}</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    {% if lesson.tags.all %}
+                    <div class="flex flex-wrap gap-1">
+                        {% for tag in lesson.tags.all %}
+                        <span class="px-2 py-0.5 text-xs rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
+                            {{ tag.name }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-gray-500 mb-8">Nenhuma aula registrada ainda.</p>
+    {% endif %}
 
 </div>
 {% endblock %}

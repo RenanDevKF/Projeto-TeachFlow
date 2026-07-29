@@ -5,12 +5,13 @@ from .models import *
 class ClassGroupForm(forms.ModelForm):
     class Meta:
         model = ClassGroup
-        fields = ['name', 'description', 'school', 'period', 'year', 'is_active']
+        fields = ['name', 'description', 'school', 'period', 'schedule', 'year', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-input'}),
             'description': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
             'school': forms.TextInput(attrs={'class': 'form-input'}),
             'period': forms.Select(attrs={'class': 'form-select'}),
+            'schedule': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Ex: 07:30 - 08:20'}),
             'year': forms.NumberInput(attrs={'class': 'form-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }
@@ -28,10 +29,15 @@ class ClassGroupForm(forms.ModelForm):
 class StudentForm(forms.ModelForm):
     class Meta:
         model = Student
-        fields = ['first_name', 'last_name', 'notes', 'is_active']
+        fields = ['first_name', 'last_name', 'birth_date', 'notes', 'is_active']  # Adicionado birth_date
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-input'}),
             'last_name': forms.TextInput(attrs={'class': 'form-input'}),
+            'birth_date': forms.DateInput(attrs={
+                'class': 'form-input', 
+                'type': 'date',
+                'placeholder': 'dd/mm/aaaa'
+            }),  # NOVO WIDGET
             'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }
@@ -65,7 +71,8 @@ class LessonForm(forms.ModelForm):
             'title': forms.TextInput(attrs={'class': 'form-input'}),
             'content': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 4}),
             'performance_notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
-            'exercises': forms.SelectMultiple(attrs={'class': 'form-multiselect'}),
+            'exercises': forms.SelectMultiple(attrs={'class': 'hidden'}),  # Nosso custom widget vai cuidar disso
+            'tags': forms.SelectMultiple(attrs={'class': 'hidden'}),  # Nosso custom widget vai cuidar disso
         }
 
     def __init__(self, *args, **kwargs):
@@ -75,7 +82,11 @@ class LessonForm(forms.ModelForm):
         if teacher:
             self.fields['exercises'].queryset = Exercise.objects.filter(created_by=teacher)
             self.fields['class_group'].queryset = ClassGroup.objects.filter(teacher=teacher)
-            self.fields['tags'].queryset = Tag.objects.filter(teacher=teacher)
+            # Filtra tags apenas do tipo 'lesson' ou 'general'
+            self.fields['tags'].queryset = Tag.objects.filter(
+                teacher=teacher,
+                type__in=['lesson', 'general']
+            ).distinct()
             
 class ExerciseForm(forms.ModelForm):
     class Meta:
@@ -86,8 +97,8 @@ class ExerciseForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 4}),
             'duration': forms.NumberInput(attrs={'class': 'form-input'}),
             'materials': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
-            'objectives': forms.SelectMultiple(attrs={'class': 'form-multiselect'}),
-            'tags': forms.SelectMultiple(attrs={'class': 'form-multiselect'}),
+            'objectives': forms.SelectMultiple(attrs={'class': 'hidden'}),  # Custom widget
+            'tags': forms.SelectMultiple(attrs={'class': 'hidden'}),  # Custom widget
         }
 
     def __init__(self, *args, **kwargs):
@@ -95,4 +106,9 @@ class ExerciseForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if teacher:
             self.fields['objectives'].queryset = LearningObjective.objects.filter(teacher=teacher)
-            self.fields['tags'].queryset = Tag.objects.filter(teacher=teacher)
+            # Filtra tags apenas do tipo 'exercise' ou 'general'
+            self.fields['tags'].queryset = Tag.objects.filter(
+                teacher=teacher,
+                type__in=['exercise', 'general']
+            ).distinct()
+    
