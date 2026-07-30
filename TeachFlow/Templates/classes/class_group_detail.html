@@ -211,31 +211,60 @@
     </div>
 
     {% if class_group.lessons.all %}
-    <ul class="divide-y divide-gray-200 mb-8">
+    <ul class="mb-8 divide-y divide-gray-200">
         {% for lesson in class_group.lessons.all|slice:":5" %}
-        <li class="py-3">
-            <div class="flex justify-between items-start">
-                <div>
-                    <a href="{% url 'lesson_detail' lesson.id %}" class="text-blue-600 hover:underline font-medium">{{ lesson.title }}</a>
-                    <p class="text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }}</p>
+        <li>
+            <a
+                href="{% url 'lesson_detail' lesson.id %}"
+                class="group grid grid-cols-1 gap-3 rounded-md px-3 py-3 transition-colors duration-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center sm:gap-6"
+                aria-label="Ver detalhes da aula {{ lesson.title }}"
+            >
+                <!-- Título e data -->
+                <div class="min-w-0">
+                    <p class="font-medium text-blue-600 transition-colors group-hover:text-primary">
+                        {{ lesson.title }}
+                    </p>
+
+                    <p class="mt-0.5 text-sm text-gray-500">
+                        {{ lesson.date|date:"d/m/Y" }}
+                    </p>
                 </div>
-                <div class="flex items-center space-x-2">
-                    {% if lesson.tags.all %}
-                    <div class="flex flex-wrap gap-1">
-                        {% for tag in lesson.tags.all %}
-                        <span class="px-2 py-0.5 text-xs rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
-                            {{ tag.name }}
-                        </span>
-                        {% endfor %}
-                    </div>
+
+                <!-- Tags -->
+                {% if lesson.tags.all %}
+                <div class="flex min-w-0 flex-wrap items-center gap-1 sm:justify-end">
+                    {% for tag in lesson.tags.all|slice:":6" %}
+                    <span
+                        class="whitespace-nowrap rounded-full px-2 py-0.5 text-xs"
+                        style="background-color: {{ tag.color }}20; color: {{ tag.color }};"
+                    >
+                        {{ tag.name }}
+                    </span>
+                    {% endfor %}
+
+                    {% if lesson.tags.count > 6 %}
+                    <span
+                        class="whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500"
+                        title="Tags ocultas: {% for tag in lesson.tags.all %}{% if forloop.counter > 6 %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}"
+                    >
+                        +{{ lesson.tags.count|add:"-6" }}
+                        {% if lesson.tags.count|add:"-6" == 1 %}
+                            tag
+                        {% else %}
+                            tags
+                        {% endif %}
+                    </span>
                     {% endif %}
                 </div>
-            </div>
+                {% endif %}
+            </a>
         </li>
         {% endfor %}
     </ul>
     {% else %}
-    <p class="text-gray-500 mb-8">Nenhuma aula registrada ainda.</p>
+    <p class="mb-8 text-gray-500">
+        Nenhuma aula registrada ainda.
+    </p>
     {% endif %}
 
 </div>
