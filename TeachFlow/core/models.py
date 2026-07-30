@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 from django.contrib.admin.models import LogEntry
 from accounts.models import Teacher
@@ -25,8 +26,17 @@ class ClassGroup(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    class Meta:  # NOVA SEÇÃO
+    class Meta:
         ordering = ['period', 'schedule', 'name']
+        constraints = [
+            models.UniqueConstraint(
+                Lower('name'),
+                Lower('school'),
+                models.F('teacher'),
+                models.F('year'),
+                name='unique_class_group_teacher_name_school_year'
+            )
+        ]
     
     def __str__(self):
         return f"{self.name} ({self.teacher})"
