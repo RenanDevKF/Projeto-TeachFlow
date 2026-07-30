@@ -106,6 +106,9 @@ class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         context['school'] = self.request.GET.get('school', '')
         context['year'] = self.request.GET.get('year', '')
         context['period'] = self.request.GET.get('period', '')
+        
+        context['has_any_class_groups'] = ClassGroup.objects.filter(
+            teacher=self.request.user.teacher_profile).exists()
         return context
     
 @method_decorator(csrf_protect, name='dispatch')

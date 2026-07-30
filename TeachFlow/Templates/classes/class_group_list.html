@@ -168,15 +168,95 @@
         </div>
         {% endfor %}
 
-        <!-- Card de Nova Turma (mantido como estava) -->
-        <a href="{% url 'class_group_form' %}" class="flex items-center justify-center bg-blue-50 border-2 border-dashed border-primary p-6 rounded-xl hover:bg-blue-100 transition">
-            <span class="text-primary font-bold">+ Nova Turma</span>
+        <!-- Card de Nova Turma -->
+        <a
+            href="{% url 'class_group_form' %}"
+            class="group flex min-h-48 items-center justify-center rounded-xl border-2 border-dashed border-primary bg-blue-50 p-6 text-center transition-colors duration-200 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+        >
+            <div>
+                <i
+                    data-lucide="plus"
+                    class="mx-auto h-7 w-7 text-primary transition-transform duration-200 group-hover:scale-110"
+                ></i>
+
+                <span class="mt-3 block font-semibold text-primary">
+                    Nova turma
+                </span>
+            </div>
         </a>
     </div>
-    {% else %}
-    <div class="text-center text-gray-500 mt-12">
-        Nenhuma turma cadastrada ainda.
+
+    {% elif has_any_class_groups %}
+
+    <!-- Nenhum resultado para os filtros -->
+    <div class="mx-auto mt-10 max-w-2xl">
+        <div class="rounded-xl border border-gray-200 bg-white px-6 py-10 text-center shadow-sm sm:px-10">
+            <i
+                data-lucide="search-x"
+                class="mx-auto h-10 w-10 text-gray-400"
+            ></i>
+
+            <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                Nenhuma turma encontrada
+            </h2>
+
+            <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
+                Não encontramos turmas que correspondam aos filtros informados.
+            </p>
+
+            <a
+                href="{% url 'class_group_list' %}"
+                class="mt-5 inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
+            >
+                Limpar filtros
+            </a>
+        </div>
     </div>
+
+    {% else %}
+
+    <!-- Estado inicial sem turmas -->
+    <div class="mx-auto mt-8 max-w-3xl">
+        <a
+            href="{% url 'class_group_form' %}"
+            class="group flex min-h-72 w-full items-center justify-center rounded-2xl border-2 border-dashed border-primary bg-blue-50 px-6 py-10 text-center transition-all duration-200 hover:bg-blue-100 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:min-h-80 sm:px-10"
+            aria-label="Criar a primeira turma"
+        >
+            <div class="max-w-lg">
+                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm transition-transform duration-200 group-hover:scale-105 sm:h-16 sm:w-16">
+                    <i
+                        data-lucide="graduation-cap"
+                        class="h-7 w-7 text-primary sm:h-8 sm:w-8"
+                    ></i>
+                </div>
+
+                <h2 class="mt-6 text-xl font-semibold text-gray-900 sm:text-2xl">
+                    Nenhuma turma cadastrada
+                </h2>
+
+                <p class="mx-auto mt-4 text-sm leading-7 text-gray-600 sm:text-base">
+                    Você ainda não possui nenhuma turma cadastrada.
+                </p>
+
+                <p class="mx-auto mt-3 text-sm leading-7 text-gray-600 sm:text-base">
+                    Clique aqui para criar sua primeira turma e começar a
+                    organizar alunos e aulas.
+                </p>
+
+                <div class="mt-8 text-center">
+                    <i
+                        data-lucide="plus"
+                        class="mx-auto h-7 w-7 text-primary transition-transform duration-200 group-hover:scale-110"
+                    ></i>
+
+                    <span class="mt-3 block text-base font-semibold text-primary">
+                        Nova turma
+                    </span>
+                </div>
+            </div>
+        </a>
+    </div>
+
     {% endif %}
 
 </div>
