@@ -1,3 +1,4 @@
+from django.template import context
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import login_required
@@ -154,11 +155,14 @@ class ClassGroupDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['class_group'] = self.get_object()  # Garante que o objeto está no contexto
+        
+        context['class_group'] = self.object # Garante que o objeto está no contexto
+        context['students_count'] = self.object.students.count()
+        context['lessons_count'] = self.object.lessons.count()
         return context
     
     def delete(self, request, *args, **kwargs):
-        messages.success(request, "Class group deleted successfully.")
+        messages.success(request, "Turma excluída com sucesso.")
         return super().delete(request, *args, **kwargs)
     
 # Lesson Views
