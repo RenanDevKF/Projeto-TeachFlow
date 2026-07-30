@@ -164,31 +164,15 @@
     {% if class_group.students.all %}
     <ul class="divide-y divide-gray-200 mb-8">
         {% for student in class_group.students.all|slice:":5" %}
-        <li class="py-2 flex justify-between items-center">
+        <li>
             <a
                 href="{% url 'student_detail' class_group.id student.id %}"
-                class="text-blue-600 hover:underline"
+                class="group flex items-center rounded-md px-3 py-3 transition-colors duration-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset"
+                aria-label="Ver detalhes do aluno {{ student.first_name }} {{ student.last_name }}"
             >
-                <span class="text-gray-800">
+                <span class="font-medium text-gray-900 group-hover:text-primary transition-colors group-hover:text-primary">
                     {{ student.first_name }} {{ student.last_name }}
                 </span>
-            </a>
-
-            <a
-                href="{% url 'student_detail' class_group.id student.id %}"
-                class="text-gray-500 hover:text-blue-600 ml-2"
-                title="Ver detalhes"
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                >
-                    <path d="M12 4.5c-7.5 0-10.5 7.5-10.5 7.5s3 7.5 10.5 7.5 10.5-7.5 10.5-7.5-3-7.5-10.5-7.5z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                </svg>
             </a>
         </li>
         {% endfor %}
@@ -221,7 +205,7 @@
             >
                 <!-- Título e data -->
                 <div class="min-w-0">
-                    <p class="font-medium text-blue-600 transition-colors group-hover:text-primary">
+                    <p class="font-medium text-gray-900 group-hover:text-primary transition-colors group-hover:text-primary">
                         {{ lesson.title }}
                     </p>
 
