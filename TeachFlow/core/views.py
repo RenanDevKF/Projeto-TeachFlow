@@ -6,7 +6,7 @@ from django.contrib.auth import logout
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, Case, IntegerField, Value, When
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.views.decorators.http import require_POST
@@ -97,6 +97,16 @@ class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         if period:
             queryset = queryset.filter(period=period)
             
+        queryset = queryset.annotate(
+            period_order=Case(
+                When(period='Manhã', then=Value(1)),
+                When(period='Tarde', then=Value(2)),
+                When(period='Noite', then=Value(3)),
+                default=Value(4),
+                output_field=IntegerField(),
+            )
+        ).order_by('period_order', 'schedule', 'name')  
+                  
         return queryset
     
     def get_context_data(self, **kwargs):
