@@ -158,8 +158,51 @@ class ClassGroupUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
     
     def get_success_url(self):
         return reverse_lazy('class_group_detail', kwargs={'pk': self.object.pk})
-    
-    
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class ClassGroupArchiveView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    def post(self, request, pk):
+        class_group = get_object_or_404(
+            ClassGroup,
+            pk=pk,
+            teacher=request.user.teacher_profile,
+        )
+
+        if not class_group.is_active:
+            messages.info(request, "Esta turma já está arquivada.")
+            return redirect('class_group_detail', pk=class_group.pk)
+
+        class_group.is_active = False
+        class_group.save(update_fields=['is_active', 'updated_at'])
+
+        messages.success(
+            request,
+            "Turma arquivada com sucesso. Os alunos, as aulas e os demais registros foram preservados.",
+        )
+        return redirect('class_group_detail', pk=class_group.pk)
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class ClassGroupRestoreView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    def post(self, request, pk):
+        class_group = get_object_or_404(
+            ClassGroup,
+            pk=pk,
+            teacher=request.user.teacher_profile,
+        )
+
+        if class_group.is_active:
+            messages.info(request, "Esta turma já está ativa.")
+            return redirect('class_group_detail', pk=class_group.pk)
+
+        class_group.is_active = True
+        class_group.save(update_fields=['is_active', 'updated_at'])
+
+        messages.success(request, "Turma reativada com sucesso.")
+        return redirect('class_group_detail', pk=class_group.pk)
+
+
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DeleteView):
     model = ClassGroup
