@@ -20,11 +20,48 @@ class ClassGroupForm(forms.ModelForm):
         self.teacher = kwargs.pop('teacher', None)
         super().__init__(*args, **kwargs)
 
-    def clean_name(self):
-        name = self.cleaned_data['name']
-        if ClassGroup.objects.filter(name=name, teacher=self.teacher).exclude(pk=self.instance.pk).exists():
-            raise forms.ValidationError("Você já tem uma turma com esse nome.")
-        return name
+    def clean(self):
+        cleaned_data = super().clean()
+
+        name = cleaned_data.get('name')
+        school = cleaned_data.get('school')
+        year = cleaned_data.get('year')
+
+        if name:
+            name = name.strip()
+            cleaned_data['name'] = name
+        if not name:
+            self.add_error(
+                'name',
+                'Informe o nome da turma.'
+            )
+        if school:
+            school = school.strip()
+            cleaned_data['school'] = school
+        else:
+            school = ''
+        if not school:
+            self.add_error(
+                'school',
+                'Informe o nome da escola.'
+            )            
+
+        if not self.teacher or not name or not school or year is None:
+            return cleaned_data
+
+        duplicate_class_group = ClassGroup.objects.filter(
+            teacher=self.teacher,
+            name__iexact=name,
+            school__iexact=school,
+            year=year,
+        ).exclude(pk=self.instance.pk)
+
+        if duplicate_class_group.exists():
+            raise forms.ValidationError(
+                'Você já possui uma turma com este nome, escola e ano letivo.'
+            )
+
+        return cleaned_data
 
 class StudentForm(forms.ModelForm):
     class Meta:
