@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models.functions import Lower
 from django.utils import timezone
@@ -21,7 +22,20 @@ class ClassGroup(models.Model):
     period = models.CharField(max_length=10, choices=PERIOD_CHOICES, blank=True, verbose_name="Período")
     schedule = models.CharField(max_length=50, blank=True, null=True, verbose_name="Horário")
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='class_groups')
-    year = models.IntegerField(default=current_year, verbose_name="Ano letivo")
+    year = models.IntegerField(
+        default=current_year,
+        validators=[
+            MinValueValidator(
+                2000,
+                message="O ano letivo deve ser igual ou superior a 2000."
+            ),
+            MaxValueValidator(
+                2100,
+                message="O ano letivo deve ser igual ou inferior a 2100."
+            ),
+        ],
+        verbose_name="Ano letivo",
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
