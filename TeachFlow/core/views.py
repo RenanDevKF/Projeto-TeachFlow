@@ -70,16 +70,31 @@ class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     template_name = 'classes/class_group_list.html'
     context_object_name = 'class_groups'
     
+    def get_selected_status(self):
+        status = self.request.GET.get('status', 'active')
+
+        if status not in {'active', 'archived', 'all'}:
+            status = 'active'
+        return status    
+    
     def get_queryset(self):
         queryset = ClassGroup.objects.filter(
             teacher=self.request.user.teacher_profile
         ).prefetch_related('students', 'lessons')
+        
+        status = self.get_selected_status()
         
         # Adicione os filtros aqui
         search = self.request.GET.get('search')
         school = self.request.GET.get('school')
         year = self.request.GET.get('year')
         period = self.request.GET.get('period')
+        
+        if status == 'active':
+            queryset = queryset.filter(is_active=True)
+
+        elif status == 'archived':
+            queryset = queryset.filter(is_active=False)        
         
         if search:
             queryset = queryset.filter(
@@ -116,9 +131,19 @@ class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         context['school'] = self.request.GET.get('school', '')
         context['year'] = self.request.GET.get('year', '')
         context['period'] = self.request.GET.get('period', '')
+        context['selected_status'] = self.get_selected_status()
         
-        context['has_any_class_groups'] = ClassGroup.objects.filter(
-            teacher=self.request.user.teacher_profile).exists()
+        teacher_class_groups = ClassGroup.objects.filter(
+            teacher=self.request.user.teacher_profile
+        )
+
+        context['has_any_class_groups'] = teacher_class_groups.exists()
+        context['has_active_class_groups'] = teacher_class_groups.filter(
+            is_active=True
+        ).exists()
+        context['has_archived_class_groups'] = teacher_class_groups.filter(
+            is_active=False
+        ).exists()
         return context
     
 @method_decorator(csrf_protect, name='dispatch')
