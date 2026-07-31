@@ -636,8 +636,8 @@ class StudentDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView):
     context_object_name = 'student'
     
     def get_queryset(self):
-        # Garante que o professor só veja seus próprios alunos
         return Student.objects.filter(
+            class_group_id=self.kwargs.get('class_group_id'),
             class_group__teacher=self.request.user.teacher_profile
         ).select_related('class_group')
 
@@ -719,8 +719,8 @@ class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
     model = Student
     
     def get_queryset(self):
-        # Garante que o professor só exclua seus próprios alunos
         return Student.objects.filter(
+            class_group_id=self.kwargs.get('class_group_id'),
             class_group__teacher=self.request.user.teacher_profile
         )
     
