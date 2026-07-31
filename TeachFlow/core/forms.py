@@ -85,18 +85,38 @@ class StudentForm(forms.ModelForm):
     
     def clean(self):
         cleaned_data = super().clean()
+
         first_name = cleaned_data.get('first_name')
         last_name = cleaned_data.get('last_name')
-        
-        # Verifica se já existe um aluno com o mesmo nome na turma
-        if first_name and last_name and self.class_group:
-            if Student.objects.filter(
-                first_name=first_name,
-                last_name=last_name,
-                class_group=self.class_group
-            ).exclude(pk=self.instance.pk).exists():
-                raise forms.ValidationError("Já existe um aluno com este nome nesta turma.")
-        
+
+        if first_name:
+            first_name = first_name.strip()
+            cleaned_data['first_name'] = first_name
+
+        if last_name:
+            last_name = last_name.strip()
+            cleaned_data['last_name'] = last_name
+
+        if not first_name:
+            self.add_error('first_name', 'Informe o primeiro nome do aluno.')
+
+        if not last_name:
+            self.add_error('last_name', 'Informe o sobrenome do aluno.')
+
+        if not first_name or not last_name or not self.class_group:
+            return cleaned_data
+
+        duplicate_student = Student.objects.filter(
+            class_group=self.class_group,
+            first_name__iexact=first_name,
+            last_name__iexact=last_name,
+        ).exclude(pk=self.instance.pk)
+
+        if duplicate_student.exists():
+            raise forms.ValidationError(
+                'Já existe um aluno com este nome nesta turma.'
+            )
+
         return cleaned_data
     
 class LessonForm(forms.ModelForm):

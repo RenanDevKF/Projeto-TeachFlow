@@ -16,7 +16,22 @@
 
     {% csrf_token %}
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <form method="post" class="space-y-6"
+        action="{% if form.instance.pk %}{% url 'student_form' class_group.id form.instance.pk %}{% else %}{% url 'student_form' class_group.id %}{% endif %}">
+
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            {% for error in form.non_field_errors %}
+            <p class="text-sm text-red-700">
+                {{ error }}
+            </p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">Primeiro Nome</label>
         <input type="text" name="first_name" value="{{ form.first_name.value|default_if_none:'' }}"
