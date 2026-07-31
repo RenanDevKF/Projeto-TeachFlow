@@ -21,7 +21,31 @@
 
         {% csrf_token %}
 
-        {% if form.non_field_errors %}
+        {% if form.duplicate_warning %}
+        <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-4">
+            <div class="flex items-start gap-3">
+                <i
+                    data-lucide="triangle-alert"
+                    class="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600"
+                ></i>
+
+                <div>
+                    <p class="text-sm font-semibold text-amber-900">
+                        Já existe um aluno com este nome
+                    </p>
+
+                    <p class="mt-1 text-sm leading-relaxed text-amber-800">
+                        Não foi possível confirmar se é a mesma pessoa porque não há
+                        data de nascimento suficiente para comparação.
+                    </p>
+
+                    <p class="mt-1 text-sm leading-relaxed text-amber-800">
+                        Caso sejam alunos diferentes, confirme o cadastro abaixo.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% elif form.non_field_errors %}
         <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
             {% for error in form.non_field_errors %}
             <p class="text-sm text-red-700">
@@ -84,10 +108,24 @@
 
     <div class="flex justify-between pt-4">
       <a href="{% url 'class_group_detail' class_group.id %}" class="text-sm text-gray-500 hover:text-gray-800 hover:underline">Cancelar</a>
-      <button type="submit"
-              class="bg-blue-500 text-white px-2 py-1 rounded-md text-sm hover:bg-blue-700 transition-all">
-            {% if form.instance.pk %}Salvar Alterações{% else %}Adicionar Aluno{% endif %}
+      {% if form.duplicate_warning %}
+      <button
+          type="submit"
+          name="confirm_duplicate"
+          value="1"
+          class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+      >
+          <i data-lucide="user-round-plus" class="h-4 w-4"></i>
+          Cadastrar mesmo assim
       </button>
+      {% else %}
+      <button
+          type="submit"
+          class="rounded-md bg-blue-500 px-2 py-1 text-sm text-white transition-all hover:bg-blue-700"
+      >
+          {% if form.instance.pk %}Salvar Alterações{% else %}Adicionar Aluno{% endif %}
+      </button>
+      {% endif %}
     </div>
   </form>
 </div>

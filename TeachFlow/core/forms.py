@@ -81,6 +81,7 @@ class StudentForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.class_group = kwargs.pop('class_group', None)
+        self.duplicate_warning = False
         super().__init__(*args, **kwargs)
     
     def clean(self):
@@ -88,6 +89,8 @@ class StudentForm(forms.ModelForm):
 
         first_name = cleaned_data.get('first_name')
         last_name = cleaned_data.get('last_name')
+        birth_date = cleaned_data.get('birth_date')
+        duplicate_confirmed = self.data.get('confirm_duplicate') == '1'
 
         if first_name:
             first_name = first_name.strip()
@@ -106,15 +109,26 @@ class StudentForm(forms.ModelForm):
         if not first_name or not last_name or not self.class_group:
             return cleaned_data
 
-        duplicate_student = Student.objects.filter(
+        students_with_same_name = Student.objects.filter(
             class_group=self.class_group,
             first_name__iexact=first_name,
             last_name__iexact=last_name,
         ).exclude(pk=self.instance.pk)
 
-        if duplicate_student.exists():
+        if birth_date and students_with_same_name.filter(birth_date=birth_date).exists():
             raise forms.ValidationError(
-                'Já existe um aluno com este nome nesta turma.'
+                'Já existe nesta turma um aluno com o mesmo nome e a mesma data de nascimento.'
+            )
+
+        needs_confirmation = students_with_same_name.exists() and (
+            birth_date is None or
+            students_with_same_name.filter(birth_date__isnull=True).exists()
+        )
+
+        if needs_confirmation and not duplicate_confirmed:
+            self.duplicate_warning = True
+            raise forms.ValidationError(
+                'Já existe um aluno com este nome nesta turma. Confirme o cadastro caso sejam pessoas diferentes.'
             )
 
         return cleaned_data
