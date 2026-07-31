@@ -26,7 +26,7 @@ class TeacherRequiredMixin(UserPassesTestMixin):
         return hasattr(self.request.user, 'teacher_profile')
     
     def handle_no_permission(self):
-        messages.error(self.request, "You must be a teacher to access this page.")
+        messages.error(self.request, "Voce precisa ser um professor para acessar essa pagina.")
         return redirect('login')
     
 class OwnershipRequiredMixin:
