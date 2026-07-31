@@ -1,5 +1,6 @@
 # core/forms.py
 from django import forms
+from django.utils import timezone
 from .models import *
 
 class ClassGroupForm(forms.ModelForm):
@@ -83,6 +84,16 @@ class StudentForm(forms.ModelForm):
         self.class_group = kwargs.pop('class_group', None)
         self.duplicate_warning = False
         super().__init__(*args, **kwargs)
+
+    def clean_birth_date(self):
+        birth_date = self.cleaned_data.get('birth_date')
+
+        if birth_date and birth_date > timezone.localdate():
+            raise forms.ValidationError(
+                'A data de nascimento não pode estar no futuro.'
+            )
+
+        return birth_date    
     
     def clean(self):
         cleaned_data = super().clean()
