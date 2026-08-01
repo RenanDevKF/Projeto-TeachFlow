@@ -692,7 +692,8 @@ class StudentListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         context['active_class_groups'] = ClassGroup.objects.filter(
             teacher=teacher,
             is_active=True
-        ).order_by('name', 'year')        
+        ).order_by('name', 'year')
+        context['query_string'] = query_parameters.urlencode()        
         context['has_any_students'] = base_students.exists()
         context['has_active_students'] = base_students.filter(is_active=True).exists()
         context['has_inactive_students'] = base_students.filter(is_active=False).exists()
