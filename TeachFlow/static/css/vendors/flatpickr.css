@@ -1,0 +1,68 @@
+/* ===========================
+   Flatpickr - TeachFlow Theme
+   =========================== */
+
+.flatpickr-calendar {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    box-shadow:
+        0 10px 15px -3px rgb(0 0 0 / 0.08),
+        0 4px 6px -4px rgb(0 0 0 / 0.08);
+
+    font-size: 0.875rem;
+}
+
+.flatpickr-months {
+    padding-top: .35rem;
+}
+
+.flatpickr-current-month {
+    font-size: .95rem;
+    font-weight: 600;
+}
+
+.flatpickr-weekday {
+    font-size: .72rem;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.flatpickr-day {
+    width: 34px;
+    height: 34px;
+    line-height: 34px;
+
+    border-radius: .5rem;
+
+    transition:
+        background-color .15s,
+        color .15s;
+}
+
+.flatpickr-day:hover {
+    background: #eff6ff;
+}
+
+.flatpickr-day.today {
+    border-color: #3b82f6;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+    background: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.flatpickr-day.selected:hover {
+    background: #2563eb;
+}
+
+.flatpickr-prev-month,
+.flatpickr-next-month {
+    padding-top: 6px;
+}
+
+.flatpickr-time {
+    border-top: 1px solid #e5e7eb;
+}

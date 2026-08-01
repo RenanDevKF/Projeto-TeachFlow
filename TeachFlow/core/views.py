@@ -778,9 +778,6 @@ class StudentCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['class_group'] = self.class_group
-        context['students'] = Student.objects.filter(
-            class_group=self.class_group
-        ).order_by('first_name', 'last_name')
         return context
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -803,7 +800,6 @@ class StudentUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['class_group'] = self.class_group
-        context['students'] = Student.objects.filter(class_group=self.class_group).order_by('last_name')
         return context
 
     def form_valid(self, form):
