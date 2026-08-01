@@ -2473,6 +2473,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   --tw-ring-offset-width: 2px;
 }
 
+.disabled\:cursor-not-allowed:disabled {
+  cursor: not-allowed;
+}
+
+.disabled\:opacity-60:disabled {
+  opacity: 0.6;
+}
+
 .group:hover .group-hover\:scale-105 {
   --tw-scale-x: 1.05;
   --tw-scale-y: 1.05;

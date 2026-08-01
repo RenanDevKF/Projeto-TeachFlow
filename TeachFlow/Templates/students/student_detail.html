@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Detalhes do aluno{% endblock %}
 
@@ -60,16 +61,17 @@
                 <form
                     method="post"
                     action="{% url 'student_delete' student.class_group.id student.id %}"
-                    onsubmit="return confirm('Deseja excluir permanentemente o aluno {{ student.first_name|escapejs }} {{ student.last_name|escapejs }}? Esta ação não poderá ser desfeita.');"
+                    class="student-delete-form"
+                    data-student-name="{{ student.first_name }} {{ student.last_name }}"
                 >
                     {% csrf_token %}
 
                     <button
                         type="submit"
-                        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                        class="student-delete-button inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <i data-lucide="trash-2" class="h-4 w-4"></i>
-                        Excluir
+                        <span class="student-delete-label">Excluir</span>
                     </button>
                 </form>
             </div>
@@ -283,4 +285,12 @@
     </div>
 
 </div>
+
+{% block scripts %}
+    {{ block.super }}
+    <script
+        src="{% static 'js/student_detail.js' %}"
+        defer
+    ></script>
+{% endblock %}
 {% endblock %}
