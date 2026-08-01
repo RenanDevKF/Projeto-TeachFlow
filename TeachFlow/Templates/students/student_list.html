@@ -1,0 +1,494 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if is_class_group_scope %}
+        Alunos da turma
+    {% else %}
+        Alunos
+    {% endif %}
+{% endblock %}
+
+{% block page_title %}
+<span class="inline-flex items-center gap-2">
+    <i data-lucide="users-round" class="h-6 w-6 text-primary"></i>
+
+    {% if is_class_group_scope %}
+        <span>Alunos da turma</span>
+    {% else %}
+        <span>Alunos</span>
+    {% endif %}
+</span>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto">
+
+    <!-- Cabeçalho -->
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+            {% if is_class_group_scope %}
+                <h1 class="text-2xl font-bold text-gray-900">
+                    {{ class_group.name }}
+                </h1>
+
+                <p class="mt-1 text-sm text-gray-500">
+                    {{ class_group.school }} · {{ class_group.year }}
+
+                    {% if class_group.period %}
+                        · {{ class_group.period }}
+                    {% endif %}
+
+                    {% if class_group.schedule %}
+                        · {{ class_group.schedule }}
+                    {% endif %}
+                </p>
+            {% else %}
+                <h1 class="text-2xl font-bold text-gray-900">
+                    Lista geral de alunos
+                </h1>
+
+                <p class="mt-1 text-sm text-gray-500">
+                    Localize e consulte alunos de todas as suas turmas.
+                </p>
+            {% endif %}
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            {% if is_class_group_scope %}
+                <a
+                    href="{% url 'class_group_detail' class_group.id %}"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                    <i data-lucide="arrow-left" class="h-4 w-4"></i>
+                    Voltar à turma
+                </a>
+
+                <a
+                    href="{% url 'student_form' class_group.id %}"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                >
+                    <i data-lucide="user-round-plus" class="h-4 w-4"></i>
+                    Novo aluno
+                </a>
+            {% else %}
+                <a
+                    href="{% url 'class_group_list' %}"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                    <i data-lucide="graduation-cap" class="h-4 w-4"></i>
+                    Ver turmas
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <form method="get" class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div class="flex flex-col gap-4 xl:flex-row xl:items-center">
+
+            <!-- Status -->
+            <div class="inline-flex h-10 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                <button
+                    type="submit"
+                    name="status"
+                    value="active"
+                    class="inline-flex items-center justify-center px-4 text-sm font-medium transition-colors
+                    {% if selected_status == 'active' %}
+                        bg-primary text-white
+                    {% else %}
+                        text-gray-600 hover:bg-gray-50
+                    {% endif %}"
+                >
+                    Ativos
+                </button>
+
+                <button
+                    type="submit"
+                    name="status"
+                    value="inactive"
+                    class="inline-flex items-center justify-center border-l border-gray-200 px-4 text-sm font-medium transition-colors
+                    {% if selected_status == 'inactive' %}
+                        bg-primary text-white
+                    {% else %}
+                        text-gray-600 hover:bg-gray-50
+                    {% endif %}"
+                >
+                    Inativos
+                </button>
+
+                <button
+                    type="submit"
+                    name="status"
+                    value="all"
+                    class="inline-flex items-center justify-center border-l border-gray-200 px-4 text-sm font-medium transition-colors
+                    {% if selected_status == 'all' %}
+                        bg-primary text-white
+                    {% else %}
+                        text-gray-600 hover:bg-gray-50
+                    {% endif %}"
+                >
+                    Todos
+                </button>
+            </div>
+
+            <!-- Busca -->
+            <div class="relative min-w-0 flex-1">
+                <i
+                    data-lucide="search"
+                    class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                ></i>
+
+                <input
+                    type="text"
+                    name="search"
+                    value="{{ search }}"
+                    placeholder="Buscar por nome ou sobrenome..."
+                    class="h-10 w-full rounded-lg border border-gray-300 pl-10 pr-4 text-sm text-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                >
+            </div>
+
+            <!-- Turma: apenas na lista geral -->
+            {% if not is_class_group_scope %}
+                <div class="w-full xl:w-64">
+                    <select
+                        name="class_group"
+                        class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                    >
+                        <option value="">Todas as turmas</option>
+
+                        {% for turma in class_groups %}
+                            <option
+                                value="{{ turma.id }}"
+                                {% if selected_class_group == turma.id|stringformat:"s" %}selected{% endif %}
+                            >
+                                {{ turma.name }} — {{ turma.year }}
+                                {% if not turma.is_active %} (Arquivada){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+
+            <!-- Ações -->
+            <div class="flex flex-shrink-0 items-center gap-2">
+                {% if is_class_group_scope %}
+                    <a
+                        href="{% url 'class_group_students' class_group.id %}?status={{ selected_status }}"
+                        class="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                    >
+                        Limpar
+                    </a>
+                {% else %}
+                    <a
+                        href="{% url 'student_list' %}?status={{ selected_status }}"
+                        class="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                    >
+                        Limpar
+                    </a>
+                {% endif %}
+
+                <button
+                    type="submit"
+                    class="inline-flex h-10 items-center justify-center rounded-lg bg-blue-500 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                >
+                    Aplicar
+                </button>
+            </div>
+        </div>
+    </form>
+
+    {% if students %}
+
+        <!-- Lista desktop -->
+        <div class="hidden overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm md:block">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Aluno
+                        </th>
+
+                        {% if not is_class_group_scope %}
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                Turma
+                            </th>
+                        {% endif %}
+
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Nascimento
+                        </th>
+
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Status
+                        </th>
+
+                        <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Ações
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody class="divide-y divide-gray-100">
+                    {% for student in students %}
+                        <tr class="transition-colors hover:bg-gray-50">
+                            <td class="px-6 py-4">
+                                <a
+                                    href="{% url 'student_detail' student.class_group.id student.id %}"
+                                    class="font-medium text-gray-900 transition-colors hover:text-primary"
+                                >
+                                    {{ student.first_name }} {{ student.last_name }}
+                                </a>
+
+                                {% if student.notes %}
+                                    <p class="mt-1 max-w-xs truncate text-xs text-gray-500">
+                                        {{ student.notes }}
+                                    </p>
+                                {% endif %}
+                            </td>
+
+                            {% if not is_class_group_scope %}
+                                <td class="px-6 py-4 text-sm text-gray-600">
+                                    <a
+                                        href="{% url 'class_group_detail' student.class_group.id %}"
+                                        class="hover:text-primary hover:underline"
+                                    >
+                                        {{ student.class_group.name }}
+                                    </a>
+
+                                    {% if not student.class_group.is_active %}
+                                        <span class="ml-1 text-xs text-gray-400">
+                                            (Arquivada)
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            {% endif %}
+
+                            <td class="px-6 py-4 text-sm text-gray-600">
+                                {% if student.birth_date %}
+                                    {{ student.birth_date|date:"d/m/Y" }}
+                                {% else %}
+                                    <span class="text-gray-400">Não informada</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="px-6 py-4">
+                                {% if student.is_active %}
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                                        Ativo
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                                        Inativo
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td class="px-6 py-4">
+                                <div class="flex items-center justify-end gap-3">
+                                    <a
+                                        href="{% url 'student_detail' student.class_group.id student.id %}"
+                                        class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 transition-colors hover:text-primary"
+                                    >
+                                        <i data-lucide="eye" class="h-4 w-4"></i>
+                                        Ver
+                                    </a>
+
+                                    <a
+                                        href="{% url 'student_form' student.class_group.id student.id %}"
+                                        class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:underline"
+                                    >
+                                        <i data-lucide="pencil" class="h-4 w-4"></i>
+                                        Editar
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Lista mobile -->
+        <div class="space-y-3 md:hidden">
+            {% for student in students %}
+                <a
+                    href="{% url 'student_detail' student.class_group.id student.id %}"
+                    class="group block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <h2 class="font-semibold text-gray-900 transition-colors group-hover:text-primary">
+                                {{ student.first_name }} {{ student.last_name }}
+                            </h2>
+
+                            {% if not is_class_group_scope %}
+                                <p class="mt-1 text-sm text-gray-500">
+                                    {{ student.class_group.name }}
+
+                                    {% if not student.class_group.is_active %}
+                                        · Arquivada
+                                    {% endif %}
+                                </p>
+                            {% endif %}
+                        </div>
+
+                        {% if student.is_active %}
+                            <span class="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+                                <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                                Ativo
+                            </span>
+                        {% else %}
+                            <span class="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                                <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                                Inativo
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-3 flex items-center gap-2 text-sm text-gray-500">
+                        <i data-lucide="cake" class="h-4 w-4 flex-shrink-0"></i>
+
+                        {% if student.birth_date %}
+                            <span>{{ student.birth_date|date:"d/m/Y" }}</span>
+                        {% else %}
+                            <span>Data de nascimento não informada</span>
+                        {% endif %}
+                    </div>
+
+                    {% if student.notes %}
+                        <p class="mt-3 line-clamp-2 text-sm leading-relaxed text-gray-500">
+                            {{ student.notes }}
+                        </p>
+                    {% endif %}
+                </a>
+            {% endfor %}
+        </div>
+
+        <!-- Paginação: apenas na lista geral -->
+        {% if is_paginated %}
+            <nav class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm text-gray-500">
+                    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                </p>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    {% if page_obj.has_previous %}
+                        <a
+                            href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.previous_page_number }}"
+                            class="inline-flex h-10 items-center justify-center gap-1 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                        >
+                            <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                            Anterior
+                        </a>
+                    {% endif %}
+
+                    {% for page_number in page_obj.paginator.page_range %}
+                        {% if page_number == page_obj.number %}
+                            <span class="inline-flex h-10 min-w-10 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-white">
+                                {{ page_number }}
+                            </span>
+                        {% elif page_number >= page_obj.number|add:"-2" and page_number <= page_obj.number|add:"2" %}
+                            <a
+                                href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_number }}"
+                                class="inline-flex h-10 min-w-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                            >
+                                {{ page_number }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <a
+                            href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.next_page_number }}"
+                            class="inline-flex h-10 items-center justify-center gap-1 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                        >
+                            Próxima
+                            <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </nav>
+        {% endif %}
+
+    {% elif has_any_students %}
+
+        <!-- Sem resultado para busca ou filtros -->
+        <div class="mx-auto mt-10 max-w-2xl">
+            <div class="rounded-xl border border-gray-200 bg-white px-6 py-10 text-center shadow-sm sm:px-10">
+                <i data-lucide="search-x" class="mx-auto h-10 w-10 text-gray-400"></i>
+
+                <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                    Nenhum aluno encontrado
+                </h2>
+
+                <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
+                    Não encontramos alunos que correspondam à busca ou aos filtros selecionados.
+                </p>
+
+                {% if is_class_group_scope %}
+                    <a
+                        href="{% url 'class_group_students' class_group.id %}"
+                        class="mt-5 inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                        Limpar filtros
+                    </a>
+                {% else %}
+                    <a
+                        href="{% url 'student_list' %}"
+                        class="mt-5 inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 px-5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                        Limpar filtros
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+    {% else %}
+
+        <!-- Estado sem alunos -->
+        <div class="mx-auto mt-10 max-w-2xl">
+            <div class="rounded-xl border border-gray-200 bg-white px-6 py-10 text-center shadow-sm sm:px-10">
+                <i data-lucide="users-round" class="mx-auto h-10 w-10 text-gray-400"></i>
+
+                {% if is_class_group_scope %}
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhum aluno cadastrado nesta turma
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
+                        Adicione o primeiro aluno para começar a organizar os registros desta turma.
+                    </p>
+
+                    <a
+                        href="{% url 'student_form' class_group.id %}"
+                        class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                    >
+                        <i data-lucide="user-round-plus" class="h-4 w-4"></i>
+                        Adicionar aluno
+                    </a>
+                {% else %}
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhum aluno cadastrado
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
+                        Os alunos são cadastrados dentro de suas respectivas turmas.
+                    </p>
+
+                    <a
+                        href="{% url 'class_group_list' %}"
+                        class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                    >
+                        <i data-lucide="graduation-cap" class="h-4 w-4"></i>
+                        Acessar turmas
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+    {% endif %}
+
+</div>
+{% endblock %}
