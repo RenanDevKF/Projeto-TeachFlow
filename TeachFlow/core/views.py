@@ -825,31 +825,27 @@ class StudentUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
 @method_decorator(csrf_protect, name='dispatch')
 class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
     model = Student
-    
+
     def get_queryset(self):
         return Student.objects.filter(
             class_group_id=self.kwargs.get('class_group_id'),
             class_group__teacher=self.request.user.teacher_profile
         )
-    
-    def delete(self, request, *args, **kwargs):
-        student = self.get_object()
-        class_group_id = student.class_group.id
-        student.delete()
 
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': True})
+    def form_valid(self, form):
+        class_group_id = self.object.class_group_id
 
-        messages.success(request, "Aluno excluído com sucesso.")
-        return redirect(reverse_lazy('student_form', kwargs={'class_group_id': class_group_id}))
-    
-    def get_success_url(self):
-        return reverse_lazy('student_form', kwargs={'class_group_id': self.object.class_group.id})
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['class_group'] = self.get_object().class_group
-        return context
+        messages.success(
+            self.request,
+            'Aluno excluído com sucesso.'
+        )
+
+        self.object.delete()
+
+        return redirect(
+            'class_group_students',
+            class_group_id=class_group_id
+        )
  
  
 @method_decorator(csrf_protect, name='dispatch')
