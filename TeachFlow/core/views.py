@@ -603,30 +603,97 @@ class StudentListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     model = Student
     template_name = 'students/student_list.html'
     context_object_name = 'students'
-    
-    def get_queryset(self):
-        # Filtra por grupo de classe específico se o parâmetro estiver presente
+    paginate_by = 20
+
+    def dispatch(self, request, *args, **kwargs):
+        self.class_group = None
         class_group_id = self.kwargs.get('class_group_id')
+
         if class_group_id:
-            return Student.objects.filter(
-                class_group_id=class_group_id,
-                class_group__teacher=self.request.user.teacher_profile
-            ).select_related('class_group')
+            self.class_group = get_object_or_404(
+                ClassGroup,
+                pk=class_group_id,
+                teacher=request.user.teacher_profile
+            )
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_selected_status(self):
+        status = self.request.GET.get('status', 'active')
+
+        if status not in {'active', 'inactive', 'all'}:
+            status = 'active'
+
+        return status
+
+    def get_selected_class_group(self):
+        if self.class_group:
+            return str(self.class_group.pk)
+
+        class_group_id = self.request.GET.get('class_group', '')
+        return class_group_id if class_group_id.isdigit() else ''
+
+    def get_queryset(self):
+        queryset = Student.objects.filter(
+            class_group__teacher=self.request.user.teacher_profile
+        ).select_related('class_group')
+
+        if self.class_group:
+            queryset = queryset.filter(class_group=self.class_group)
         else:
-            # Lista todos os alunos deste professor
-            return Student.objects.filter(
-                class_group__teacher=self.request.user.teacher_profile
-            ).select_related('class_group')
-    
+            selected_class_group = self.get_selected_class_group()
+
+            if selected_class_group:
+                queryset = queryset.filter(class_group_id=selected_class_group)
+
+        status = self.get_selected_status()
+        search = self.request.GET.get('search', '').strip()
+
+        if status == 'active':
+            queryset = queryset.filter(is_active=True)
+        elif status == 'inactive':
+            queryset = queryset.filter(is_active=False)
+
+        if search:
+            for term in search.split():
+                queryset = queryset.filter(
+                    Q(first_name__icontains=term) |
+                    Q(last_name__icontains=term)
+                )
+
+        return queryset.order_by('first_name', 'last_name', 'id')
+
+    def get_paginate_by(self, queryset):
+        if self.class_group:
+            return None
+
+        return self.paginate_by
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        class_group_id = self.kwargs.get('class_group_id')
-        if class_group_id:
-            context['class_group'] = get_object_or_404(
-                ClassGroup, 
-                id=class_group_id,
-                teacher=self.request.user.teacher_profile
-            )
+        teacher = self.request.user.teacher_profile
+
+        if self.class_group:
+            base_students = Student.objects.filter(class_group=self.class_group)
+        else:
+            base_students = Student.objects.filter(class_group__teacher=teacher)
+
+        query_parameters = self.request.GET.copy()
+        query_parameters.pop('page', None)
+
+        context['class_group'] = self.class_group
+        context['is_class_group_scope'] = self.class_group is not None
+        context['search'] = self.request.GET.get('search', '').strip()
+        context['selected_status'] = self.get_selected_status()
+        context['selected_class_group'] = self.get_selected_class_group()
+        context['class_groups'] = ClassGroup.objects.filter(
+            teacher=teacher
+        ).order_by('-is_active', 'name', 'year')
+        context['has_any_students'] = base_students.exists()
+        context['has_active_students'] = base_students.filter(is_active=True).exists()
+        context['has_inactive_students'] = base_students.filter(is_active=False).exists()
+        context['query_string'] = query_parameters.urlencode()
+
         return context
 
 @method_decorator(csrf_protect, name='dispatch')
