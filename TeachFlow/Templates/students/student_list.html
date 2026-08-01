@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}
     {% if is_class_group_scope %}
@@ -83,7 +84,8 @@
     </div>
 
     <!-- Filtros -->
-    <form method="get" class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <form id="student-filter-form" method="get" class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <input type="hidden" name="status" value="{{ selected_status }}">
         <div class="flex flex-col gap-4 xl:flex-row xl:items-center">
 
             <!-- Status -->
@@ -139,6 +141,7 @@
                 ></i>
 
                 <input
+                    id="student-search-input"
                     type="text"
                     name="search"
                     value="{{ search }}"
@@ -491,4 +494,9 @@
     {% endif %}
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script src="{% static 'js/student_list.js' %}" defer></script>
 {% endblock %}
