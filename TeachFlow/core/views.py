@@ -761,19 +761,19 @@ class StudentCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
         return kwargs
     
     def form_valid(self, form):
-        if not self.class_group:
-            return self.form_invalid(form)
+        form.instance.class_group = self.class_group
+        self.object = form.save()
 
-        # Set manualmente no momento certo
-        instance = form.save(commit=False)
-        instance.class_group = self.class_group
-        instance.save()
-        messages.success(self.request, "Aluno cadastrado com sucesso!")
-        return redirect(reverse('student_form', kwargs={'class_group_id': self.class_group.pk}))
+        messages.success(
+            self.request,
+            "Aluno cadastrado com sucesso! Você já pode cadastrar o próximo aluno."
+        )
+
+        return redirect(
+            'student_form',
+            class_group_id=self.class_group.pk
+        )
     
-    def get_success_url(self):
-        # Redireciona para a lista de alunos da turma
-        return reverse_lazy('class_group_students', kwargs={'class_group_id': self.class_group.id})
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -807,10 +807,23 @@ class StudentUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
         return context
 
     def form_valid(self, form):
-        form.instance.class_group = self.class_group  # Garante que o relacionamento está mantido
-        form.save()
-        messages.success(self.request, "Aluno atualizado com sucesso!")
-        return redirect(reverse('student_form', kwargs={'class_group_id': self.class_group.pk}))
+        form.instance.class_group = self.class_group
+
+        messages.success(
+            self.request,
+            "Dados do aluno atualizados com sucesso."
+        )
+
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse(
+            'student_detail',
+            kwargs={
+                'class_group_id': self.class_group.pk,
+                'pk': self.object.pk,
+            }
+        )    
 
 
 @method_decorator(csrf_protect, name='dispatch')
