@@ -1,4 +1,6 @@
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 from django.contrib.admin.models import LogEntry
 from accounts.models import Teacher
@@ -14,19 +16,41 @@ class ClassGroup(models.Model):
         ('Tarde', 'Tarde'),
         ('Noite', 'Noite'),
     ]
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
-    school = models.CharField(max_length=100, blank=True)
-    period = models.CharField(max_length=10, choices=PERIOD_CHOICES, blank=True)
-    schedule = models.CharField(max_length=50, blank=True, null=True, verbose_name="Horário")  # NOVA LINHA
+    name = models.CharField(max_length=100, verbose_name="Nome da turma")
+    description = models.TextField(blank=True, verbose_name="Descrição")
+    school = models.CharField(max_length=100, verbose_name="Escola")
+    period = models.CharField(max_length=10, choices=PERIOD_CHOICES, blank=True, verbose_name="Período")
+    schedule = models.CharField(max_length=50, blank=True, null=True, verbose_name="Horário")
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='class_groups')
-    year = models.IntegerField(default=current_year)
+    year = models.IntegerField(
+        default=current_year,
+        validators=[
+            MinValueValidator(
+                2000,
+                message="O ano letivo deve ser igual ou superior a 2000."
+            ),
+            MaxValueValidator(
+                2100,
+                message="O ano letivo deve ser igual ou inferior a 2100."
+            ),
+        ],
+        verbose_name="Ano letivo",
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    class Meta:  # NOVA SEÇÃO
+    class Meta:
         ordering = ['period', 'schedule', 'name']
+        constraints = [
+            models.UniqueConstraint(
+                Lower('name'),
+                Lower('school'),
+                models.F('teacher'),
+                models.F('year'),
+                name='unique_class_group_teacher_name_school_year'
+            )
+        ]
     
     def __str__(self):
         return f"{self.name} ({self.teacher})"

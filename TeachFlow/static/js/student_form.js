@@ -1,118 +1,144 @@
-// student_form.js
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
     const birthDateInput = document.getElementById('birth_date_input');
-    
-    // Remove qualquer foco automático
-    if (document.activeElement && document.activeElement !== document.body) {
-        document.activeElement.blur();
+
+    if (!birthDateInput || typeof flatpickr === 'undefined') {
+        return;
     }
-    
-    // Força o campo de data a perder o foco quando outros elementos são clicados
-    document.addEventListener('click', function(e) {
-        // Se o clique não foi no campo de data ou em seu calendário
-        if (!e.target.closest('#birth_date_input') && 
-            !e.target.closest('.datepicker') && 
-            !e.target.closest('[data-date]')) {
-            
-            if (document.activeElement === birthDateInput) {
-                birthDateInput.blur();
-                // Força o fechamento do calendário
-                birthDateInput.setAttribute('readonly', true);
-                setTimeout(() => {
-                    birthDateInput.removeAttribute('readonly');
-                }, 10);
-            }
-        }
-    });
-    
-    // Adiciona evento específico para quando o campo perde o foco
-    birthDateInput.addEventListener('blur', function() {
-        // Força o fechamento de qualquer calendário que possa estar aberto
-        this.setAttribute('readonly', true);
-        setTimeout(() => {
-            this.removeAttribute('readonly');
-        }, 10);
-    });
-    
-    // Previne que o campo mantenha foco indefinidamente
-    birthDateInput.addEventListener('change', function() {
-        setTimeout(() => {
-            this.blur();
-        }, 100);
-    });
-    
-    // Event listener para ESC key fechar o calendário
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && document.activeElement === birthDateInput) {
-            birthDateInput.blur();
-        }
-    });
-});
 
-// Função para confirmar exclusão de estudante
-function confirmStudentDeletion(studentId, studentName, classGroupId) {
-    // Força o campo de data a perder foco antes de abrir o modal
-    const birthDateInput = document.getElementById('birth_date_input');
-    if (document.activeElement === birthDateInput) {
-        birthDateInput.blur();
+    function createValidDate(day, month, year) {
+        const parsedDay = Number(day);
+        const parsedMonth = Number(month);
+        const parsedYear = Number(year);
+
+        if (
+            !Number.isInteger(parsedDay) ||
+            !Number.isInteger(parsedMonth) ||
+            !Number.isInteger(parsedYear)
+        ) {
+            return undefined;
+        }
+
+        const date = new Date(
+            parsedYear,
+            parsedMonth - 1,
+            parsedDay
+        );
+
+        const isValidDate =
+            date.getFullYear() === parsedYear &&
+            date.getMonth() === parsedMonth - 1 &&
+            date.getDate() === parsedDay;
+
+        return isValidDate ? date : undefined;
     }
-    
-    const modal = document.getElementById('deleteModal');
-    const modalText = document.getElementById('deleteModalText');
-    const confirmBtn = document.getElementById('confirmDeleteBtn');
-    
-    modalText.textContent = `Tem certeza que deseja excluir o aluno "${studentName}"? Esta ação não pode ser desfeita.`;
-    
-    confirmBtn.onclick = function() {
-        deleteStudent(studentId, classGroupId);
-    };
-    
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-}
 
-function closeDeleteModal() {
-    const modal = document.getElementById('deleteModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-}
+    function parseBirthDate(dateString) {
+        if (!dateString) {
+            return undefined;
+        }
 
-function deleteStudent(studentId, classGroupId) {
-    fetch(`/student/${studentId}/delete/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            'Content-Type': 'application/json',
+        const normalizedValue = dateString.trim();
+
+        // Formato digitado pelo usuário: dd/mm/aaaa
+        const brazilianDateMatch = normalizedValue.match(
+            /^(\d{2})\/(\d{2})\/(\d{4})$/
+        );
+
+        if (brazilianDateMatch) {
+            return createValidDate(
+                brazilianDateMatch[1],
+                brazilianDateMatch[2],
+                brazilianDateMatch[3]
+            );
+        }
+
+        // Formato interno enviado ao Django: aaaa-mm-dd
+        const isoDateMatch = normalizedValue.match(
+            /^(\d{4})-(\d{2})-(\d{2})$/
+        );
+
+        if (isoDateMatch) {
+            return createValidDate(
+                isoDateMatch[3],
+                isoDateMatch[2],
+                isoDateMatch[1]
+            );
+        }
+
+        return undefined;
+    }
+
+    function applyDateMask(event) {
+        const input = event.currentTarget;
+        const digits = input.value.replace(/\D/g, '').slice(0, 8);
+
+        let maskedValue = digits;
+
+        if (digits.length > 2) {
+            maskedValue = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+        }
+
+        if (digits.length > 4) {
+            maskedValue =
+                `${digits.slice(0, 2)}/` +
+                `${digits.slice(2, 4)}/` +
+                `${digits.slice(4)}`;
+        }
+
+        input.value = maskedValue;
+    }
+
+    flatpickr(birthDateInput, {
+        locale: 'pt',
+        dateFormat: 'Y-m-d',
+        altInput: true,
+        altFormat: 'd/m/Y',
+        allowInput: true,
+        maxDate: 'today',
+        disableMobile: true,
+        monthSelectorType: 'dropdown',
+        static: true,
+
+        parseDate(dateString) {
+            return parseBirthDate(dateString);
         },
-    })
-    .then(response => {
-        if (response.ok) {
-            // Remove a linha do estudante da lista
-            const studentRow = document.getElementById(`student-row-${studentId}`);
-            if (studentRow) {
-                studentRow.remove();
-            }
-            closeDeleteModal();
-        } else {
-            alert('Erro ao excluir o aluno. Tente novamente.');
-        }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        alert('Erro ao excluir o aluno. Tente novamente.');
-    });
-}
 
-// Configuração do modal de exclusão
-document.addEventListener('DOMContentLoaded', function() {
-    const deleteModal = document.getElementById('deleteModal');
-    
-    if (deleteModal) {
-        // Previne propagação de eventos no modal
-        deleteModal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeDeleteModal();
+        onReady(selectedDates, dateStr, instance) {
+            const wrapper = instance.element.closest('.flatpickr-wrapper');
+
+            if (wrapper) {
+                wrapper.classList.add('block', 'w-full');
             }
-        });
-    }
+
+            if (!instance.altInput) {
+                return;
+            }
+
+            instance.altInput.classList.add('w-full');
+            instance.altInput.placeholder = 'dd/mm/aaaa';
+            instance.altInput.inputMode = 'numeric';
+            instance.altInput.maxLength = 10;
+
+            instance.altInput.addEventListener('input', applyDateMask);
+
+            instance.altInput.addEventListener('blur', () => {
+                const typedValue = instance.altInput.value.trim();
+
+                if (!typedValue) {
+                    instance.clear();
+                    return;
+                }
+
+                if (typedValue.length !== 10) {
+                    return;
+                }
+
+                const parsedDate = parseBirthDate(typedValue);
+
+                if (parsedDate) {
+                    instance.setDate(parsedDate, true);
+                }
+            });
+        },
+    });
 });

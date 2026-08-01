@@ -1,7 +1,5 @@
 from django.urls import path
 from . import views
-from .views import DuplicateLessonView
-from .views import QuickAddTagView, TagListView, CheckTagAPIView
 
 urlpatterns = [
     # Class Group URLs
@@ -9,8 +7,10 @@ urlpatterns = [
     path('class-groups/new/', views.ClassGroupCreateView.as_view(), name='class_group_form'),
     path('class-groups/<int:pk>/', views.ClassGroupDetailView.as_view(), name='class_group_detail'),
     path('class-groups/<int:pk>/edit/', views.ClassGroupUpdateView.as_view(), name='class_group_form'),
+    path('class-groups/<int:pk>/archive/', views.ClassGroupArchiveView.as_view(), name='class_group_archive'),
+    path('class-groups/<int:pk>/restore/', views.ClassGroupRestoreView.as_view(), name='class_group_restore'),
     path('class-groups/<int:pk>/delete/', views.ClassGroupDeleteView.as_view(), name='class_group_delete'),
-    
+        
     # Student URLs - NOVAS ROTAS
     path('students/', views.StudentListView.as_view(), name='student_list'),
     path('class-groups/<int:class_group_id>/students/', views.StudentListView.as_view(), name='class_group_students'),

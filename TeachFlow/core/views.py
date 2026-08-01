@@ -1,3 +1,4 @@
+from django.template import context
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import login_required
@@ -5,7 +6,7 @@ from django.contrib.auth import logout
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, Case, IntegerField, Value, When
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.views.decorators.http import require_POST
@@ -25,7 +26,7 @@ class TeacherRequiredMixin(UserPassesTestMixin):
         return hasattr(self.request.user, 'teacher_profile')
     
     def handle_no_permission(self):
-        messages.error(self.request, "You must be a teacher to access this page.")
+        messages.error(self.request, "Voce precisa ser um professor para acessar essa pagina.")
         return redirect('login')
     
 class OwnershipRequiredMixin:
@@ -69,16 +70,31 @@ class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     template_name = 'classes/class_group_list.html'
     context_object_name = 'class_groups'
     
+    def get_selected_status(self):
+        status = self.request.GET.get('status', 'active')
+
+        if status not in {'active', 'archived', 'all'}:
+            status = 'active'
+        return status    
+    
     def get_queryset(self):
         queryset = ClassGroup.objects.filter(
             teacher=self.request.user.teacher_profile
         ).prefetch_related('students', 'lessons')
+        
+        status = self.get_selected_status()
         
         # Adicione os filtros aqui
         search = self.request.GET.get('search')
         school = self.request.GET.get('school')
         year = self.request.GET.get('year')
         period = self.request.GET.get('period')
+        
+        if status == 'active':
+            queryset = queryset.filter(is_active=True)
+
+        elif status == 'archived':
+            queryset = queryset.filter(is_active=False)        
         
         if search:
             queryset = queryset.filter(
@@ -96,6 +112,16 @@ class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         if period:
             queryset = queryset.filter(period=period)
             
+        queryset = queryset.annotate(
+            period_order=Case(
+                When(period='Manhã', then=Value(1)),
+                When(period='Tarde', then=Value(2)),
+                When(period='Noite', then=Value(3)),
+                default=Value(4),
+                output_field=IntegerField(),
+            )
+        ).order_by('period_order', 'schedule', 'name')  
+                  
         return queryset
     
     def get_context_data(self, **kwargs):
@@ -105,6 +131,19 @@ class ClassGroupListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         context['school'] = self.request.GET.get('school', '')
         context['year'] = self.request.GET.get('year', '')
         context['period'] = self.request.GET.get('period', '')
+        context['selected_status'] = self.get_selected_status()
+        
+        teacher_class_groups = ClassGroup.objects.filter(
+            teacher=self.request.user.teacher_profile
+        )
+
+        context['has_any_class_groups'] = teacher_class_groups.exists()
+        context['has_active_class_groups'] = teacher_class_groups.filter(
+            is_active=True
+        ).exists()
+        context['has_archived_class_groups'] = teacher_class_groups.filter(
+            is_active=False
+        ).exists()
         return context
     
 @method_decorator(csrf_protect, name='dispatch')
@@ -144,8 +183,51 @@ class ClassGroupUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
     
     def get_success_url(self):
         return reverse_lazy('class_group_detail', kwargs={'pk': self.object.pk})
-    
-    
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class ClassGroupArchiveView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    def post(self, request, pk):
+        class_group = get_object_or_404(
+            ClassGroup,
+            pk=pk,
+            teacher=request.user.teacher_profile,
+        )
+
+        if not class_group.is_active:
+            messages.info(request, "Esta turma já está arquivada.")
+            return redirect('class_group_detail', pk=class_group.pk)
+
+        class_group.is_active = False
+        class_group.save(update_fields=['is_active', 'updated_at'])
+
+        messages.success(
+            request,
+            "Turma arquivada com sucesso. Os alunos, as aulas e os demais registros foram preservados.",
+        )
+        return redirect('class_group_detail', pk=class_group.pk)
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class ClassGroupRestoreView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    def post(self, request, pk):
+        class_group = get_object_or_404(
+            ClassGroup,
+            pk=pk,
+            teacher=request.user.teacher_profile,
+        )
+
+        if class_group.is_active:
+            messages.info(request, "Esta turma já está ativa.")
+            return redirect('class_group_detail', pk=class_group.pk)
+
+        class_group.is_active = True
+        class_group.save(update_fields=['is_active', 'updated_at'])
+
+        messages.success(request, "Turma reativada com sucesso.")
+        return redirect('class_group_detail', pk=class_group.pk)
+
+
 @method_decorator(csrf_protect, name='dispatch')
 class ClassGroupDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DeleteView):
     model = ClassGroup
@@ -154,11 +236,14 @@ class ClassGroupDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['class_group'] = self.get_object()  # Garante que o objeto está no contexto
+        
+        context['class_group'] = self.object # Garante que o objeto está no contexto
+        context['students_count'] = self.object.students.count()
+        context['lessons_count'] = self.object.lessons.count()
         return context
     
     def delete(self, request, *args, **kwargs):
-        messages.success(request, "Class group deleted successfully.")
+        messages.success(request, "Turma excluída com sucesso.")
         return super().delete(request, *args, **kwargs)
     
 # Lesson Views
@@ -518,30 +603,105 @@ class StudentListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     model = Student
     template_name = 'students/student_list.html'
     context_object_name = 'students'
-    
-    def get_queryset(self):
-        # Filtra por grupo de classe específico se o parâmetro estiver presente
+    paginate_by = 20
+
+    def dispatch(self, request, *args, **kwargs):
+        self.class_group = None
         class_group_id = self.kwargs.get('class_group_id')
+
         if class_group_id:
-            return Student.objects.filter(
-                class_group_id=class_group_id,
-                class_group__teacher=self.request.user.teacher_profile
-            ).select_related('class_group')
+            self.class_group = get_object_or_404(
+                ClassGroup,
+                pk=class_group_id,
+                teacher=request.user.teacher_profile
+            )
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_selected_status(self):
+        status = self.request.GET.get('status', 'active')
+
+        if status not in {'active', 'inactive', 'all'}:
+            status = 'active'
+
+        return status
+
+    def get_selected_class_group(self):
+        if self.class_group:
+            return str(self.class_group.pk)
+
+        class_group_id = self.request.GET.get('class_group', '')
+        return class_group_id if class_group_id.isdigit() else ''
+
+    def get_queryset(self):
+        queryset = Student.objects.filter(
+            class_group__teacher=self.request.user.teacher_profile
+        ).select_related('class_group')
+
+        if self.class_group:
+            queryset = queryset.filter(class_group=self.class_group)
         else:
-            # Lista todos os alunos deste professor
-            return Student.objects.filter(
-                class_group__teacher=self.request.user.teacher_profile
-            ).select_related('class_group')
-    
+            selected_class_group = self.get_selected_class_group()
+
+            if selected_class_group:
+                queryset = queryset.filter(class_group_id=selected_class_group)
+
+        status = self.get_selected_status()
+        search = self.request.GET.get('search', '').strip()
+
+        if status == 'active':
+            queryset = queryset.filter(is_active=True)
+        elif status == 'inactive':
+            queryset = queryset.filter(is_active=False)
+
+        if search:
+            for term in search.split():
+                queryset = queryset.filter(
+                    Q(first_name__icontains=term) |
+                    Q(last_name__icontains=term)
+                )
+
+        return queryset.order_by('first_name', 'last_name', 'id')
+
+    def get_paginate_by(self, queryset):
+        if self.class_group:
+            return None
+
+        return self.paginate_by
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        class_group_id = self.kwargs.get('class_group_id')
-        if class_group_id:
-            context['class_group'] = get_object_or_404(
-                ClassGroup, 
-                id=class_group_id,
-                teacher=self.request.user.teacher_profile
-            )
+        teacher = self.request.user.teacher_profile
+
+        if self.class_group:
+            base_students = Student.objects.filter(class_group=self.class_group)
+        else:
+            base_students = Student.objects.filter(class_group__teacher=teacher)
+
+        query_parameters = self.request.GET.copy()
+        query_parameters.pop('page', None)
+
+        context['class_group'] = self.class_group
+        context['is_class_group_scope'] = self.class_group is not None
+        context['search'] = self.request.GET.get('search', '').strip()
+        context['selected_status'] = self.get_selected_status()
+        context['selected_class_group'] = self.get_selected_class_group()
+        context['class_groups'] = ClassGroup.objects.filter(
+            teacher=teacher
+        ).order_by('-is_active', 'name', 'year')
+        context['active_class_groups'] = ClassGroup.objects.filter(
+            teacher=teacher,
+            is_active=True
+        ).order_by('name', 'year')        
+        context['has_any_students'] = base_students.exists()
+        context['has_active_students'] = base_students.filter(is_active=True).exists()
+        context['has_inactive_students'] = base_students.filter(is_active=False).exists()
+        
+        if context.get('paginator'):
+            context['results_count'] = context['paginator'].count
+        else:
+            context['results_count'] = len(context['students'])        
+
         return context
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -551,10 +711,34 @@ class StudentDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView):
     context_object_name = 'student'
     
     def get_queryset(self):
-        # Garante que o professor só veja seus próprios alunos
         return Student.objects.filter(
+            class_group_id=self.kwargs.get('class_group_id'),
             class_group__teacher=self.request.user.teacher_profile
         ).select_related('class_group')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+        birth_date = self.object.birth_date
+
+        if birth_date:
+            age = today.year - birth_date.year
+            birthday_has_not_occurred = (
+                today.month,
+                today.day,
+            ) < (
+                birth_date.month,
+                birth_date.day,
+            )
+
+            if birthday_has_not_occurred:
+                age -= 1
+
+            context['student_age'] = age
+        else:
+            context['student_age'] = None
+
+        return context
 
 @method_decorator(csrf_protect, name='dispatch')
 class StudentCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
@@ -577,26 +761,23 @@ class StudentCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
         return kwargs
     
     def form_valid(self, form):
-        if not self.class_group:
-            return self.form_invalid(form)
+        form.instance.class_group = self.class_group
+        self.object = form.save()
 
-        # Set manualmente no momento certo
-        instance = form.save(commit=False)
-        instance.class_group = self.class_group
-        instance.save()
-        messages.success(self.request, "Aluno cadastrado com sucesso!")
-        return redirect(reverse('student_form', kwargs={'class_group_id': self.class_group.pk}))
+        messages.success(
+            self.request,
+            "Aluno cadastrado com sucesso! Você já pode cadastrar o próximo aluno."
+        )
+
+        return redirect(
+            'student_form',
+            class_group_id=self.class_group.pk
+        )
     
-    def get_success_url(self):
-        # Redireciona para a lista de alunos da turma
-        return reverse_lazy('class_group_students', kwargs={'class_group_id': self.class_group.id})
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['class_group'] = self.class_group
-        context['students'] = Student.objects.filter(
-            class_group=self.class_group
-        ).order_by('first_name', 'last_name')
         return context
 
 @method_decorator(csrf_protect, name='dispatch')
@@ -619,44 +800,52 @@ class StudentUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['class_group'] = self.class_group
-        context['students'] = Student.objects.filter(class_group=self.class_group).order_by('last_name')
         return context
 
     def form_valid(self, form):
-        form.instance.class_group = self.class_group  # Garante que o relacionamento está mantido
-        form.save()
-        messages.success(self.request, "Aluno atualizado com sucesso!")
-        return redirect(reverse('student_form', kwargs={'class_group_id': self.class_group.pk}))
+        form.instance.class_group = self.class_group
+
+        messages.success(
+            self.request,
+            "Dados do aluno atualizados com sucesso."
+        )
+
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse(
+            'student_detail',
+            kwargs={
+                'class_group_id': self.class_group.pk,
+                'pk': self.object.pk,
+            }
+        )    
 
 
 @method_decorator(csrf_protect, name='dispatch')
 class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
     model = Student
-    
+
     def get_queryset(self):
-        # Garante que o professor só exclua seus próprios alunos
         return Student.objects.filter(
+            class_group_id=self.kwargs.get('class_group_id'),
             class_group__teacher=self.request.user.teacher_profile
         )
-    
-    def delete(self, request, *args, **kwargs):
-        student = self.get_object()
-        class_group_id = student.class_group.id
-        student.delete()
 
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': True})
+    def form_valid(self, form):
+        class_group_id = self.object.class_group_id
 
-        messages.success(request, "Aluno excluído com sucesso.")
-        return redirect(reverse_lazy('student_form', kwargs={'class_group_id': class_group_id}))
-    
-    def get_success_url(self):
-        return reverse_lazy('student_form', kwargs={'class_group_id': self.object.class_group.id})
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['class_group'] = self.get_object().class_group
-        return context
+        messages.success(
+            self.request,
+            'Aluno excluído com sucesso.'
+        )
+
+        self.object.delete()
+
+        return redirect(
+            'class_group_students',
+            class_group_id=class_group_id
+        )
  
  
 @method_decorator(csrf_protect, name='dispatch')

@@ -11,140 +11,428 @@
 {% block content %}
 <div class="mx-auto">
 
-    <!-- Busca + Filtros -->
-<div class="flex justify-between items-center mb-6 gap-4">
-    <!-- Dropdown de Filtro -->
-    <div class="relative z-30 flex-1 min-w-0"> <!-- z-30 para ficar acima dos cards -->
-        <div class="relative w-full">
-            <!-- Botão do dropdown -->
-            <button id="filter-dropdown-button" class="flex items-center justify-between w-full px-4 py-2 rounded-lg bg-white shadow-sm transition-all">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="filter" class="w-4 h-4 text-blue-500"></i>
-                    <span class="text-gray-700">Filtro</span>
-                </div>
-                <svg id="filter-arrow" class="w-4 h-4 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-            </button>
-            
-            <!-- Conteúdo do dropdown -->
-            <div id="filter-dropdown-content" class="hidden absolute z-40 top-full left-0 mt-2 w-full md:w-[600px] bg-white p-4 rounded-lg shadow-lg border border-gray-200">
-                <form method="get" class="space-y-4">
-                    <!-- Campo de busca -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
-                        <div class="relative">
-                            <input type="text" name="search" value="{{ search }}" placeholder="Buscar turmas..." 
-                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                <i data-lucide="search" class="w-5 h-5 text-gray-400"></i>
+    <!-- Status + Busca/Filtros + Nova Turma -->
+    <div class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center">
+
+        <!-- Filtro de status -->
+        <div class="inline-flex h-10 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+            <a
+                href="{% url 'class_group_list' %}?status=active{% if search %}&amp;search={{ search|urlencode }}{% endif %}{% if school %}&amp;school={{ school|urlencode }}{% endif %}{% if year %}&amp;year={{ year|urlencode }}{% endif %}{% if period %}&amp;period={{ period|urlencode }}{% endif %}"
+                class="inline-flex items-center justify-center px-4 text-sm font-medium transition-colors
+                {% if selected_status == 'active' %}
+                    bg-primary text-white
+                {% else %}
+                    text-gray-600 hover:bg-gray-50
+                {% endif %}"
+            >
+                Ativas
+            </a>
+
+            <a
+                href="{% url 'class_group_list' %}?status=archived{% if search %}&amp;search={{ search|urlencode }}{% endif %}{% if school %}&amp;school={{ school|urlencode }}{% endif %}{% if year %}&amp;year={{ year|urlencode }}{% endif %}{% if period %}&amp;period={{ period|urlencode }}{% endif %}"
+                class="inline-flex items-center justify-center border-l border-gray-200 px-4 text-sm font-medium transition-colors
+                {% if selected_status == 'archived' %}
+                    bg-primary text-white
+                {% else %}
+                    text-gray-600 hover:bg-gray-50
+                {% endif %}"
+            >
+                Arquivadas
+            </a>
+
+            <a
+                href="{% url 'class_group_list' %}?status=all{% if search %}&amp;search={{ search|urlencode }}{% endif %}{% if school %}&amp;school={{ school|urlencode }}{% endif %}{% if year %}&amp;year={{ year|urlencode }}{% endif %}{% if period %}&amp;period={{ period|urlencode }}{% endif %}"
+                class="inline-flex items-center justify-center border-l border-gray-200 px-4 text-sm font-medium transition-colors
+                {% if selected_status == 'all' %}
+                    bg-primary text-white
+                {% else %}
+                    text-gray-600 hover:bg-gray-50
+                {% endif %}"
+            >
+                Todas
+            </a>
+        </div>
+
+        <!-- Dropdown de filtro -->
+        <div class="relative z-30 min-w-0 flex-1">
+            <div class="relative w-full">
+
+                <!-- Botão do dropdown -->
+                <button
+                    id="filter-dropdown-button"
+                    type="button"
+                    class="flex h-10 w-full items-center justify-between rounded-lg bg-white px-4 shadow-sm transition-all"
+                >
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="filter" class="h-4 w-4 text-blue-500"></i>
+                        <span class="text-gray-700">Filtro</span>
+                    </div>
+
+                    <svg
+                        id="filter-arrow"
+                        class="h-4 w-4 text-gray-500 transition-transform"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 9l-7 7-7-7"
+                        ></path>
+                    </svg>
+                </button>
+
+                <!-- Conteúdo do dropdown -->
+                <div
+                    id="filter-dropdown-content"
+                    class="absolute left-0 top-full z-40 mt-2 hidden w-full rounded-lg border border-gray-200 bg-white p-4 shadow-lg md:w-[600px]"
+                >
+                    <form method="get" class="space-y-4">
+                        <input
+                            type="hidden"
+                            name="status"
+                            value="{{ selected_status }}"
+                        >
+
+                        <!-- Campo de busca -->
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-gray-700">
+                                Buscar
+                            </label>
+
+                            <div class="relative">
+                                <input
+                                    type="text"
+                                    name="search"
+                                    value="{{ search }}"
+                                    placeholder="Buscar turmas..."
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                                >
+
+                                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                    <i data-lucide="search" class="h-5 w-5 text-gray-400"></i>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Filtros -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Escola</label>
-                            <input type="text" name="school" value="{{ school }}" placeholder="Escola" 
-                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+
+                        <!-- Filtros -->
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div>
+                                <label class="mb-2 block text-sm font-medium text-gray-700">
+                                    Escola
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="school"
+                                    value="{{ school }}"
+                                    placeholder="Escola"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="mb-2 block text-sm font-medium text-gray-700">
+                                    Ano Letivo
+                                </label>
+
+                                <input
+                                    type="number"
+                                    name="year"
+                                    value="{{ year }}"
+                                    placeholder="Ano Letivo"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="mb-2 block text-sm font-medium text-gray-700">
+                                    Período
+                                </label>
+
+                                <select
+                                    name="period"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                                >
+                                    <option value="">Todos</option>
+                                    <option value="Manhã" {% if period == 'Manhã' %}selected{% endif %}>Manhã</option>
+                                    <option value="Tarde" {% if period == 'Tarde' %}selected{% endif %}>Tarde</option>
+                                    <option value="Noite" {% if period == 'Noite' %}selected{% endif %}>Noite</option>
+                                </select>
+                            </div>
                         </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Ano Letivo</label>
-                            <input type="number" name="year" value="{{ year }}" placeholder="Ano Letivo" 
-                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+
+                        <!-- Botões de ação -->
+                        <div class="flex justify-end gap-3 pt-2">
+                            <a
+                                href="{% url 'class_group_list' %}?status={{ selected_status }}"
+                                class="rounded border border-gray-300 px-4 py-2 text-sm text-gray-600 transition-all hover:bg-gray-100"
+                            >
+                                Limpar filtros
+                            </a>
+
+                            <button
+                                type="submit"
+                                class="rounded bg-blue-500 px-4 py-2 text-sm text-white transition-all hover:bg-blue-700"
+                            >
+                                Aplicar filtros
+                            </button>
                         </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Período</label>
-                            <select name="period" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-                                <option value="">Todos</option>
-                                <option value="Manhã" {% if period == 'Manhã' %}selected{% endif %}>Manhã</option>
-                                <option value="Tarde" {% if period == 'Tarde' %}selected{% endif %}>Tarde</option>
-                                <option value="Noite" {% if period == 'Noite' %}selected{% endif %}>Noite</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <!-- Botões de ação -->
-                    <div class="flex justify-end gap-3 pt-2">
-                        <a href="{% url 'class_group_list' %}" class="px-4 py-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition-all">
-                            Limpar Filtros
-                        </a>
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-all">
-                            Aplicar Filtros
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
+
+        <!-- Botão Nova Turma -->
+        <div class="flex-shrink-0">
+            <a
+                href="{% url 'class_group_form' %}"
+                class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-primary px-4 text-white transition hover:bg-blue-600"
+            >
+                <i data-lucide="plus" class="h-5 w-5"></i>
+                <span>Nova Turma</span>
+            </a>
+        </div>
     </div>
-    
-    <!-- Botão Nova Turma -->
-    <div class="flex-shrink-0">
-        <a href="{% url 'class_group_form' %}" class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition whitespace-nowrap">
-            <i data-lucide="plus" class="w-5 h-5"></i>
-            <span>Nova Turma</span>
-        </a>
-    </div>
-</div>
 
     <!-- Cards de Turmas -->
     {% if class_groups %}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for turma in class_groups %}
-        <div class="group relative bg-white rounded-xl shadow hover:shadow-lg transition">
+        <div class="group relative flex h-full flex-col rounded-xl bg-white shadow transition hover:shadow-lg">
             <!-- Link principal que cobre todo o card -->
             <a href="{% url 'class_group_detail' turma.id %}" class="absolute inset-0 z-10"></a>
-            
-            <div class="p-6">
-                <h3 class="text-lg font-semibold text-gray-800 group-hover:text-primary transition">{{ turma.name }}</h3>
-                <p class="text-sm text-gray-600">{{ turma.school }} | {{ turma.year }} | {{ turma.period }}</p>
+
+            <div class="flex h-full flex-col p-6">
+                <div class="flex items-start justify-between gap-3">
+                    <h3 class="text-lg font-semibold text-gray-800 group-hover:text-primary transition">
+                        {{ turma.name }}
+                    </h3>
+
+                    {% if turma.is_active %}
+                        <span class="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                            Ativa
+                        </span>
+                    {% else %}
+                        <span class="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                            <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                            Arquivada
+                        </span>
+                    {% endif %}
+                </div>
+                <p class="text-sm text-gray-600">
+                    {% if turma.school %}
+                        {{ turma.school }} |
+                    {% endif %}
+
+                    {{ turma.year }}
+
+                    {% if turma.period %}
+                        | {{ turma.period }}
+                    {% endif %}
+
+                    {% if turma.schedule %}
+                        | {{ turma.schedule }}
+                    {% endif %}
+                </p>
                 <p class="mt-2 text-gray-500 text-sm">{{ turma.description|truncatewords:18 }}</p>
                 
-                <div class="mt-4 flex gap-4 text-sm text-gray-500">
-                    <div class="flex items-center gap-1">
-                        <i data-lucide="users-round" class="w-4 h-4"></i>
-                        <span>Alunos: {{ turma.students.count }}</span>
+                <div class="mt-auto pt-4">
+                    <div class="flex gap-4 text-sm text-gray-500">
+                        <div class="flex items-center gap-1">
+                            <i data-lucide="users-round" class="w-4 h-4"></i>
+                            <span>Alunos: {{ turma.students.count }}</span>
+                        </div>
+
+                        <div class="flex items-center gap-1">
+                            <i data-lucide="book-open" class="w-4 h-4"></i>
+                            <span>Aulas: {{ turma.lessons.count }}</span>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <i data-lucide="book-open" class="w-4 h-4"></i>
-                        <span>Aulas: {{ turma.lessons.count }}</span>
+
+                    <!-- Links internos acima do link principal do card -->
+                    <div class="mt-4 flex gap-3 relative z-20">
+                        <a href="{% url 'class_group_students' class_group_id=turma.pk %}"
+                        class="mt-2 inline-flex items-center px-2 py-1 border border-blue-500 text-blue-500 font-medium rounded-lg hover:bg-blue-500 hover:text-white transition-colors duration-200">
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                class="w-4 h-4 mr-1"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 11c0 1.657-1.343 3-3 3S6 12.657 6 11s1.343-3 3-3 3 1.343 3 3zm0 0c0 1.657 1.343 3 3 3s3-1.343 3-3-1.343-3-3-3-3 1.343-3 3zM6 16.5A5.978 5.978 0 0112 14c1.657 0 3.156.672 4.242 1.758A5.978 5.978 0 0118 20.5H6a5.978 5.978 0 010-4z"/>
+                            </svg>
+                            Ver Alunos
+                        </a>
                     </div>
-                </div>
-                
-                <!-- Links internos - adicionamos relative z-20 para ficarem acima do link principal -->
-                <div class="mt-4 flex gap-3 relative z-20">
-                    <a href="{% url 'class_group_students' class_group_id=turma.pk %}" class="mt-2 inline-flex items-center px-2 py-1 border border-blue-500 text-blue-500 font-medium rounded-lg hover:bg-blue-500 hover:text-white transition-colors duration-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 1.657-1.343 3-3 3S6 12.657 6 11s1.343-3 3-3 3 1.343 3 3zm0 0c0 1.657 1.343 3 3 3s3-1.343 3-3-1.343-3-3-3-3 1.343-3 3zM6 16.5A5.978 5.978 0 0112 14c1.657 0 3.156.672 4.242 1.758A5.978 5.978 0 0118 20.5H6a5.978 5.978 0 010-4z"/>
-                        </svg>
-                        Ver Alunos
-                      </a>
                 </div>
             </div>
         </div>
         {% endfor %}
 
-        <!-- Card de Nova Turma (mantido como estava) -->
-        <a href="{% url 'class_group_form' %}" class="flex items-center justify-center bg-blue-50 border-2 border-dashed border-primary p-6 rounded-xl hover:bg-blue-100 transition">
-            <span class="text-primary font-bold">+ Nova Turma</span>
+        <!-- Card de Nova Turma -->
+        <a
+            href="{% url 'class_group_form' %}"
+            class="group flex min-h-48 items-center justify-center rounded-xl border-2 border-dashed border-primary bg-blue-50 p-6 text-center transition-colors duration-200 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+        >
+            <div>
+                <i
+                    data-lucide="plus"
+                    class="mx-auto h-7 w-7 text-primary transition-transform duration-200 group-hover:scale-110"
+                ></i>
+
+                <span class="mt-3 block font-semibold text-primary">
+                    Nova turma
+                </span>
+            </div>
         </a>
     </div>
+
+    {% elif has_any_class_groups %}
+
+        {% if search or school or year or period %}
+
+        <!-- Nenhum resultado para os filtros -->
+        <div class="mx-auto mt-10 max-w-2xl">
+            <div class="rounded-xl border border-gray-200 bg-white px-6 py-10 text-center shadow-sm sm:px-10">
+                <i
+                    data-lucide="search-x"
+                    class="mx-auto h-10 w-10 text-gray-400"
+                ></i>
+
+                <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                    Nenhuma turma encontrada
+                </h2>
+
+                <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
+                    Não encontramos turmas que correspondam aos filtros informados.
+                </p>
+
+                <a
+                    href="{% url 'class_group_list' %}?status={{ selected_status }}"
+                    class="mt-5 inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
+                >
+                    Limpar filtros
+                </a>
+            </div>
+        </div>
+
+        {% elif selected_status == 'archived' %}
+
+        <!-- Nenhuma turma arquivada -->
+        <div class="mx-auto mt-10 max-w-2xl">
+            <div class="rounded-xl border border-gray-200 bg-white px-6 py-10 text-center shadow-sm sm:px-10">
+                <i
+                    data-lucide="archive"
+                    class="mx-auto h-10 w-10 text-gray-400"
+                ></i>
+
+                <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                    Nenhuma turma arquivada
+                </h2>
+
+                <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
+                    As turmas arquivadas aparecerão aqui quando você decidir preservar uma turma sem mantê-la entre as turmas ativas.
+                </p>
+
+                <a
+                    href="{% url 'class_group_list' %}?status=active"
+                    class="mt-5 inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
+                >
+                    Ver turmas ativas
+                </a>
+            </div>
+        </div>
+
+        {% elif selected_status == 'active' %}
+
+        <!-- Nenhuma turma ativa -->
+        <div class="mx-auto mt-10 max-w-2xl">
+            <div class="rounded-xl border border-gray-200 bg-white px-6 py-10 text-center shadow-sm sm:px-10">
+                <i
+                    data-lucide="graduation-cap"
+                    class="mx-auto h-10 w-10 text-gray-400"
+                ></i>
+
+                <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                    Nenhuma turma ativa
+                </h2>
+
+                <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
+                    Você não possui turmas ativas no momento. Suas turmas arquivadas continuam disponíveis com todo o histórico preservado.
+                </p>
+
+                <div class="mt-5 flex flex-wrap items-center justify-center gap-3">
+                    <a
+                        href="{% url 'class_group_list' %}?status=archived"
+                        class="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
+                    >
+                        Ver arquivadas
+                    </a>
+
+                    <a
+                        href="{% url 'class_group_form' %}"
+                        class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    >
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        Nova turma
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {% endif %}
+
     {% else %}
-    <div class="text-center text-gray-500 mt-12">
-        Nenhuma turma cadastrada ainda.
+
+    <!-- Estado inicial sem turmas -->
+    <div class="mx-auto mt-8 max-w-3xl">
+        <a
+            href="{% url 'class_group_form' %}"
+            class="group flex min-h-72 w-full items-center justify-center rounded-2xl border-2 border-dashed border-primary bg-blue-50 px-6 py-10 text-center transition-all duration-200 hover:bg-blue-100 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:min-h-80 sm:px-10"
+            aria-label="Criar a primeira turma"
+        >
+            <div class="max-w-lg">
+                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm transition-transform duration-200 group-hover:scale-105 sm:h-16 sm:w-16">
+                    <i
+                        data-lucide="graduation-cap"
+                        class="h-7 w-7 text-primary sm:h-8 sm:w-8"
+                    ></i>
+                </div>
+
+                <h2 class="mt-6 text-xl font-semibold text-gray-900 sm:text-2xl">
+                    Nenhuma turma cadastrada
+                </h2>
+
+                <p class="mx-auto mt-4 text-sm leading-7 text-gray-600 sm:text-base">
+                    Você ainda não possui nenhuma turma cadastrada.
+                </p>
+
+                <p class="mx-auto mt-3 text-sm leading-7 text-gray-600 sm:text-base">
+                    Clique aqui para criar sua primeira turma e começar a
+                    organizar alunos e aulas.
+                </p>
+
+                <div class="mt-8 text-center">
+                    <i
+                        data-lucide="plus"
+                        class="mx-auto h-7 w-7 text-primary transition-transform duration-200 group-hover:scale-110"
+                    ></i>
+
+                    <span class="mt-3 block text-base font-semibold text-primary">
+                        Nova turma
+                    </span>
+                </div>
+            </div>
+        </a>
     </div>
+
     {% endif %}
 
 </div>
-
-<!-- Script JS para mostrar/ocultar filtros -->
-<script>
-    document.getElementById('toggleFilters').addEventListener('click', function () {
-        const panel = document.getElementById('filtersPanel');
-        panel.classList.toggle('hidden');
-    });
-</script>
 {% endblock %}
