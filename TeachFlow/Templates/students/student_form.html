@@ -306,7 +306,7 @@
                     for="id_notes"
                     class="mb-2 block text-sm font-medium text-gray-700"
                 >
-                    Observações
+                    Observações pedagógicas
                     <span class="text-xs font-normal text-gray-400">
                         (opcional)
                     </span>
@@ -316,9 +316,16 @@
                     id="id_notes"
                     name="notes"
                     rows="5"
-                    placeholder="Registre informações relevantes sobre o aluno..."
+                    placeholder="Registre observações pedagógicas, evolução, participação ou pontos de acompanhamento do aluno..."
                     class="w-full resize-y rounded-lg border border-gray-300 px-4 py-3 text-sm leading-relaxed text-gray-700 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 >{{ form.notes.value|default_if_none:'' }}</textarea>
+
+                <p class="mt-2 text-xs leading-5 text-gray-500">
+                    Utilize este espaço para registrar observações sobre o desenvolvimento,
+                    participação e acompanhamento pedagógico do aluno. Evite incluir
+                    informações pessoais que não sejam necessárias para a atividade
+                    educacional.
+                </p>
 
                 {% if form.notes.errors %}
                     <p class="mt-1.5 text-sm text-red-600">
