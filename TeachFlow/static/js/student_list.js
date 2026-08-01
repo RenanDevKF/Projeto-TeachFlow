@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('student-search-input');
     const resultsContainer = document.getElementById('student-results');
     const classGroupFilter = document.getElementById('student-class-group-filter');
+    const createClassGroupSelect = document.getElementById('student-create-class-group');
 
     if (!form || !searchInput || !resultsContainer) {
         return;
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                 },
+                cache: 'no-store',
                 signal: activeRequest.signal,
             });
 
@@ -78,4 +80,14 @@ document.addEventListener('DOMContentLoaded', () => {
             updateStudentResults();
         });
     }
+
+    if (createClassGroupSelect) {
+        createClassGroupSelect.addEventListener('change', () => {
+            const targetUrl = createClassGroupSelect.value;
+
+            if (targetUrl) {
+                window.location.href = targetUrl;
+            }
+        });
+    }    
 });
