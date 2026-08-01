@@ -9,6 +9,18 @@
     {% endif %}
 {% endblock %}
 
+{% block vendor_css %}
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+>
+
+<link
+    rel="stylesheet"
+    href="{% static 'css/vendors/flatpickr.css' %}"
+>
+{% endblock %}
+
 {% block page_title %}
 <span class="inline-flex items-center gap-2">
     <i
@@ -410,29 +422,20 @@
 </div>
 {% endblock %}
 
+{% block vendor_scripts %}
+<script
+    src="https://cdn.jsdelivr.net/npm/flatpickr"
+    defer
+></script>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"
+    defer
+></script>
+{% endblock %}
+
 {% block scripts %}
     {{ block.super }}
-
-    <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
-    >
-
-    <link
-        rel="stylesheet"
-        href="{% static 'css/vendors/flatpickr.css' %}"
-    >
-
-    <script
-        src="https://cdn.jsdelivr.net/npm/flatpickr"
-        defer
-    ></script>
-
-    <script
-        src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"
-        defer
-    ></script>
-
     <script
         src="{% static 'js/student_form.js' %}"
         defer
