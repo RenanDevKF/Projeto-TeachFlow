@@ -716,6 +716,30 @@ class StudentDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView):
             class_group__teacher=self.request.user.teacher_profile
         ).select_related('class_group')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+        birth_date = self.object.birth_date
+
+        if birth_date:
+            age = today.year - birth_date.year
+            birthday_has_not_occurred = (
+                today.month,
+                today.day,
+            ) < (
+                birth_date.month,
+                birth_date.day,
+            )
+
+            if birthday_has_not_occurred:
+                age -= 1
+
+            context['student_age'] = age
+        else:
+            context['student_age'] = None
+
+        return context
+
 @method_decorator(csrf_protect, name='dispatch')
 class StudentCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = Student

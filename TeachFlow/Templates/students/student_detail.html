@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhes do aluno{% endblock %}
+
+{% block page_title %}
+<span class="inline-flex items-center gap-2">
+    <i data-lucide="user-round" class="h-6 w-6 text-primary"></i>
+    <span>Detalhes do aluno</span>
+</span>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl">
+
+    <!-- Cabeçalho do aluno -->
+    <div class="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+
+            <!-- Identificação -->
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-3">
+                    <h1 class="text-2xl font-bold text-gray-900">
+                        {{ student.first_name }} {{ student.last_name }}
+                    </h1>
+
+                    {% if student.is_active %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                            Ativo
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
+                            <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                            Inativo
+                        </span>
+                    {% endif %}
+                </div>
+
+                <p class="mt-2 text-sm text-gray-500">
+                    Aluno da turma
+                    <a
+                        href="{% url 'class_group_detail' student.class_group.id %}"
+                        class="font-medium text-primary hover:underline"
+                    >
+                        {{ student.class_group.name }}
+                    </a>
+                </p>
+            </div>
+
+            <!-- Ações -->
+            <div class="ml-auto flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
+                <a
+                    href="{% url 'student_form' student.class_group.id student.id %}"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                >
+                    <i data-lucide="pencil" class="h-4 w-4"></i>
+                    Editar
+                </a>
+
+                <form
+                    method="post"
+                    action="{% url 'student_delete' student.class_group.id student.id %}"
+                    onsubmit="return confirm('Deseja excluir permanentemente o aluno {{ student.first_name|escapejs }} {{ student.last_name|escapejs }}? Esta ação não poderá ser desfeita.');"
+                >
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                    >
+                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                        Excluir
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações -->
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+        <!-- Dados pessoais -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="flex items-center gap-2">
+                <i data-lucide="contact" class="h-5 w-5 text-primary"></i>
+
+                <h2 class="text-lg font-semibold text-gray-900">
+                    Dados pessoais
+                </h2>
+            </div>
+
+            <dl class="mt-6 space-y-5">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">
+                        Nome completo
+                    </dt>
+
+                    <dd class="mt-1 text-sm font-medium text-gray-900">
+                        {{ student.first_name }} {{ student.last_name }}
+                    </dd>
+                </div>
+
+                <div class="border-t border-gray-100 pt-5">
+                    <dt class="text-sm font-medium text-gray-500">
+                        Data de nascimento
+                    </dt>
+
+                    <dd class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-900">
+                        {% if student.birth_date %}
+                            <span>{{ student.birth_date|date:"d/m/Y" }}</span>
+
+                            {% if student_age is not None %}
+                                <span class="text-gray-400">·</span>
+
+                                <span>
+                                    {{ student_age }}
+                                    {% if student_age == 1 %}
+                                        ano
+                                    {% else %}
+                                        anos
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-gray-400">Não informada</span>
+                        {% endif %}
+                    </dd>
+                </div>
+
+                <div class="border-t border-gray-100 pt-5">
+                    <dt class="text-sm font-medium text-gray-500">
+                        Status
+                    </dt>
+
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {% if student.is_active %}
+                            Aluno ativo
+                        {% else %}
+                            Aluno inativo
+                        {% endif %}
+                    </dd>
+                </div>
+
+                <div class="border-t border-gray-100 pt-5">
+                    <dt class="text-sm font-medium text-gray-500">
+                        Cadastrado em
+                    </dt>
+
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {{ student.created_at|date:"d/m/Y \à\s H:i" }}
+                    </dd>
+                </div>
+            </dl>
+        </section>
+
+        <!-- Dados da turma -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="flex items-center gap-2">
+                <i data-lucide="graduation-cap" class="h-5 w-5 text-primary"></i>
+
+                <h2 class="text-lg font-semibold text-gray-900">
+                    Turma
+                </h2>
+            </div>
+
+            <dl class="mt-6 space-y-5">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">
+                        Nome da turma
+                    </dt>
+
+                    <dd class="mt-1">
+                        <a
+                            href="{% url 'class_group_detail' student.class_group.id %}"
+                            class="text-sm font-medium text-gray-900 transition-colors hover:text-primary"
+                        >
+                            {{ student.class_group.name }}
+                        </a>
+                    </dd>
+                </div>
+
+                <div class="border-t border-gray-100 pt-5">
+                    <dt class="text-sm font-medium text-gray-500">
+                        Escola
+                    </dt>
+
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {{ student.class_group.school }}
+                    </dd>
+                </div>
+
+                <div class="border-t border-gray-100 pt-5">
+                    <dt class="text-sm font-medium text-gray-500">
+                        Ano letivo
+                    </dt>
+
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {{ student.class_group.year }}
+                    </dd>
+                </div>
+
+                <div class="border-t border-gray-100 pt-5">
+                    <dt class="text-sm font-medium text-gray-500">
+                        Período
+                    </dt>
+
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {% if student.class_group.period %}
+                            {{ student.class_group.period }}
+                        {% else %}
+                            <span class="text-gray-400">Não informado</span>
+                        {% endif %}
+                    </dd>
+                </div>
+
+                <div class="border-t border-gray-100 pt-5">
+                    <dt class="text-sm font-medium text-gray-500">
+                        Horário
+                    </dt>
+
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {% if student.class_group.schedule %}
+                            {{ student.class_group.schedule }}
+                        {% else %}
+                            <span class="text-gray-400">Não informado</span>
+                        {% endif %}
+                    </dd>
+                </div>
+            </dl>
+        </section>
+    </div>
+
+    <!-- Observações -->
+    <section class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="flex items-center gap-2">
+            <i data-lucide="notebook-pen" class="h-5 w-5 text-primary"></i>
+
+            <h2 class="text-lg font-semibold text-gray-900">
+                Observações
+            </h2>
+        </div>
+
+        {% if student.notes %}
+            <p class="mt-4 whitespace-pre-line text-sm leading-7 text-gray-700">
+                {{ student.notes }}
+            </p>
+        {% else %}
+            <div class="mt-4 rounded-lg bg-gray-50 px-4 py-5">
+                <p class="text-sm text-gray-500">
+                    Nenhuma observação foi registrada para este aluno.
+                </p>
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- Navegação -->
+    <div class="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <a
+            href="{% url 'class_group_detail' student.class_group.id %}"
+            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+        >
+            <i data-lucide="arrow-left" class="h-4 w-4"></i>
+            Voltar para a turma
+        </a>
+
+        <div class="flex flex-col gap-3 sm:flex-row">
+            <a
+                href="{% url 'class_group_students' student.class_group.id %}"
+                class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+                <i data-lucide="users-round" class="h-4 w-4"></i>
+                Alunos desta turma
+            </a>
+
+            <a
+                href="{% url 'student_list' %}"
+                class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+                <i data-lucide="list" class="h-4 w-4"></i>
+                Lista geral de alunos
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
