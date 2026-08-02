@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-
     const templateCheckbox = document.getElementById('id_is_template');
     const templateCard = document.getElementById('template-info-card');
 
@@ -53,5 +52,4 @@ document.addEventListener('DOMContentLoaded', () => {
         'id_materials',
         'materials-counter'
     );
-
 });
