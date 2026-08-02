@@ -493,6 +493,11 @@ class ExerciseUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
     form_class = ExerciseForm
     template_name = 'exercises/exercise_form.html'
     
+    def get_queryset(self):
+        return Exercise.objects.filter(
+            created_by=self.request.user.teacher_profile
+        )
+       
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['teacher'] = self.request.user.teacher_profile

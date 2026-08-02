@@ -29,18 +29,20 @@
             </form>
         {% endif %}
 
-        <a
-            href="{% url 'exercise_form' exercise.id %}"
-            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-        >
-            <i data-lucide="pencil" class="h-4 w-4"></i>
+        {% if exercise.created_by == request.user.teacher_profile %}
+            <a
+                href="{% url 'exercise_form' exercise.id %}"
+                class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            >
+                <i data-lucide="pencil" class="h-4 w-4"></i>
 
-            {% if exercise.is_template %}
-                Editar modelo
-            {% else %}
-                Editar exercício
-            {% endif %}
-        </a>
+                {% if exercise.is_template %}
+                    Editar modelo
+                {% else %}
+                    Editar exercício
+                {% endif %}
+            </a>
+        {% endif %}
 
         <button
             type="button"
