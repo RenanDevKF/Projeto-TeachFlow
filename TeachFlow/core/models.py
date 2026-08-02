@@ -141,7 +141,15 @@ class Lesson(models.Model):
 class Exercise(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
-    duration = models.IntegerField(help_text="Duration in minutes", null=True, blank=True)
+    duration = models.PositiveIntegerField(
+        null=True, blank=True,
+        validators=[
+            MinValueValidator(1, message='A duração deve ser de pelo menos 1 minuto.'),
+            MaxValueValidator(1440, message='A duração não pode ultrapassar 1440 minutos.'),
+        ],
+        verbose_name='Duração',
+        help_text='Duração estimada em minutos, entre 1 e 1440.',
+    )
     materials = models.TextField(blank=True)
     created_by = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='exercises')
     objectives = models.ManyToManyField(LearningObjective, blank=True, related_name='exercises')

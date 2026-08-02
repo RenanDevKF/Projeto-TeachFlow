@@ -177,7 +177,7 @@ class ExerciseForm(forms.ModelForm):
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-input'}),
             'description': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 4}),
-            'duration': forms.NumberInput(attrs={'class': 'form-input'}),
+            'duration': forms.NumberInput(attrs={'class': 'form-input', 'min': 1, 'max': 1440, 'step': 1, 'placeholder': 'Ex.: 50'}),
             'materials': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
             'objectives': forms.SelectMultiple(attrs={'class': 'hidden'}),  # Custom widget
             'tags': forms.SelectMultiple(attrs={'class': 'hidden'}),  # Custom widget
