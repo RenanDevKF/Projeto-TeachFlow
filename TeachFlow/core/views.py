@@ -437,14 +437,157 @@ class ExerciseListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     model = Exercise
     template_name = 'exercises/exercise_list.html'
     context_object_name = 'exercises'
-    
+    paginate_by = 18
+
+    def get_selected_status(self):
+        status = self.request.GET.get('status', 'active')
+
+        if status not in {'active', 'archived', 'all'}:
+            status = 'active'
+
+        return status
+
+    def get_selected_type(self):
+        exercise_type = self.request.GET.get('type', 'all')
+
+        if exercise_type not in {'exercise', 'template', 'all'}:
+            exercise_type = 'all'
+
+        return exercise_type
+
+    def get_selected_duration(self):
+        duration = self.request.GET.get('duration', '')
+
+        valid_durations = {
+            '',
+            'up-to-15',
+            '16-to-30',
+            '31-to-60',
+            '61-to-120',
+            'over-120',
+            'without-duration',
+        }
+
+        return duration if duration in valid_durations else ''
+
     def get_queryset(self):
-        return Exercise.objects.filter(
+        queryset = Exercise.objects.filter(
             created_by=self.request.user.teacher_profile
-        ).select_related('created_by').prefetch_related(
+        ).select_related(
+            'created_by'
+        ).prefetch_related(
             'tags',
             'objectives',
         )
+
+        status = self.get_selected_status()
+        exercise_type = self.get_selected_type()
+        duration = self.get_selected_duration()
+
+        search = self.request.GET.get('search', '').strip()
+        tag_id = self.request.GET.get('tag', '')
+        objective_id = self.request.GET.get('objective', '')
+
+        if status == 'active':
+            queryset = queryset.filter(is_active=True)
+        elif status == 'archived':
+            queryset = queryset.filter(is_active=False)
+
+        if exercise_type == 'exercise':
+            queryset = queryset.filter(is_template=False)
+        elif exercise_type == 'template':
+            queryset = queryset.filter(is_template=True)
+
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search) |
+                Q(materials__icontains=search)
+            )
+
+        if duration == 'up-to-15':
+            queryset = queryset.filter(
+                duration__gte=1,
+                duration__lte=15,
+            )
+        elif duration == '16-to-30':
+            queryset = queryset.filter(
+                duration__gte=16,
+                duration__lte=30,
+            )
+        elif duration == '31-to-60':
+            queryset = queryset.filter(
+                duration__gte=31,
+                duration__lte=60,
+            )
+        elif duration == '61-to-120':
+            queryset = queryset.filter(
+                duration__gte=61,
+                duration__lte=120,
+            )
+        elif duration == 'over-120':
+            queryset = queryset.filter(duration__gt=120)
+        elif duration == 'without-duration':
+            queryset = queryset.filter(duration__isnull=True)
+
+        if tag_id.isdigit():
+            queryset = queryset.filter(tags__id=tag_id)
+
+        if objective_id.isdigit():
+            queryset = queryset.filter(objectives__id=objective_id)
+
+        return queryset.distinct().order_by('title', 'id')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        teacher = self.request.user.teacher_profile
+
+        base_exercises = Exercise.objects.filter(created_by=teacher)
+
+        query_parameters = self.request.GET.copy()
+        query_parameters.pop('page', None)
+
+        context['search'] = self.request.GET.get('search', '').strip()
+        context['selected_status'] = self.get_selected_status()
+        context['selected_type'] = self.get_selected_type()
+        context['selected_duration'] = self.get_selected_duration()
+        context['selected_tag'] = self.request.GET.get('tag', '')
+        context['selected_objective'] = self.request.GET.get(
+            'objective',
+            ''
+        )
+
+        context['tags'] = Tag.objects.filter(
+            teacher=teacher,
+            type__in=['exercise', 'general'],
+        ).order_by('name')
+
+        context['objectives'] = LearningObjective.objects.filter(
+            teacher=teacher
+        ).order_by('title')
+
+        context['has_any_exercises'] = base_exercises.exists()
+        context['has_active_exercises'] = base_exercises.filter(
+            is_active=True
+        ).exists()
+        context['has_archived_exercises'] = base_exercises.filter(
+            is_active=False
+        ).exists()
+        context['has_templates'] = base_exercises.filter(
+            is_template=True
+        ).exists()
+        context['has_regular_exercises'] = base_exercises.filter(
+            is_template=False
+        ).exists()
+
+        context['query_string'] = query_parameters.urlencode()
+
+        if context.get('paginator'):
+            context['results_count'] = context['paginator'].count
+        else:
+            context['results_count'] = len(context['exercises'])
+
+        return context
         
 @method_decorator(csrf_protect, name='dispatch')
 class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView):
