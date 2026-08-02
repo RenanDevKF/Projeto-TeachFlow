@@ -605,7 +605,11 @@ class ExerciseListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         return context
         
 @method_decorator(csrf_protect, name='dispatch')
-class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView):
+class ExerciseDetailView(
+    LoginRequiredMixin,
+    TeacherRequiredMixin,
+    DetailView,
+):
     model = Exercise
     template_name = 'exercises/exercise_detail.html'
     context_object_name = 'exercise'
@@ -614,12 +618,44 @@ class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView):
         return Exercise.objects.filter(
             created_by=self.request.user.teacher_profile
         ).select_related(
-            'created_by',
+            'created_by__user',
+            'source_template',
         ).prefetch_related(
             'tags',
             'objectives',
-            'lessons__class_group',
         )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        related_lessons = self.object.lessons.select_related(
+            'class_group'
+        ).order_by(
+            '-date',
+            '-id',
+        )
+
+        lessons_count = related_lessons.count()
+
+        context['related_lessons'] = related_lessons
+        context['lessons_count'] = lessons_count
+        context['can_delete_exercise'] = lessons_count == 0
+
+        if self.object.is_template:
+            generated_exercises = self.object.generated_exercises.order_by(
+                'title',
+                'id',
+            )
+
+            context['generated_exercises'] = generated_exercises
+            context['generated_exercises_count'] = (
+                generated_exercises.count()
+            )
+        else:
+            context['generated_exercises'] = Exercise.objects.none()
+            context['generated_exercises_count'] = 0
+
+        return context
         
 @method_decorator(csrf_protect, name='dispatch')
 class UseExerciseTemplateView(LoginRequiredMixin, TeacherRequiredMixin, View):
