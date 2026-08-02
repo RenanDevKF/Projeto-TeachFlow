@@ -485,8 +485,13 @@ class ExerciseListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         duration = self.get_selected_duration()
 
         search = self.request.GET.get('search', '').strip()
-        tag_id = self.request.GET.get('tag', '')
-        objective_id = self.request.GET.get('objective', '')
+        tag_ids = [
+            tag_id for tag_id in self.request.GET.getlist('tag') if tag_id.isdigit()
+        ]
+
+        objective_ids = [
+            objective_id for objective_id in self.request.GET.getlist('objective') if objective_id.isdigit()
+        ]
 
         if status == 'active':
             queryset = queryset.filter(is_active=True)
@@ -530,11 +535,15 @@ class ExerciseListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         elif duration == 'without-duration':
             queryset = queryset.filter(duration__isnull=True)
 
-        if tag_id.isdigit():
-            queryset = queryset.filter(tags__id=tag_id)
+        if tag_ids:
+            queryset = queryset.filter(
+                tags__id__in=tag_ids
+            )
 
-        if objective_id.isdigit():
-            queryset = queryset.filter(objectives__id=objective_id)
+        if objective_ids:
+            queryset = queryset.filter(
+                objectives__id__in=objective_ids
+            )
 
         return queryset.distinct().order_by('title', 'id')
 
@@ -551,11 +560,17 @@ class ExerciseListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         context['selected_status'] = self.get_selected_status()
         context['selected_type'] = self.get_selected_type()
         context['selected_duration'] = self.get_selected_duration()
-        context['selected_tag'] = self.request.GET.get('tag', '')
-        context['selected_objective'] = self.request.GET.get(
-            'objective',
-            ''
-        )
+        context['selected_tags'] = [
+            tag_id
+            for tag_id in self.request.GET.getlist('tag')
+            if tag_id.isdigit()
+        ]
+
+        context['selected_objectives'] = [
+            objective_id
+            for objective_id in self.request.GET.getlist('objective')
+            if objective_id.isdigit()
+        ]
 
         context['tags'] = Tag.objects.filter(
             teacher=teacher,

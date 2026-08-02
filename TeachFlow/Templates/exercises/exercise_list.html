@@ -201,60 +201,191 @@
                     </select>
                 </div>
 
-                <!-- Tag -->
-                <div>
+                <!-- Tags -->
+                <div class="relative">
                     <label
-                        for="exercise-tag-filter"
                         class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
                     >
-                        Tag
+                        Tags
                     </label>
 
-                    <select
-                        id="exercise-tag-filter"
-                        name="tag"
-                        class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    <button
+                        id="exercise-tag-filter-trigger"
+                        type="button"
+                        class="flex min-h-10 w-full items-center justify-between gap-3 rounded-lg border border-gray-300 bg-white px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        aria-expanded="false"
                     >
-                        <option value="">Todas as tags</option>
+                        <span
+                            id="exercise-selected-tags"
+                            class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
+                        >
+                            {% if selected_tags %}
+                                {% for tag in tags %}
+                                    {% if tag.id|stringformat:"s" in selected_tags %}
+                                        <span
+                                            class="rounded-full px-2 py-0.5 text-xs font-medium"
+                                            style="background-color: {{ tag.color }}20; color: {{ tag.color }};"
+                                        >
+                                            {{ tag.name }}
+                                        </span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-gray-500">
+                                    Todas as tags
+                                </span>
+                            {% endif %}
+                        </span>
 
-                        {% for tag in tags %}
-                            <option
-                                value="{{ tag.id }}"
-                                {% if selected_tag == tag.id|stringformat:"s" %}selected{% endif %}
-                            >
-                                {{ tag.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
+                        <i
+                            data-lucide="chevron-down"
+                            class="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform"
+                            data-filter-arrow
+                        ></i>
+                    </button>
+
+                    <div
+                        id="exercise-tag-filter-dropdown"
+                        class="absolute left-0 top-full z-30 mt-1 hidden max-h-72 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+                    >
+                        <div class="border-b border-gray-100 p-3">
+                            <div class="relative">
+                                <i
+                                    data-lucide="search"
+                                    class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                ></i>
+
+                                <input
+                                    id="exercise-tag-filter-search"
+                                    type="text"
+                                    placeholder="Buscar tag..."
+                                    autocomplete="off"
+                                    class="h-9 w-full rounded-lg border border-gray-300 pl-9 pr-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="max-h-56 overflow-y-auto py-1">
+                            {% for tag in tags %}
+                                <label
+                                    class="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-gray-50"
+                                    data-multiple-filter-item
+                                >
+                                    <input
+                                        type="checkbox"
+                                        name="tag"
+                                        value="{{ tag.id }}"
+                                        class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                        data-exercise-multiple-filter
+                                        {% if tag.id|stringformat:"s" in selected_tags %}checked{% endif %}
+                                    >
+
+                                    <span
+                                        class="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                                        style="background-color: {{ tag.color }};"
+                                    ></span>
+
+                                    <span class="min-w-0 truncate text-sm text-gray-700">
+                                        {{ tag.name }}
+                                    </span>
+                                </label>
+                            {% empty %}
+                                <p class="px-3 py-4 text-sm text-gray-500">
+                                    Nenhuma tag disponível.
+                                </p>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Objetivo -->
-                <div>
+                <!-- Objetivos -->
+                <div class="relative">
                     <label
-                        for="exercise-objective-filter"
                         class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
                     >
-                        Objetivo de aprendizagem
+                        Objetivos de aprendizagem
                     </label>
 
-                    <select
-                        id="exercise-objective-filter"
-                        name="objective"
-                        class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    <button
+                        id="exercise-objective-filter-trigger"
+                        type="button"
+                        class="flex min-h-10 w-full items-center justify-between gap-3 rounded-lg border border-gray-300 bg-white px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        aria-expanded="false"
                     >
-                        <option value="">Todos os objetivos</option>
+                        <span
+                            id="exercise-selected-objectives"
+                            class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
+                        >
+                            {% if selected_objectives %}
+                                {% for objective in objectives %}
+                                    {% if objective.id|stringformat:"s" in selected_objectives %}
+                                        <span class="max-w-full truncate rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                                            {{ objective.title }}
+                                        </span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-gray-500">
+                                    Todos os objetivos
+                                </span>
+                            {% endif %}
+                        </span>
 
-                        {% for objective in objectives %}
-                            <option
-                                value="{{ objective.id }}"
-                                {% if selected_objective == objective.id|stringformat:"s" %}selected{% endif %}
-                            >
-                                {{ objective.title }}
-                            </option>
-                        {% endfor %}
-                    </select>
+                        <i
+                            data-lucide="chevron-down"
+                            class="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform"
+                            data-filter-arrow
+                        ></i>
+                    </button>
+
+                    <div
+                        id="exercise-objective-filter-dropdown"
+                        class="absolute left-0 top-full z-30 mt-1 hidden max-h-72 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+                    >
+                        <div class="border-b border-gray-100 p-3">
+                            <div class="relative">
+                                <i
+                                    data-lucide="search"
+                                    class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                ></i>
+
+                                <input
+                                    id="exercise-objective-filter-search"
+                                    type="text"
+                                    placeholder="Buscar objetivo..."
+                                    autocomplete="off"
+                                    class="h-9 w-full rounded-lg border border-gray-300 pl-9 pr-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="max-h-56 overflow-y-auto py-1">
+                            {% for objective in objectives %}
+                                <label
+                                    class="flex cursor-pointer items-start gap-3 px-3 py-2.5 transition-colors hover:bg-gray-50"
+                                    data-multiple-filter-item
+                                >
+                                    <input
+                                        type="checkbox"
+                                        name="objective"
+                                        value="{{ objective.id }}"
+                                        class="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
+                                        data-exercise-multiple-filter
+                                        {% if objective.id|stringformat:"s" in selected_objectives %}checked{% endif %}
+                                    >
+
+                                    <span class="text-sm leading-5 text-gray-700">
+                                        {{ objective.title }}
+                                    </span>
+                                </label>
+                            {% empty %}
+                                <p class="px-3 py-4 text-sm text-gray-500">
+                                    Nenhum objetivo disponível.
+                                </p>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
-            </div>
 
             <!-- Limpar -->
             <div class="flex justify-end">
