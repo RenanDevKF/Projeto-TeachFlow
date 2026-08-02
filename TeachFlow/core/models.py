@@ -147,6 +147,11 @@ class Exercise(models.Model):
     objectives = models.ManyToManyField(LearningObjective, blank=True, related_name='exercises')
     tags = models.ManyToManyField(Tag, blank=True, related_name='exercises')
     is_template = models.BooleanField(default=False, help_text="Exercício modelo para reutilização")
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Ativo',
+        help_text='Indica se o exercício está disponível para uso.',
+    )
     source_template = models.ForeignKey(
         'self',
         on_delete=models.SET_NULL,

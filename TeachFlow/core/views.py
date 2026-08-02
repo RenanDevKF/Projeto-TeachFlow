@@ -472,6 +472,7 @@ class UseExerciseTemplateView(LoginRequiredMixin, TeacherRequiredMixin, View):
             pk=pk,
             created_by=request.user.teacher_profile,
             is_template=True,
+            is_active=True,
         )
 
         new_exercise = Exercise.objects.create(
@@ -513,6 +514,71 @@ class ExerciseUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
     def get_success_url(self):
         messages.success(self.request, "Exercício atualizado com sucesso!")
         return reverse('exercise_detail', kwargs={'pk': self.object.pk})
+    
+@method_decorator(csrf_protect, name='dispatch')
+class ExerciseArchiveView(
+    LoginRequiredMixin,
+    TeacherRequiredMixin,
+    View,
+):
+    def post(self, request, pk):
+        exercise = get_object_or_404(
+            Exercise,
+            pk=pk,
+            created_by=request.user.teacher_profile,
+        )
+
+        if not exercise.is_active:
+            messages.info(
+                request,
+                'Este exercício já está arquivado.'
+            )
+            return redirect('exercise_detail', pk=exercise.pk)
+
+        exercise.is_active = False
+        exercise.save(update_fields=['is_active'])
+
+        messages.success(
+            request,
+            (
+                'Exercício arquivado com sucesso. '
+                'Ele não aparecerá para uso em novas aulas, '
+                'mas continuará preservado nas aulas anteriores.'
+            )
+        )
+
+        return redirect('exercise_detail', pk=exercise.pk)
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class ExerciseRestoreView(
+    LoginRequiredMixin,
+    TeacherRequiredMixin,
+    View,
+):
+    def post(self, request, pk):
+        exercise = get_object_or_404(
+            Exercise,
+            pk=pk,
+            created_by=request.user.teacher_profile,
+        )
+
+        if exercise.is_active:
+            messages.info(
+                request,
+                'Este exercício já está ativo.'
+            )
+            return redirect('exercise_detail', pk=exercise.pk)
+
+        exercise.is_active = True
+        exercise.save(update_fields=['is_active'])
+
+        messages.success(
+            request,
+            'Exercício reativado com sucesso.'
+        )
+
+        return redirect('exercise_detail', pk=exercise.pk)
 
 @method_decorator(csrf_protect, name='dispatch')
 class ExerciseDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
@@ -526,6 +592,24 @@ class ExerciseDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
         )
 
     def form_valid(self, form):
+        lessons_count = self.object.lessons.count()
+
+        if lessons_count > 0:
+            messages.error(
+                self.request,
+                (
+                    'Este exercício não pode ser excluído porque está vinculado '
+                    f'a {lessons_count} '
+                    f'{"aula" if lessons_count == 1 else "aulas"}. '
+                    'Você pode arquivá-lo para removê-lo da lista principal.'
+                )
+            )
+
+            return redirect(
+                'exercise_detail',
+                pk=self.object.pk
+            )
+
         messages.success(
             self.request,
             'Exercício excluído com sucesso.'

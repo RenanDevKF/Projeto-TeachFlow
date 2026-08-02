@@ -162,7 +162,7 @@ class LessonForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         if teacher:
-            self.fields['exercises'].queryset = Exercise.objects.filter(created_by=teacher, is_template=False)
+            self.fields['exercises'].queryset = Exercise.objects.filter(created_by=teacher, is_template=False, is_active=True,)
             self.fields['class_group'].queryset = ClassGroup.objects.filter(teacher=teacher)
             # Filtra tags apenas do tipo 'lesson' ou 'general'
             self.fields['tags'].queryset = Tag.objects.filter(
