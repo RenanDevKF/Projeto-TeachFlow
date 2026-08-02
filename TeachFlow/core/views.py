@@ -6,6 +6,7 @@ from django.contrib.auth import logout
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Q, Case, IntegerField, Value, When
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
@@ -455,6 +456,36 @@ class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView):
             Q(created_by=self.request.user.teacher_profile) |
             Q(lessons__class_group__teacher=self.request.user.teacher_profile)
         ).distinct()
+        
+@method_decorator(csrf_protect, name='dispatch')
+class UseExerciseTemplateView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    @transaction.atomic
+    def post(self, request, pk):
+        exercise_template = get_object_or_404(
+            Exercise,
+            pk=pk,
+            created_by=request.user.teacher_profile,
+            is_template=True,
+        )
+
+        new_exercise = Exercise.objects.create(
+            title=exercise_template.title,
+            description=exercise_template.description,
+            duration=exercise_template.duration,
+            materials=exercise_template.materials,
+            created_by=request.user.teacher_profile,
+            is_template=False,
+        )
+
+        new_exercise.objectives.set(exercise_template.objectives.all())
+        new_exercise.tags.set(exercise_template.tags.all())
+
+        messages.success(
+            request,
+            'Exercício criado a partir do modelo. Revise os dados antes de utilizá-lo.',
+        )
+
+        return redirect('exercise_form', pk=new_exercise.pk)
         
 @method_decorator(csrf_protect, name='dispatch')
 class ExerciseUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
