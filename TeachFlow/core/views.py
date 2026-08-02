@@ -440,9 +440,11 @@ class ExerciseListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     
     def get_queryset(self):
         return Exercise.objects.filter(
-        Q(created_by=self.request.user.teacher_profile) |
-        Q(lessons__class_group__teacher=self.request.user.teacher_profile)
-    ).distinct().select_related('created_by')
+            created_by=self.request.user.teacher_profile
+        ).select_related('created_by').prefetch_related(
+            'tags',
+            'objectives',
+        )
         
 @method_decorator(csrf_protect, name='dispatch')
 class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView):
@@ -451,11 +453,15 @@ class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView):
     context_object_name = 'exercise'
 
     def get_queryset(self):
-        # Filtra para mostrar apenas exercícios do professor
         return Exercise.objects.filter(
-            Q(created_by=self.request.user.teacher_profile) |
-            Q(lessons__class_group__teacher=self.request.user.teacher_profile)
-        ).distinct()
+            created_by=self.request.user.teacher_profile
+        ).select_related(
+            'created_by',
+        ).prefetch_related(
+            'tags',
+            'objectives',
+            'lessons__class_group',
+        )
         
 @method_decorator(csrf_protect, name='dispatch')
 class UseExerciseTemplateView(LoginRequiredMixin, TeacherRequiredMixin, View):
