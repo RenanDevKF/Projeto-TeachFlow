@@ -481,6 +481,7 @@ class UseExerciseTemplateView(LoginRequiredMixin, TeacherRequiredMixin, View):
             materials=exercise_template.materials,
             created_by=request.user.teacher_profile,
             is_template=False,
+            source_template=exercise_template,
         )
 
         new_exercise.objectives.set(exercise_template.objectives.all())

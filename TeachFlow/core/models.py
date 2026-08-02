@@ -147,6 +147,15 @@ class Exercise(models.Model):
     objectives = models.ManyToManyField(LearningObjective, blank=True, related_name='exercises')
     tags = models.ManyToManyField(Tag, blank=True, related_name='exercises')
     is_template = models.BooleanField(default=False, help_text="Exercício modelo para reutilização")
+    source_template = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='generated_exercises',
+        verbose_name='Modelo de origem',
+        help_text='Modelo utilizado para gerar este exercício.',
+    )
     
     class Meta:
         ordering = ['title']
