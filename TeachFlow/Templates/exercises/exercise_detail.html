@@ -230,30 +230,15 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Modal de tag
-    const tagModal = document.getElementById('tag-modal');
-    const addTagsBtn = document.getElementById('add-tags-btn');
-    const cancelTagModal = document.getElementById('cancel-tag-modal');
+    {{ block.super }}
 
-    if (addTagsBtn) {
-        addTagsBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            tagModal.classList.remove('hidden');
-        });
-    }
+    <script
+        src="{% static 'js/tagModal.js' %}"
+        defer
+    ></script>
 
-    if (cancelTagModal) {
-        cancelTagModal.addEventListener('click', function() {
-            tagModal.classList.add('hidden');
-        });
-    }
-});
-</script>
-
-<script
-    src="{% static 'js/exercise_detail.js' %}"
-    defer
-></script>
+    <script
+        src="{% static 'js/exercise_detail.js' %}"
+        defer
+    ></script>
 {% endblock %}

@@ -7,6 +7,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const tagForm = document.getElementById('tag-form');
     const tagNameInput = document.getElementById('tag_name');
     const submitBtn = document.getElementById('submit-tag-btn');
+
+    if (!tagModal || !tagForm || !tagNameInput) {
+        return;
+    }
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+    }    
     
     // Funções básicas do modal
     function openModal() {
@@ -77,7 +85,9 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Erro:', error);
             alert('Erro ao comunicar com o servidor');
         } finally {
-            submitBtn.disabled = false;
+            if (submitBtn) {
+                submitBtn.disabled = false;
+            }
         }
     });
 });
