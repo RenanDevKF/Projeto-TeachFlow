@@ -3,23 +3,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusInput = document.getElementById('exercise-status-input');
     const typeInput = document.getElementById('exercise-type-input');
     const searchInput = document.getElementById('exercise-search-input');
-
-    const statusButtons = document.querySelectorAll(
-        '[data-exercise-status]'
+    const durationSelect = document.getElementById(
+        'exercise-duration-filter'
     );
-    const typeButtons = document.querySelectorAll(
-        '[data-exercise-type]'
-    );
-
-    const automaticSelects = [
-        document.getElementById('exercise-duration-filter'),
-    ].filter(Boolean);
 
     if (!filterForm) {
         return;
     }
 
+    const statusButtons = Array.from(
+        document.querySelectorAll('[data-exercise-status]')
+    );
+
+    const typeButtons = Array.from(
+        document.querySelectorAll('[data-exercise-type]')
+    );
+
     let searchTimeout = null;
+    let isSubmitting = false;
+
+    function submitFilters() {
+        if (isSubmitting) {
+            return;
+        }
+
+        isSubmitting = true;
+        filterForm.requestSubmit();
+    }
 
     statusButtons.forEach((button) => {
         button.addEventListener('click', () => {
@@ -27,8 +37,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            statusInput.value = button.dataset.exerciseStatus;
-            filterForm.requestSubmit();
+            const nextStatus = button.dataset.exerciseStatus;
+
+            if (!nextStatus || statusInput.value === nextStatus) {
+                return;
+            }
+
+            statusInput.value = nextStatus;
+            submitFilters();
         });
     });
 
@@ -38,35 +54,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            typeInput.value = button.dataset.exerciseType;
-            filterForm.requestSubmit();
+            const nextType = button.dataset.exerciseType;
+
+            if (!nextType || typeInput.value === nextType) {
+                return;
+            }
+
+            typeInput.value = nextType;
+            submitFilters();
         });
     });
 
-    automaticSelects.forEach((select) => {
-        select.addEventListener('change', () => {
-            filterForm.requestSubmit();
-        });
-    });
+    durationSelect?.addEventListener('change', submitFilters);
 
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             window.clearTimeout(searchTimeout);
 
             searchTimeout = window.setTimeout(() => {
-                filterForm.requestSubmit();
+                submitFilters();
             }, 400);
         });
 
-        const urlParameters = new URLSearchParams(window.location.search);
+        const urlParameters = new URLSearchParams(
+            window.location.search
+        );
 
         if (urlParameters.has('search')) {
             searchInput.focus();
 
             const valueLength = searchInput.value.length;
-            searchInput.setSelectionRange(valueLength, valueLength);
+
+            searchInput.setSelectionRange(
+                valueLength,
+                valueLength
+            );
         }
     }
+
+    const dropdownControllers = [];
 
     function setupMultipleFilter({
         triggerId,
@@ -82,20 +108,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const arrow = trigger.querySelector('[data-filter-arrow]');
-        const checkboxes = dropdown.querySelectorAll(
-            '[data-exercise-multiple-filter]'
+
+        const checkboxes = Array.from(
+            dropdown.querySelectorAll(
+                '[data-exercise-multiple-filter]'
+            )
         );
-        const items = dropdown.querySelectorAll(
-            '[data-multiple-filter-item]'
+
+        const items = Array.from(
+            dropdown.querySelectorAll(
+                '[data-multiple-filter-item]'
+            )
         );
 
         function closeDropdown() {
             dropdown.classList.add('hidden');
             trigger.setAttribute('aria-expanded', 'false');
             arrow?.classList.remove('rotate-180');
+
+            if (search) {
+                search.value = '';
+
+                items.forEach((item) => {
+                    item.classList.remove('hidden');
+                });
+            }
         }
 
         function openDropdown() {
+            dropdownControllers.forEach((controller) => {
+                if (controller.trigger !== trigger) {
+                    controller.close();
+                }
+            });
+
             dropdown.classList.remove('hidden');
             trigger.setAttribute('aria-expanded', 'true');
             arrow?.classList.add('rotate-180');
@@ -115,15 +161,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         checkboxes.forEach((checkbox) => {
             checkbox.addEventListener('change', () => {
-                filterForm.requestSubmit();
+                submitFilters();
             });
         });
 
         search?.addEventListener('input', () => {
-            const query = search.value.trim().toLowerCase();
+            const query = search.value
+                .trim()
+                .toLocaleLowerCase('pt-BR');
 
             items.forEach((item) => {
-                const text = item.textContent.toLowerCase();
+                const text = item.textContent
+                    .toLocaleLowerCase('pt-BR');
 
                 item.classList.toggle(
                     'hidden',
@@ -132,19 +181,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        document.addEventListener('click', (event) => {
-            if (
-                !trigger.contains(event.target) &&
-                !dropdown.contains(event.target)
-            ) {
-                closeDropdown();
-            }
-        });
-
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                closeDropdown();
-            }
+        dropdownControllers.push({
+            trigger,
+            dropdown,
+            close: closeDropdown,
         });
     }
 
@@ -158,5 +198,26 @@ document.addEventListener('DOMContentLoaded', () => {
         triggerId: 'exercise-objective-filter-trigger',
         dropdownId: 'exercise-objective-filter-dropdown',
         searchId: 'exercise-objective-filter-search',
-    });    
+    });
+
+    document.addEventListener('click', (event) => {
+        dropdownControllers.forEach((controller) => {
+            if (
+                !controller.trigger.contains(event.target) &&
+                !controller.dropdown.contains(event.target)
+            ) {
+                controller.close();
+            }
+        });
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') {
+            return;
+        }
+
+        dropdownControllers.forEach((controller) => {
+            controller.close();
+        });
+    });
 });

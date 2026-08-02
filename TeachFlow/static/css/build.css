@@ -921,6 +921,10 @@ video {
   max-height: 18rem;
 }
 
+.max-h-60 {
+  max-height: 15rem;
+}
+
 .min-h-10 {
   min-height: 2.5rem;
 }
@@ -943,6 +947,10 @@ video {
 
 .min-h-screen {
   min-height: 100vh;
+}
+
+.min-h-80 {
+  min-height: 20rem;
 }
 
 .w-1 {
@@ -1047,6 +1055,10 @@ video {
 
 .min-w-full {
   min-width: 100%;
+}
+
+.min-w-72 {
+  min-width: 18rem;
 }
 
 .max-w-2xl {
@@ -1662,6 +1674,14 @@ video {
 
 .bg-gray-900\/50 {
   background-color: rgb(17 24 39 / 0.5);
+}
+
+.bg-gray-50\/70 {
+  background-color: rgb(249 250 251 / 0.7);
+}
+
+.bg-white\/70 {
+  background-color: rgb(255 255 255 / 0.7);
 }
 
 .bg-opacity-50 {
@@ -2628,6 +2648,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     width: auto;
   }
 
+  .sm\:flex-none {
+    flex: none;
+  }
+
   .sm\:grid-cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2751,6 +2775,28 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   .xl\:items-center {
+    align-items: center;
+  }
+}
+
+@media (min-width: 1536px) {
+  .\32xl\:sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  .\32xl\:flex-row {
+    flex-direction: row;
+  }
+
+  .\32xl\:items-center {
     align-items: center;
   }
 }
