@@ -517,12 +517,21 @@ class ExerciseUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
 @method_decorator(csrf_protect, name='dispatch')
 class ExerciseDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
     model = Exercise
-    template_name = 'exercises/exercise_confirm_delete.html'
     success_url = reverse_lazy('exercise_list')
+    http_method_names = ['post']
     
     def get_queryset(self):
-        # Só permite deletar exercícios que o professor criou
-        return Exercise.objects.filter(created_by=self.request.user.teacher_profile)
+        return Exercise.objects.filter(
+            created_by=self.request.user.teacher_profile
+        )
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            'Exercício excluído com sucesso.'
+        )
+
+        return super().form_valid(form)
     
     
 @require_POST

@@ -54,13 +54,22 @@
         </button>
 
         {% if exercise.created_by == request.user.teacher_profile %}
-            <a
-                href="{% url 'exercise_delete' exercise.id %}"
-                class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+            <form
+                method="post"
+                action="{% url 'exercise_delete' exercise.id %}"
+                class="exercise-delete-form"
+                data-exercise-title="{{ exercise.title }}"
             >
-                <i data-lucide="trash-2" class="h-4 w-4"></i>
-                Excluir
-            </a>
+                {% csrf_token %}
+
+                <button
+                    type="submit"
+                    class="exercise-delete-button inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    <span class="exercise-delete-label">Excluir</span>
+                </button>
+            </form>
         {% endif %}
     </div>
 
@@ -242,4 +251,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<script
+    src="{% static 'js/exercise_detail.js' %}"
+    defer
+></script>
 {% endblock %}
