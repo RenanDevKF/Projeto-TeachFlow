@@ -199,6 +199,7 @@
                             class="exercise-delete-button inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             <i data-lucide="trash-2" class="h-4 w-4"></i>
+
                             <span class="exercise-delete-label">
                                 Excluir
                             </span>
@@ -208,11 +209,18 @@
                     <button
                         type="button"
                         disabled
-                        title="Este exercício está vinculado a aulas e não pode ser excluído."
+                        title="{% if lessons_count > 0 and generated_exercises_count > 0 %}Este recurso possui aulas vinculadas e cópias geradas.{% elif lessons_count > 0 %}Este exercício está vinculado a aulas e não pode ser excluído.{% else %}Este modelo possui cópias geradas e não pode ser excluído.{% endif %}"
                         class="inline-flex h-10 cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-100 px-4 text-sm font-medium text-gray-400"
                     >
                         <i data-lucide="lock-keyhole" class="h-4 w-4"></i>
-                        Em uso
+
+                        {% if lessons_count > 0 %}
+                            Em uso
+                        {% elif generated_exercises_count > 0 %}
+                            Com cópias
+                        {% else %}
+                            Indisponível
+                        {% endif %}
                     </button>
                 {% endif %}
             </div>
@@ -275,17 +283,58 @@
                         Exclusão indisponível
                     </p>
 
-                    <p class="mt-1 text-sm leading-6 text-amber-800">
-                        Este exercício está vinculado a
-                        {{ lessons_count }}
-                        {% if lessons_count == 1 %}
-                            aula
-                        {% else %}
-                            aulas
-                        {% endif %}
-                        e será preservado para manter o histórico pedagógico.
-                        Você pode arquivá-lo para removê-lo da lista principal.
-                    </p>
+                    {% if lessons_count > 0 and generated_exercises_count > 0 %}
+                        <p class="mt-1 text-sm leading-6 text-amber-800">
+                            Este recurso está vinculado a
+                            {{ lessons_count }}
+                            {% if lessons_count == 1 %}
+                                aula
+                            {% else %}
+                                aulas
+                            {% endif %}
+                            e possui
+                            {{ generated_exercises_count }}
+                            {% if generated_exercises_count == 1 %}
+                                cópia gerada.
+                            {% else %}
+                                cópias geradas.
+                            {% endif %}
+
+                            Ele será preservado para manter o histórico e a
+                            rastreabilidade. Você pode arquivá-lo para removê-lo
+                            da lista principal.
+                        </p>
+
+                    {% elif lessons_count > 0 %}
+                        <p class="mt-1 text-sm leading-6 text-amber-800">
+                            Este exercício está vinculado a
+                            {{ lessons_count }}
+                            {% if lessons_count == 1 %}
+                                aula
+                            {% else %}
+                                aulas
+                            {% endif %}
+                            e será preservado para manter o histórico pedagógico.
+
+                            Você pode arquivá-lo para removê-lo da lista principal.
+                        </p>
+
+                    {% elif generated_exercises_count > 0 %}
+                        <p class="mt-1 text-sm leading-6 text-amber-800">
+                            Este modelo já gerou
+                            {{ generated_exercises_count }}
+                            {% if generated_exercises_count == 1 %}
+                                exercício.
+                            {% else %}
+                                exercícios.
+                            {% endif %}
+
+                            Ele será preservado para que as cópias continuem
+                            registrando corretamente seu modelo de origem.
+
+                            Você pode arquivá-lo para removê-lo da lista principal.
+                        </p>
+                    {% endif %}
                 </div>
             </div>
         {% endif %}

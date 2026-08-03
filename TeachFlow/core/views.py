@@ -605,11 +605,7 @@ class ExerciseListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         return context
         
 @method_decorator(csrf_protect, name='dispatch')
-class ExerciseDetailView(
-    LoginRequiredMixin,
-    TeacherRequiredMixin,
-    DetailView,
-):
+class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView,):
     model = Exercise
     template_name = 'exercises/exercise_detail.html'
     context_object_name = 'exercise'
@@ -637,23 +633,33 @@ class ExerciseDetailView(
 
         lessons_count = related_lessons.count()
 
-        context['related_lessons'] = related_lessons
-        context['lessons_count'] = lessons_count
-        context['can_delete_exercise'] = lessons_count == 0
+        generated_exercises = Exercise.objects.none()
+        generated_exercises_count = 0
 
         if self.object.is_template:
-            generated_exercises = self.object.generated_exercises.order_by(
-                'title',
-                'id',
+            generated_exercises = (
+                self.object.generated_exercises.order_by(
+                    'title',
+                    'id',
+                )
             )
 
-            context['generated_exercises'] = generated_exercises
-            context['generated_exercises_count'] = (
+            generated_exercises_count = (
                 generated_exercises.count()
             )
-        else:
-            context['generated_exercises'] = Exercise.objects.none()
-            context['generated_exercises_count'] = 0
+
+        context['related_lessons'] = related_lessons
+        context['lessons_count'] = lessons_count
+
+        context['generated_exercises'] = generated_exercises
+        context['generated_exercises_count'] = (
+            generated_exercises_count
+        )
+
+        context['can_delete_exercise'] = (
+            lessons_count == 0
+            and generated_exercises_count == 0
+        )
 
         return context
         
@@ -788,20 +794,53 @@ class ExerciseDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
     def form_valid(self, form):
         lessons_count = self.object.lessons.count()
 
-        if lessons_count > 0:
+        generated_exercises_count = (
+            self.object.generated_exercises.count()
+            if self.object.is_template
+            else 0
+        )
+
+        if lessons_count > 0 or generated_exercises_count > 0:
+            if (
+                lessons_count > 0
+                and generated_exercises_count > 0
+            ):
+                message = (
+                    'Este recurso não pode ser excluído porque está '
+                    f'vinculado a {lessons_count} '
+                    f'{"aula" if lessons_count == 1 else "aulas"} '
+                    f'e possui {generated_exercises_count} '
+                    f'{"cópia gerada" if generated_exercises_count == 1 else "cópias geradas"}. '
+                    'Você pode arquivá-lo para removê-lo da lista principal '
+                    'sem perder o histórico.'
+                )
+
+            elif lessons_count > 0:
+                message = (
+                    'Este exercício não pode ser excluído porque está '
+                    f'vinculado a {lessons_count} '
+                    f'{"aula" if lessons_count == 1 else "aulas"}. '
+                    'Você pode arquivá-lo para removê-lo da lista principal '
+                    'sem perder o histórico.'
+                )
+
+            else:
+                message = (
+                    'Este modelo não pode ser excluído porque já gerou '
+                    f'{generated_exercises_count} '
+                    f'{"exercício" if generated_exercises_count == 1 else "exercícios"}. '
+                    'Você pode arquivá-lo para removê-lo da lista principal '
+                    'sem perder a referência de origem das cópias.'
+                )
+
             messages.error(
                 self.request,
-                (
-                    'Este exercício não pode ser excluído porque está vinculado '
-                    f'a {lessons_count} '
-                    f'{"aula" if lessons_count == 1 else "aulas"}. '
-                    'Você pode arquivá-lo para removê-lo da lista principal.'
-                )
+                message,
             )
 
             return redirect(
                 'exercise_detail',
-                pk=self.object.pk
+                pk=self.object.pk,
             )
 
         messages.success(
