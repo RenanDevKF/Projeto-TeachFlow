@@ -1,181 +1,835 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block title %}
+    {% if exercise.is_template %}
+        Detalhes do modelo
+    {% else %}
+        Detalhes do exercício
+    {% endif %}
+{% endblock %}
+
 {% block page_title %}
 <span class="inline-flex items-center gap-2">
-    <i data-lucide="notebook-text" class="w-6 h-6 text-primary"></i>
-    <span>Detalhe Exercício - {{ exercise.title }}</span>
+    <i
+        data-lucide="{% if exercise.is_template %}copy{% else %}notebook-text{% endif %}"
+        class="h-6 w-6 text-primary"
+    ></i>
+
+    {% if exercise.is_template %}
+        <span>Detalhes do modelo</span>
+    {% else %}
+        <span>Detalhes do exercício</span>
+    {% endif %}
 </span>
 {% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Botões de ação -->
-    <div class="flex justify-end gap-3">
-        <a href="{% url 'exercise_form' exercise.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark">
-            <i data-lucide="edit" class="w-4 h-4 mr-2"></i>
-            Editar Exercício
-        </a>
-        
-        <a href="#" id="add-tags-btn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700">
-            <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
-            Tags para Exercício
-        </a>
+<div class="mx-auto max-w-5xl">
 
-        {% if exercise.created_by == request.user.teacher_profile %}
-        <a href="{% url 'exercise_delete' exercise.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700">
-            <i data-lucide="trash-2" class="w-4 h-4 mr-2"></i>
-            Excluir
-        </a>
-        {% endif %}
-    </div>
+    <!-- Cabeçalho -->
+    <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
 
-    <div class="bg-white shadow-sm rounded-lg overflow-hidden">
-        <div class="p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="flex items-center gap-2">
-                        <h1 class="text-2xl font-bold text-gray-900">{{ exercise.title }}</h1>
-                        {% if exercise.is_template %}
-                        <span class="bg-blue-100 text-blue-800 px-2 py-1 text-xs rounded-full">Modelo</span>
+            <!-- Identificação -->
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-3">
+                    <h1 class="break-words text-2xl font-bold text-gray-900">
+                        {{ exercise.title }}
+                    </h1>
+
+                    {% if exercise.is_template %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                            <i data-lucide="copy" class="h-3.5 w-3.5"></i>
+                            Modelo reutilizável
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
+                            <i data-lucide="notebook-text" class="h-3.5 w-3.5"></i>
+                            Exercício
+                        </span>
+                    {% endif %}
+
+                    {% if exercise.is_active %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                            Ativo
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500 ring-1 ring-inset ring-gray-500/20">
+                            <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                            Arquivado
+                        </span>
+                    {% endif %}
+                </div>
+
+                <p class="mt-2 text-sm text-gray-500">
+                    Criado por
+                    <span class="font-medium text-gray-700">
+                        {% if exercise.created_by.user.get_full_name %}
+                            {{ exercise.created_by.user.get_full_name }}
+                        {% else %}
+                            {{ exercise.created_by.user.username }}
                         {% endif %}
-                    </div>
-                    <p class="text-gray-500 mt-1">Criado por: {{ exercise.created_by.user.first_name }} {{ exercise.created_by.user.last_name }}</p>
+                    </span>
+                </p>
+
+                <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-gray-500">
+                    {% if exercise.duration %}
+                        <span class="inline-flex items-center gap-2">
+                            <i data-lucide="clock-3" class="h-4 w-4"></i>
+                            {{ exercise.duration }}
+                            {% if exercise.duration == 1 %}
+                                minuto
+                            {% else %}
+                                minutos
+                            {% endif %}
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center gap-2 text-gray-400">
+                            <i data-lucide="clock-3" class="h-4 w-4"></i>
+                            Duração não informada
+                        </span>
+                    {% endif %}
+
+                    {% if not exercise.is_template %}
+                        <span class="inline-flex items-center gap-2">
+                            <i data-lucide="book-open" class="h-4 w-4"></i>
+
+                            {{ lessons_count }}
+                            {% if lessons_count == 1 %}
+                                aula vinculada
+                            {% else %}
+                                aulas vinculadas
+                            {% endif %}
+                        </span>
+                    {% endif %}
+
+                    {% if exercise.is_template %}
+                        <span class="inline-flex items-center gap-2">
+                            <i data-lucide="copy-plus" class="h-4 w-4"></i>
+
+                            {{ generated_exercises_count }}
+                            {% if generated_exercises_count == 1 %}
+                                exercício gerado
+                            {% else %}
+                                exercícios gerados
+                            {% endif %}
+                        </span>
+                    {% endif %}
                 </div>
-                
-                {% if exercise.duration %}
-                <div class="bg-gray-100 px-3 py-2 rounded-lg flex items-center gap-2">
-                    <i data-lucide="clock" class="w-5 h-5 text-gray-600"></i>
-                    <span class="text-gray-700">{{ exercise.duration }} minutos</span>
-                </div>
+            </div>
+
+            <!-- Ações -->
+            <div class="flex flex-shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+
+                {% if exercise.is_template and exercise.is_active %}
+                    <form
+                        method="post"
+                        action="{% url 'exercise_use_template' exercise.id %}"
+                    >
+                        {% csrf_token %}
+
+                        <button
+                            type="submit"
+                            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        >
+                            <i data-lucide="copy-plus" class="h-4 w-4"></i>
+                            Usar modelo
+                        </button>
+                    </form>
+                {% endif %}
+
+                <a
+                    href="{% url 'exercise_form' exercise.id %}"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                >
+                    <i data-lucide="pencil" class="h-4 w-4"></i>
+
+                    {% if exercise.is_template %}
+                        Editar modelo
+                    {% else %}
+                        Editar exercício
+                    {% endif %}
+                </a>
+
+                {% if exercise.is_active %}
+                    <form
+                        method="post"
+                        action="{% url 'exercise_archive' exercise.id %}"
+                    >
+                        {% csrf_token %}
+
+                        <button
+                            type="submit"
+                            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        >
+                            <i data-lucide="archive" class="h-4 w-4"></i>
+                            Arquivar
+                        </button>
+                    </form>
+                {% else %}
+                    <form
+                        method="post"
+                        action="{% url 'exercise_restore' exercise.id %}"
+                    >
+                        {% csrf_token %}
+
+                        <button
+                            type="submit"
+                            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 text-sm font-medium text-blue-700 shadow-sm transition-colors hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        >
+                            <i data-lucide="archive-restore" class="h-4 w-4"></i>
+                            Reativar
+                        </button>
+                    </form>
+                {% endif %}
+
+                {% if can_delete_exercise %}
+                    <form
+                        method="post"
+                        action="{% url 'exercise_delete' exercise.id %}"
+                        class="exercise-delete-form"
+                        data-exercise-title="{{ exercise.title }}"
+                    >
+                        {% csrf_token %}
+
+                        <button
+                            type="submit"
+                            class="exercise-delete-button inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            <i data-lucide="trash-2" class="h-4 w-4"></i>
+
+                            <span class="exercise-delete-label">
+                                Excluir
+                            </span>
+                        </button>
+                    </form>
+                {% else %}
+                    <button
+                        type="button"
+                        disabled
+                        title="{% if lessons_count > 0 and generated_exercises_count > 0 %}Este recurso possui aulas vinculadas e cópias geradas.{% elif lessons_count > 0 %}Este exercício está vinculado a aulas e não pode ser excluído.{% else %}Este modelo possui cópias geradas e não pode ser excluído.{% endif %}"
+                        class="inline-flex h-10 cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-100 px-4 text-sm font-medium text-gray-400"
+                    >
+                        <i data-lucide="lock-keyhole" class="h-4 w-4"></i>
+
+                        {% if lessons_count > 0 %}
+                            Em uso
+                        {% elif generated_exercises_count > 0 %}
+                            Com cópias
+                        {% else %}
+                            Indisponível
+                        {% endif %}
+                    </button>
                 {% endif %}
             </div>
-            
-            <div class="mt-6">
-                <h3 class="text-md font-medium text-gray-900">Descrição</h3>
-                <div class="mt-2 text-gray-600 whitespace-pre-line">{{ exercise.description }}</div>
+        </div>
+
+        <!-- Aviso de arquivamento -->
+        {% if not exercise.is_active %}
+            <div class="mt-6 flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-4">
+                <i
+                    data-lucide="archive"
+                    class="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-500"
+                ></i>
+
+                <div>
+                    <p class="text-sm font-semibold text-gray-800">
+                        Este recurso está arquivado
+                    </p>
+
+                    <p class="mt-1 text-sm leading-6 text-gray-600">
+                        Ele não aparece entre os recursos disponíveis para novas
+                        aulas ou para uso como modelo, mas seu conteúdo e seus
+                        vínculos históricos continuam preservados.
+                    </p>
+                </div>
             </div>
-            
+        {% endif %}
+
+        <!-- Aviso do modelo -->
+        {% if exercise.is_template %}
+            <div class="mt-6 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-4">
+                <i
+                    data-lucide="copy-plus"
+                    class="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600"
+                ></i>
+
+                <div>
+                    <p class="text-sm font-semibold text-blue-900">
+                        Como funciona este modelo
+                    </p>
+
+                    <p class="mt-1 text-sm leading-6 text-blue-800">
+                        Ao escolher <strong>Usar modelo</strong>, o TeachFlow
+                        cria uma nova cópia independente. A cópia poderá ser
+                        editada e adicionada às aulas sem modificar este modelo.
+                    </p>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Aviso de preservação -->
+        {% if not can_delete_exercise %}
+            <div class="mt-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-4">
+                <i
+                    data-lucide="shield-alert"
+                    class="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600"
+                ></i>
+
+                <div>
+                    <p class="text-sm font-semibold text-amber-900">
+                        Exclusão indisponível
+                    </p>
+
+                    {% if lessons_count > 0 and generated_exercises_count > 0 %}
+                        <p class="mt-1 text-sm leading-6 text-amber-800">
+                            Este recurso está vinculado a
+                            {{ lessons_count }}
+                            {% if lessons_count == 1 %}
+                                aula
+                            {% else %}
+                                aulas
+                            {% endif %}
+                            e possui
+                            {{ generated_exercises_count }}
+                            {% if generated_exercises_count == 1 %}
+                                cópia gerada.
+                            {% else %}
+                                cópias geradas.
+                            {% endif %}
+
+                            Ele será preservado para manter o histórico e a
+                            rastreabilidade. Você pode arquivá-lo para removê-lo
+                            da lista principal.
+                        </p>
+
+                    {% elif lessons_count > 0 %}
+                        <p class="mt-1 text-sm leading-6 text-amber-800">
+                            Este exercício está vinculado a
+                            {{ lessons_count }}
+                            {% if lessons_count == 1 %}
+                                aula
+                            {% else %}
+                                aulas
+                            {% endif %}
+                            e será preservado para manter o histórico pedagógico.
+
+                            Você pode arquivá-lo para removê-lo da lista principal.
+                        </p>
+
+                    {% elif generated_exercises_count > 0 %}
+                        <p class="mt-1 text-sm leading-6 text-amber-800">
+                            Este modelo já gerou
+                            {{ generated_exercises_count }}
+                            {% if generated_exercises_count == 1 %}
+                                exercício.
+                            {% else %}
+                                exercícios.
+                            {% endif %}
+
+                            Ele será preservado para que as cópias continuem
+                            registrando corretamente seu modelo de origem.
+
+                            Você pode arquivá-lo para removê-lo da lista principal.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- Descrição -->
+    <section class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="flex items-center gap-2">
+            <i data-lucide="file-text" class="h-5 w-5 text-primary"></i>
+
+            <h2 class="text-lg font-semibold text-gray-900">
+                Descrição
+            </h2>
+        </div>
+
+        <div class="mt-4 whitespace-pre-line text-sm leading-7 text-gray-700">
+            {{ exercise.description }}
+        </div>
+    </section>
+
+    <!-- Materiais e origem -->
+    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+        <!-- Materiais -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="flex items-center gap-2">
+                <i data-lucide="package-open" class="h-5 w-5 text-primary"></i>
+
+                <h2 class="text-lg font-semibold text-gray-900">
+                    Materiais necessários
+                </h2>
+            </div>
+
             {% if exercise.materials %}
-            <div class="mt-6">
-                <h3 class="text-md font-medium text-gray-900">Materiais Necessários</h3>
-                <div class="mt-2 text-gray-600 whitespace-pre-line">{{ exercise.materials }}</div>
-            </div>
+                <div class="mt-4 whitespace-pre-line text-sm leading-7 text-gray-700">
+                    {{ exercise.materials }}
+                </div>
+            {% else %}
+                <div class="mt-4 rounded-lg bg-gray-50 px-4 py-5">
+                    <p class="text-sm text-gray-500">
+                        Nenhum material específico foi informado.
+                    </p>
+                </div>
             {% endif %}
-            
+        </section>
+
+        <!-- Origem e utilização -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="flex items-center gap-2">
+                <i data-lucide="git-branch" class="h-5 w-5 text-primary"></i>
+
+                <h2 class="text-lg font-semibold text-gray-900">
+                    Origem e utilização
+                </h2>
+            </div>
+
+            <dl class="mt-6 space-y-5">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">
+                        Tipo
+                    </dt>
+
+                    <dd class="mt-1 text-sm font-medium text-gray-900">
+                        {% if exercise.is_template %}
+                            Modelo reutilizável
+                        {% else %}
+                            Exercício
+                        {% endif %}
+                    </dd>
+                </div>
+
+                <div class="border-t border-gray-100 pt-5">
+                    <dt class="text-sm font-medium text-gray-500">
+                        Modelo de origem
+                    </dt>
+
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {% if exercise.source_template %}
+                            <a
+                                href="{% url 'exercise_detail' exercise.source_template.id %}"
+                                class="font-medium text-primary hover:underline"
+                            >
+                                {{ exercise.source_template.title }}
+                            </a>
+                        {% else %}
+                            <span class="text-gray-400">
+                                Não possui modelo de origem
+                            </span>
+                        {% endif %}
+                    </dd>
+                </div>
+
+                <div class="border-t border-gray-100 pt-5">
+                    <dt class="text-sm font-medium text-gray-500">
+                        Status
+                    </dt>
+
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {% if exercise.is_active %}
+                            Disponível para utilização
+                        {% else %}
+                            Arquivado
+                        {% endif %}
+                    </dd>
+                </div>
+
+                {% if exercise.is_template %}
+                    <div class="border-t border-gray-100 pt-5">
+                        <dt class="text-sm font-medium text-gray-500">
+                            Cópias geradas
+                        </dt>
+
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {{ generated_exercises_count }}
+                        </dd>
+                    </div>
+                {% else %}
+                    <div class="border-t border-gray-100 pt-5">
+                        <dt class="text-sm font-medium text-gray-500">
+                            Aulas vinculadas
+                        </dt>
+
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {{ lessons_count }}
+                        </dd>
+                    </div>
+                {% endif %}
+            </dl>
+        </section>
+    </div>
+
+    <!-- Organização pedagógica -->
+    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+        <!-- Objetivos -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="flex items-center gap-2">
+                <i data-lucide="target" class="h-5 w-5 text-primary"></i>
+
+                <h2 class="text-lg font-semibold text-gray-900">
+                    Objetivos de aprendizagem
+                </h2>
+            </div>
+
             {% if exercise.objectives.all %}
-            <div class="mt-6">
-                <h3 class="text-md font-medium text-gray-900">Objetivos de Aprendizagem</h3>
-                <ul class="mt-2 space-y-2">
+                <ul class="mt-5 space-y-3">
                     {% for objective in exercise.objectives.all %}
-                    <li class="flex items-start gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-green-500 shrink-0"></i>
-                        <span class="text-gray-600">{{ objective.title }}</span>
-                    </li>
+                        <li class="flex items-start gap-3">
+                            <i
+                                data-lucide="circle-check"
+                                class="mt-0.5 h-5 w-5 flex-shrink-0 text-green-500"
+                            ></i>
+
+                            <span class="text-sm leading-6 text-gray-700">
+                                {% if objective.description %}
+                                    {{ objective.description }}
+                                {% else %}
+                                    {{ objective.title }}
+                                {% endif %}
+                            </span>
+                        </li>
                     {% endfor %}
                 </ul>
-            </div>
+            {% else %}
+                <div class="mt-4 rounded-lg bg-gray-50 px-4 py-5">
+                    <p class="text-sm text-gray-500">
+                        Nenhum objetivo de aprendizagem foi associado.
+                    </p>
+                </div>
             {% endif %}
-            
+        </section>
+
+        <!-- Tags -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="tags" class="h-5 w-5 text-primary"></i>
+
+                    <h2 class="text-lg font-semibold text-gray-900">
+                        Tags
+                    </h2>
+                </div>
+
+                <button
+                    type="button"
+                    id="add-tags-btn"
+                    class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-3 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                >
+                    <i data-lucide="plus" class="h-4 w-4"></i>
+                    Nova tag
+                </button>
+            </div>
+
             {% if exercise.tags.all %}
-            <div class="mt-6">
-                <h3 class="text-md font-medium text-gray-900">Tags</h3>
-                <div class="flex flex-wrap gap-2 mt-2">
+                <div class="mt-5 flex flex-wrap gap-2">
                     {% for tag in exercise.tags.all %}
-                    <span class="px-2 py-1 text-xs rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
-                        {{ tag.name }}
-                    </span>
+                        <span
+                            class="rounded-full px-2.5 py-1 text-xs font-medium"
+                            style="background-color: {{ tag.color }}20; color: {{ tag.color }};"
+                        >
+                            {{ tag.name }}
+                        </span>
                     {% endfor %}
                 </div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    
-    <!-- Aulas Section -->
-    <div class="bg-white shadow-sm rounded-lg overflow-hidden">
-        <div class="p-6">
-            <h2 class="text-lg font-medium text-gray-900 mb-4">Aulas em que este exercício foi aplicado</h2>
-            
-            {% if exercise.lessons.all %}
-            <div class="space-y-4">
-                {% for lesson in exercise.lessons.all %}
-                <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <div class="text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }} - {{ lesson.class_group.name }}</div>
-                            <h3 class="font-medium">{{ lesson.title }}</h3>
-                        </div>
-                        <a href="{% url 'lesson_detail' lesson.id %}" class="text-primary text-sm hover:underline">Ver aula</a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
             {% else %}
-            <div class="text-center py-4 text-gray-500">
-                Este exercício ainda não foi aplicado em nenhuma aula.
-            </div>
+                <div class="mt-4 rounded-lg bg-gray-50 px-4 py-5">
+                    <p class="text-sm text-gray-500">
+                        Nenhuma tag foi associada a este recurso.
+                    </p>
+                </div>
             {% endif %}
-        </div>
+        </section>
+    </div>
+
+    <!-- Exercícios gerados -->
+    {% if exercise.is_template %}
+        <section class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="copy-plus" class="h-5 w-5 text-primary"></i>
+
+                    <h2 class="text-lg font-semibold text-gray-900">
+                        Exercícios criados com este modelo
+                    </h2>
+                </div>
+
+                <span class="text-sm text-gray-500">
+                    {{ generated_exercises_count }}
+                    {% if generated_exercises_count == 1 %}
+                        exercício
+                    {% else %}
+                        exercícios
+                    {% endif %}
+                </span>
+            </div>
+
+            {% if generated_exercises %}
+                <div class="mt-5 divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200">
+                    {% for generated_exercise in generated_exercises|slice:":5" %}
+                        <a
+                            href="{% url 'exercise_detail' generated_exercise.id %}"
+                            class="flex items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-gray-50"
+                        >
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-medium text-gray-900">
+                                    {{ generated_exercise.title }}
+                                </p>
+
+                                <p class="mt-1 text-xs text-gray-500">
+                                    {% if generated_exercise.is_active %}
+                                        Ativo
+                                    {% else %}
+                                        Arquivado
+                                    {% endif %}
+                                </p>
+                            </div>
+
+                            <i
+                                data-lucide="chevron-right"
+                                class="h-4 w-4 flex-shrink-0 text-gray-400"
+                            ></i>
+                        </a>
+                    {% endfor %}
+                </div>
+
+                {% if generated_exercises_count > 5 %}
+                    <p class="mt-4 text-sm text-gray-500">
+                        Exibindo os 5 primeiros exercícios gerados.
+                    </p>
+                {% endif %}
+            {% else %}
+                <div class="mt-5 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-center">
+                    <i
+                        data-lucide="copy-plus"
+                        class="mx-auto h-7 w-7 text-gray-300"
+                    ></i>
+
+                    <p class="mt-3 text-sm text-gray-500">
+                        Este modelo ainda não foi utilizado.
+                    </p>
+                </div>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <!-- Aulas relacionadas -->
+    {% if not exercise.is_template %}
+        <section class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="book-open" class="h-5 w-5 text-primary"></i>
+
+                    <h2 class="text-lg font-semibold text-gray-900">
+                        Aulas relacionadas
+                    </h2>
+                </div>
+
+                <span class="text-sm text-gray-500">
+                    {{ lessons_count }}
+                    {% if lessons_count == 1 %}
+                        aula
+                    {% else %}
+                        aulas
+                    {% endif %}
+                </span>
+            </div>
+
+            {% if related_lessons %}
+                <div class="mt-5 divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200">
+                    {% for lesson in related_lessons %}
+                        <a
+                            href="{% url 'lesson_detail' lesson.id %}"
+                            class="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <div class="min-w-0">
+                                <p class="font-medium text-gray-900">
+                                    {{ lesson.title }}
+                                </p>
+
+                                <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <i data-lucide="calendar-days" class="h-3.5 w-3.5"></i>
+                                        {{ lesson.date|date:"d/m/Y" }}
+                                    </span>
+
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <i data-lucide="graduation-cap" class="h-3.5 w-3.5"></i>
+                                        {{ lesson.class_group.name }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <span class="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                                Ver aula
+                                <i data-lucide="arrow-right" class="h-4 w-4"></i>
+                            </span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="mt-5 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-center">
+                    <i
+                        data-lucide="book-open"
+                        class="mx-auto h-7 w-7 text-gray-300"
+                    ></i>
+
+                    <p class="mt-3 text-sm text-gray-500">
+                        Este exercício ainda não foi utilizado em nenhuma aula.
+                    </p>
+                </div>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <!-- Navegação -->
+    <div class="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <a
+            href="{% url 'exercise_list' %}"
+            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+        >
+            <i data-lucide="arrow-left" class="h-4 w-4"></i>
+            Voltar à biblioteca
+        </a>
+
+        {% if exercise.is_template and exercise.is_active %}
+            <form
+                method="post"
+                action="{% url 'exercise_use_template' exercise.id %}"
+            >
+                {% csrf_token %}
+
+                <button
+                    type="submit"
+                    class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:w-auto"
+                >
+                    <i data-lucide="copy-plus" class="h-4 w-4"></i>
+                    Usar este modelo
+                </button>
+            </form>
+        {% endif %}
     </div>
 </div>
 
-<!-- Modal de Tags (parte do formulário) -->
-<div id="tag-modal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-        <form method="POST" action="{% url 'quick_add_tag' 'exercise' exercise.id %}" id="tag-form">
+<!-- Modal de criação rápida de tag -->
+<div
+    id="tag-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/50 px-4 py-6"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="tag-modal-title"
+>
+    <div class="w-full max-w-md rounded-xl border border-gray-200 bg-white shadow-xl">
+
+        <!-- Cabeçalho do modal -->
+        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <div>
+                <h2
+                    id="tag-modal-title"
+                    class="text-lg font-semibold text-gray-900"
+                >
+                    Criar nova tag
+                </h2>
+
+                <p class="mt-1 text-sm text-gray-500">
+                    A nova tag será associada automaticamente a este recurso.
+                </p>
+            </div>
+
+            <button
+                type="button"
+                id="close-modal-x"
+                class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                aria-label="Fechar modal"
+            >
+                <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+        </div>
+
+        <form
+            method="post"
+            action="{% url 'quick_add_tag' 'exercise' exercise.id %}"
+            id="tag-form"
+            class="p-6"
+        >
             {% csrf_token %}
-            <div class="space-y-4">
-                <div>
-                    <label for="tag_name" class="block text-sm font-medium text-gray-700 mb-1">Nome da Tag</label>
-                    <input type="text" name="tag_name" id="tag_name"
-                           class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                           required autofocus>
-                </div>
-                
-                <div class="pt-4 flex justify-between items-center">
-                    <a href="{% url 'tag_list' %}" class="text-sm text-primary hover:underline">
-                        Ver todas as tags
-                    </a>
-                    
-                    <div class="flex gap-3">
-                        <button type="button" id="cancel-tag-modal" 
-                                class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                            Cancelar
-                        </button>
-                        <button type="submit" id="submit-tag-btn"
-                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark">
-                            Salvar Tag
-                        </button>
-                    </div>
+
+            <div>
+                <label
+                    for="tag_name"
+                    class="mb-2 block text-sm font-medium text-gray-700"
+                >
+                    Nome da tag
+                    <span class="text-red-500">*</span>
+                </label>
+
+                <input
+                    type="text"
+                    name="tag_name"
+                    id="tag_name"
+                    maxlength="50"
+                    autocomplete="off"
+                    placeholder="Ex.: Matemática"
+                    class="h-11 w-full rounded-lg border border-gray-300 px-4 text-sm text-gray-700 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    required
+                >
+
+                <p
+                    id="tag-modal-feedback"
+                    class="mt-2 hidden text-sm"
+                    role="alert"
+                ></p>
+            </div>
+
+            <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <a
+                    href="{% url 'tag_list' %}"
+                    class="text-center text-sm font-medium text-primary hover:underline"
+                >
+                    Ver todas as tags
+                </a>
+
+                <div class="flex flex-col-reverse gap-2 sm:flex-row">
+                    <button
+                        type="button"
+                        id="cancel-tag-modal"
+                        class="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="submit"
+                        id="submit-tag-btn"
+                        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        Criar tag
+                    </button>
                 </div>
             </div>
         </form>
     </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Modal de tag
-    const tagModal = document.getElementById('tag-modal');
-    const addTagsBtn = document.getElementById('add-tags-btn');
-    const cancelTagModal = document.getElementById('cancel-tag-modal');
+    {{ block.super }}
 
-    if (addTagsBtn) {
-        addTagsBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            tagModal.classList.remove('hidden');
-        });
-    }
+    <script
+        src="{% static 'js/tagModal.js' %}"
+        defer
+    ></script>
 
-    if (cancelTagModal) {
-        cancelTagModal.addEventListener('click', function() {
-            tagModal.classList.add('hidden');
-        });
-    }
-});
-</script>
+    <script
+        src="{% static 'js/exercise_detail.js' %}"
+        defer
+    ></script>
 {% endblock %}

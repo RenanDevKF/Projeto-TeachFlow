@@ -35,7 +35,10 @@ urlpatterns = [
     path('exercises/', views.ExerciseListView.as_view(), name='exercise_list'),
     path('exercises/new/', views.ExerciseCreateView.as_view(), name='exercise_form'),
     path('exercises/<int:pk>/', views.ExerciseDetailView.as_view(), name='exercise_detail'),
+    path('exercises/<int:pk>/use-template/', views.UseExerciseTemplateView.as_view(), name='exercise_use_template'),
     path('exercises/<int:pk>/edit/', views.ExerciseUpdateView.as_view(), name='exercise_form'),
+    path('exercises/<int:pk>/archive/', views.ExerciseArchiveView.as_view(), name='exercise_archive',),
+    path('exercises/<int:pk>/restore/', views.ExerciseRestoreView.as_view(), name='exercise_restore',),
     path('exercises/<int:pk>/delete/', views.ExerciseDeleteView.as_view(), name='exercise_delete'),
     
     # Learning Objective URLs

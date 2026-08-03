@@ -1,248 +1,832 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{% if object %}Editar Exercício{% else %}Novo Exercício{% endif %}{% endblock %}
-{% block page_title %}{% if object %}Editar Exercício{% else %}Novo Exercício{% endif %}{% endblock %}
+{% block title %}
+    {% if form.instance.pk %}
+        {% if form.instance.is_template %}
+            Editar modelo
+        {% else %}
+            Editar exercício
+        {% endif %}
+    {% else %}
+        Novo exercício
+    {% endif %}
+{% endblock %}
+
+{% block page_title %}
+<span class="inline-flex items-center gap-2">
+    <i
+        data-lucide="{% if form.instance.pk %}notebook-pen{% else %}notebook-tabs{% endif %}"
+        class="h-6 w-6 text-primary"
+    ></i>
+
+    {% if form.instance.pk %}
+        {% if form.instance.is_template %}
+            <span>Editar modelo</span>
+        {% else %}
+            <span>Editar exercício</span>
+        {% endif %}
+    {% else %}
+        <span>Novo exercício</span>
+    {% endif %}
+</span>
+{% endblock %}
 
 {% block content %}
-<!-- Cabeçalho da página -->
-<div class="max-w-3xl mx-auto mt-1 mb-4 px-6 flex items-center">
-  <h1 class="text-2xl font-semibold text-gray-800 flex items-center gap-2">
-    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
-         viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
-    </svg>
-    {% if object %}Editar Exercício{% else %}Novo Exercício{% endif %}
-  </h1>
-</div>
+<div class="mx-auto max-w-5xl">
 
-<!-- Formulário de exercício -->
-<div class="max-w-3xl mx-auto px-6 py-2 bg-white rounded-xl shadow border border-gray-200">
-  <form method="POST" class="space-y-6">
-    {% csrf_token %}
-    {% if form.non_field_errors %}
-      <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-        {{ form.non_field_errors }}
-      </div>
-    {% endif %}
-
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">Título do Exercício</label>
-      <input type="text" name="{{ form.title.name }}" value="{{ form.title.value|default:'' }}"
-             class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm"
-             placeholder="Insira o título do exercício">
-      {% if form.title.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.title.errors.0 }}</p>
-      {% endif %}
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
-      <textarea name="{{ form.description.name }}" rows="6"
-                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm"
-                placeholder="Descreva o exercício em detalhes...">{{ form.description.value|default:'' }}</textarea>
-      {% if form.description.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.description.errors.0 }}</p>
-      {% endif %}
-    </div>
-
-    <!-- Duração e materiais lado a lado -->
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Duração (minutos)</label>
-        <input type="number" name="{{ form.duration.name }}" value="{{ form.duration.value|default:'' }}"
-               class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm"
-               placeholder="Tempo estimado em minutos">
-        {% if form.duration.errors %}
-          <p class="text-red-500 text-sm mt-1">{{ form.duration.errors.0 }}</p>
-        {% endif %}
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">É um modelo?</label>
-        <div class="relative flex items-center mt-3">
-          <input type="checkbox" name="{{ form.is_template.name }}" id="id_is_template" {% if form.is_template.value %}checked{% endif %}
-                 class="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500">
-          <label for="id_is_template" class="ml-3 text-sm text-gray-700">Exercício modelo para reutilização</label>
-        </div>
-        {% if form.is_template.errors %}
-          <p class="text-red-500 text-sm mt-1">{{ form.is_template.errors.0 }}</p>
-        {% endif %}
-      </div>
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">Materiais Necessários</label>
-      <textarea name="{{ form.materials.name }}" rows="3"
-                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm"
-                placeholder="Liste os materiais necessários para este exercício...">{{ form.materials.value|default:'' }}</textarea>
-      {% if form.materials.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.materials.errors.0 }}</p>
-      {% endif %}
-    </div>
-
-    <!-- Objetivos de Aprendizagem -->
-    <div class="mb-6 relative">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Objetivos de Aprendizagem</label>
-      <!-- Campo oculto real do formulário Django -->
-      <select name="{{ form.objectives.name }}" id="id_objectives" multiple class="hidden">
-        {% for objective in form.objectives.field.queryset %}
-          <option value="{{ objective.id }}" {% if objective.id in form.objectives.value|default:'' %}selected{% endif %}>
-            {{ objective.description }}
-          </option>
-        {% endfor %}
-      </select>
-      
-      <!-- Interface personalizada para seleção de objetivos -->
-      <div class="relative">
-        <!-- Botão de trigger para o dropdown com objetivos incorporados -->
-        <div id="objective-trigger" class="w-full min-h-12 p-3 border border-gray-300 rounded-lg bg-white cursor-pointer hover:border-blue-500 focus:border-blue-500 transition-colors flex flex-wrap items-center gap-2">
-          <!-- Container para os objetivos selecionados -->
-          <div id="selected-objectives" class="flex flex-wrap gap-2 items-center">
-            {% if form.objectives.value %}
-              {% for objective in form.objectives.field.queryset %}
-                {% if objective.id in form.objectives.value %}
-                  <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
-                    {{ objective.description }}
-                  </span>
+    <!-- Cabeçalho -->
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">
+                {% if form.instance.pk %}
+                    {% if form.instance.is_template %}
+                        Editar modelo
+                    {% else %}
+                        Editar exercício
+                    {% endif %}
+                    — {{ form.instance.title }}
+                {% else %}
+                    Criar exercício
                 {% endif %}
-              {% endfor %}
-            {% else %}
-              <span class="text-gray-500" id="objectives-placeholder">Clique para selecionar objetivos</span>
-            {% endif %}
-          </div>
-          <svg class="w-5 h-5 text-gray-400 transition-transform ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="objective-dropdown-arrow">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
-        </div>
-        
-        <!-- Dropdown de seleção de objetivos -->
-        <div id="objective-dropdown" class="absolute z-10 hidden w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
-          <!-- Cabeçalho com filtro -->
-          <div class="p-4 border-b sticky top-0 bg-white z-10">
-            <div class="relative">
-              <input type="text" 
-                    id="objective-filter" 
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm pl-9 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none"
-                    placeholder="Filtrar objetivos...">
-              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Lista de objetivos -->
-          <div id="objective-list" class="divide-y max-h-64 overflow-y-auto">
-            {% for objective in form.objectives.field.queryset %}
-            <label class="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer">
-              <input type="checkbox" 
-                    value="{{ objective.id }}"
-                    class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 mr-3"
-                    {% if objective.id in form.objectives.value|default:'' %}checked{% endif %}
-                    data-objective-select
-                    data-objective-description="{{ objective.description }}">
-              <span class="text-sm text-gray-700">{{ objective.description }}</span>
-            </label>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-      
-      {% if form.objectives.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.objectives.errors.0 }}</p>
-      {% endif %}
-    </div>
+            </h1>
 
-    <!-- Tags -->
-    <div class="mb-6 relative">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Tags</label>
-      <!-- Campo oculto real do formulário Django -->
-      <select name="{{ form.tags.name }}" id="id_tags" multiple class="hidden">
-        {% for tag in form.tags.field.queryset %}
-          <option value="{{ tag.id }}" {% if tag.id in form.tags.value|default:'' %}selected{% endif %}>
-            {{ tag.name }}
-          </option>
-        {% endfor %}
-      </select>
-      
-      <!-- Interface personalizada para seleção de tags -->
-      <div class="relative">
-        <!-- Botão de trigger para o dropdown com tags incorporadas -->
-        <div id="tag-trigger" class="w-full min-h-12 p-3 border border-gray-300 rounded-lg bg-white cursor-pointer hover:border-blue-500 focus:border-blue-500 transition-colors flex flex-wrap items-center gap-2">
-          <!-- Container para as tags selecionadas (dentro do trigger) -->
-          <div id="selected-tags" class="flex flex-wrap gap-2 items-center">
-            {% if form.tags.value %}
-              {% for tag in form.tags.field.queryset %}
-                {% if tag.id in form.tags.value %}
-                  <span class="px-2 py-1 text-xs rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
-                    {{ tag.name }}
-                  </span>
+            <p class="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
+                {% if form.instance.pk %}
+                    Atualize o conteúdo, a duração, os materiais e as classificações
+                    deste
+                    {% if form.instance.is_template %}
+                        modelo reutilizável.
+                    {% else %}
+                        exercício.
+                    {% endif %}
+                {% else %}
+                    Cadastre um novo recurso para sua biblioteca pedagógica.
+                    Ele poderá ser utilizado diretamente ou salvo como modelo reutilizável.
                 {% endif %}
-              {% endfor %}
-            {% else %}
-              <span class="text-gray-500" id="tags-placeholder">Clique para selecionar tags</span>
+            </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            {% if form.instance.pk %}
+                <a
+                    href="{% url 'exercise_detail' form.instance.pk %}"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                >
+                    <i data-lucide="eye" class="h-4 w-4"></i>
+                    Ver detalhes
+                </a>
             {% endif %}
-          </div>
-          <svg class="w-5 h-5 text-gray-400 transition-transform ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="tag-dropdown-arrow">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
+
+            <a
+                href="{% url 'exercise_list' %}"
+                class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            >
+                <i data-lucide="library-big" class="h-4 w-4"></i>
+                Biblioteca
+            </a>
         </div>
-        
-        <!-- Dropdown de seleção de tags -->
-        <div id="tag-dropdown" class="absolute z-10 hidden w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
-          <!-- Cabeçalho com filtro -->
-          <div class="p-4 border-b sticky top-0 bg-white z-10">
-            <div class="relative">
-              <input type="text" 
-                    id="tag-filter" 
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm pl-9 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none"
-                    placeholder="Filtrar tags...">
-              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Lista de tags -->
-          <div id="tag-list" class="divide-y max-h-64 overflow-y-auto">
-            {% for tag in form.tags.field.queryset %}
-            <label class="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer">
-              <input type="checkbox" 
-                    value="{{ tag.id }}"
-                    class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 mr-3"
-                    {% if tag.id in form.tags.value|default:'' %}checked{% endif %}
-                    data-tag-select
-                    data-tag-name="{{ tag.name }}"
-                    data-tag-color="{{ tag.color }}">
-              <span class="text-sm text-gray-700">{{ tag.name }}</span>
-            </label>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-      
-      {% if form.tags.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.tags.errors.0 }}</p>
-      {% endif %}
     </div>
 
-    <div class="flex justify-between pt-6">
-      <a href="{% if object %}{% url 'exercise_detail' object.pk %}{% else %}{% url 'exercise_list' %}{% endif %}" 
-          class="px-4 py-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition-all">
-          Cancelar
-      </a>
-      <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-all">
-        {% if object %}Atualizar{% else %}Salvar{% endif %}
-      </button>
-    </div>
-  </form>
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Erros gerais -->
+        {% if form.non_field_errors %}
+            <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-4">
+                <div class="flex items-start gap-3">
+                    <i
+                        data-lucide="circle-alert"
+                        class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600"
+                    ></i>
+
+                    <div>
+                        <p class="text-sm font-semibold text-red-900">
+                            Não foi possível salvar o exercício
+                        </p>
+
+                        <div class="mt-1 space-y-1">
+                            {% for error in form.non_field_errors %}
+                                <p class="text-sm leading-relaxed text-red-700">
+                                    {{ error }}
+                                </p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Informações principais -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+            <div class="mb-6 flex items-center gap-2">
+                <i data-lucide="file-text" class="h-5 w-5 text-primary"></i>
+
+                <h2 class="text-lg font-semibold text-gray-900">
+                    Informações principais
+                </h2>
+            </div>
+
+            <div class="space-y-6">
+
+                <!-- Título -->
+                <div>
+                    <label
+                        for="id_title"
+                        class="mb-2 block text-sm font-medium text-gray-700"
+                    >
+                        Título
+                        <span class="text-red-500">*</span>
+                    </label>
+
+                    <input
+                        id="id_title"
+                        type="text"
+                        name="{{ form.title.name }}"
+                        value="{{ form.title.value|default_if_none:'' }}"
+                        placeholder="Ex.: Introdução às frações"
+                        autocomplete="off"
+                        required
+                        class="h-11 w-full rounded-lg border px-4 text-sm text-gray-700 shadow-sm transition-colors focus:outline-none focus:ring-2
+                        {% if form.title.errors %}
+                            border-red-300 focus:border-red-500 focus:ring-red-200
+                        {% else %}
+                            border-gray-300 focus:border-blue-500 focus:ring-blue-200
+                        {% endif %}"
+                    >
+
+                    {% if form.title.errors %}
+                        <p class="mt-1.5 text-sm text-red-600">
+                            {{ form.title.errors.0 }}
+                        </p>
+                    {% endif %}
+                </div>
+
+                <!-- Descrição -->
+                <div>
+                    <div class="mb-2 flex items-center justify-between gap-4">
+                        <label
+                            for="id_description"
+                            class="block text-sm font-medium text-gray-700"
+                        >
+                            Descrição
+                            <span class="text-red-500">*</span>
+                        </label>
+
+                        <span
+                            id="description-counter"
+                            class="flex-shrink-0 text-xs text-gray-400"
+                            aria-live="polite"
+                        >
+                            0 caracteres
+                        </span>
+                    </div>
+
+                    <textarea
+                        id="id_description"
+                        name="{{ form.description.name }}"
+                        rows="7"
+                        required
+                        placeholder="Descreva as instruções, etapas, perguntas ou dinâmica do exercício..."
+                        class="w-full resize-y rounded-lg border px-4 py-3 text-sm leading-7 text-gray-700 shadow-sm transition-colors focus:outline-none focus:ring-2
+                        {% if form.description.errors %}
+                            border-red-300 focus:border-red-500 focus:ring-red-200
+                        {% else %}
+                            border-gray-300 focus:border-blue-500 focus:ring-blue-200
+                        {% endif %}"
+                    >{{ form.description.value|default_if_none:'' }}</textarea>
+
+                    <p class="mt-2 text-xs leading-5 text-gray-500">
+                        Registre informações suficientes para que o exercício possa
+                        ser compreendido e reutilizado futuramente.
+                    </p>
+
+                    {% if form.description.errors %}
+                        <p class="mt-1.5 text-sm text-red-600">
+                            {{ form.description.errors.0 }}
+                        </p>
+                    {% endif %}
+                </div>
+
+                <!-- Duração -->
+                <div>
+                    <label
+                        for="id_duration"
+                        class="mb-2 block text-sm font-medium text-gray-700"
+                    >
+                        Duração estimada
+                        <span class="text-xs font-normal text-gray-400">
+                            (opcional)
+                        </span>
+                    </label>
+
+                    <div class="max-w-xs">
+                        <div class="relative">
+                            <i
+                                data-lucide="clock-3"
+                                class="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+                            ></i>
+
+                            <input
+                                id="id_duration"
+                                type="number"
+                                name="{{ form.duration.name }}"
+                                value="{{ form.duration.value|default_if_none:'' }}"
+                                min="1"
+                                max="1440"
+                                step="1"
+                                inputmode="numeric"
+                                placeholder="Ex.: 50"
+                                class="h-11 w-full rounded-lg border pl-11 pr-20 text-sm text-gray-700 shadow-sm transition-colors focus:outline-none focus:ring-2
+                                {% if form.duration.errors %}
+                                    border-red-300 focus:border-red-500 focus:ring-red-200
+                                {% else %}
+                                    border-gray-300 focus:border-blue-500 focus:ring-blue-200
+                                {% endif %}"
+                            >
+
+                            <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                                minutos
+                            </span>
+                        </div>
+                    </div>
+
+                    <p class="mt-2 text-xs leading-5 text-gray-500">
+                        Informe um valor entre 1 e 1440 minutos.
+                    </p>
+
+                    {% if form.duration.errors %}
+                        <p class="mt-1.5 text-sm text-red-600">
+                            {{ form.duration.errors.0 }}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <!-- Materiais -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+            <div class="mb-6 flex items-center gap-2">
+                <i data-lucide="package-open" class="h-5 w-5 text-primary"></i>
+
+                <h2 class="text-lg font-semibold text-gray-900">
+                    Materiais necessários
+                </h2>
+            </div>
+
+            <div>
+                <div class="mb-2 flex items-center justify-between gap-4">
+                    <label
+                        for="id_materials"
+                        class="block text-sm font-medium text-gray-700"
+                    >
+                        Materiais
+                        <span class="text-xs font-normal text-gray-400">
+                            (opcional)
+                        </span>
+                    </label>
+
+                    <span
+                        id="materials-counter"
+                        class="flex-shrink-0 text-xs text-gray-400"
+                        aria-live="polite"
+                    >
+                        0 caracteres
+                    </span>
+                </div>
+
+                <textarea
+                    id="id_materials"
+                    name="{{ form.materials.name }}"
+                    rows="4"
+                    placeholder="Ex.: folhas impressas, lápis de cor, cartolina e calculadora..."
+                    class="w-full resize-y rounded-lg border px-4 py-3 text-sm leading-7 text-gray-700 shadow-sm transition-colors focus:outline-none focus:ring-2
+                    {% if form.materials.errors %}
+                        border-red-300 focus:border-red-500 focus:ring-red-200
+                    {% else %}
+                        border-gray-300 focus:border-blue-500 focus:ring-blue-200
+                    {% endif %}"
+                >{{ form.materials.value|default_if_none:'' }}</textarea>
+
+                <p class="mt-2 text-xs leading-5 text-gray-500">
+                    Liste apenas os recursos necessários para preparar ou executar
+                    o exercício.
+                </p>
+
+                {% if form.materials.errors %}
+                    <p class="mt-1.5 text-sm text-red-600">
+                        {{ form.materials.errors.0 }}
+                    </p>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Objetivos e tags -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+            <div class="mb-6 flex items-center gap-2">
+                <i data-lucide="tags" class="h-5 w-5 text-primary"></i>
+
+                <h2 class="text-lg font-semibold text-gray-900">
+                    Organização pedagógica
+                </h2>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+                <!-- Objetivos -->
+                <div class="relative">
+                    <label
+                        for="id_objectives"
+                        class="mb-2 block text-sm font-medium text-gray-700"
+                    >
+                        Objetivos de aprendizagem
+                        <span class="text-xs font-normal text-gray-400">
+                            (opcional)
+                        </span>
+                    </label>
+
+                    <!-- Campo real enviado ao Django -->
+                    <select
+                        name="{{ form.objectives.name }}"
+                        id="id_objectives"
+                        multiple
+                        class="hidden"
+                    >
+                        {% for objective in form.objectives.field.queryset %}
+                            <option
+                                value="{{ objective.id }}"
+                                {% if objective.id|stringformat:"s" in form.objectives.value %}selected{% endif %}
+                            >
+                                {{ objective.description }}
+                            </option>
+                        {% endfor %}
+                    </select>
+
+                    <!-- Seletor visual -->
+                    <div class="relative">
+                        <div
+                            id="objective-trigger"
+                            role="button"
+                            tabindex="0"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            class="flex min-h-12 w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white p-3 text-sm shadow-sm transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        >
+                            <div
+                                id="selected-objectives"
+                                class="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+                            >
+                                {% if form.objectives.value %}
+                                    {% for objective in form.objectives.field.queryset %}
+                                        {% if objective.id|stringformat:"s" in form.objectives.value %}
+                                            <span class="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                                                {{ objective.description }}
+                                            </span>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <span
+                                        id="objectives-placeholder"
+                                        class="text-gray-500"
+                                    >
+                                        Selecionar objetivos
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <i
+                                id="objective-dropdown-arrow"
+                                data-lucide="chevron-down"
+                                class="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform"
+                            ></i>
+                        </div>
+
+                        <div
+                            id="objective-dropdown"
+                            class="absolute left-0 top-full z-30 mt-1 hidden w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+                        >
+                            <div class="border-b border-gray-100 p-3">
+                                <div class="relative">
+                                    <i
+                                        data-lucide="search"
+                                        class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                    ></i>
+
+                                    <input
+                                        id="objective-filter"
+                                        type="text"
+                                        autocomplete="off"
+                                        placeholder="Buscar objetivo..."
+                                        class="h-10 w-full rounded-lg border border-gray-300 pl-9 pr-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                    >
+                                </div>
+                            </div>
+
+                            <div
+                                id="objective-list"
+                                class="max-h-64 overflow-y-auto py-1"
+                                role="listbox"
+                                aria-multiselectable="true"
+                            >
+                                {% for objective in form.objectives.field.queryset %}
+                                    <label class="flex cursor-pointer items-start gap-3 px-3 py-3 transition-colors hover:bg-gray-50">
+                                        <input
+                                            type="checkbox"
+                                            value="{{ objective.id }}"
+                                            class="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
+                                            {% if objective.id|stringformat:"s" in form.objectives.value %}checked{% endif %}
+                                            data-objective-select
+                                            data-objective-description="{{ objective.description }}"
+                                        >
+
+                                        <span class="text-sm leading-5 text-gray-700">
+                                            {{ objective.description }}
+                                        </span>
+                                    </label>
+                                {% empty %}
+                                    <div class="px-4 py-6 text-center">
+                                        <i
+                                            data-lucide="target"
+                                            class="mx-auto h-6 w-6 text-gray-300"
+                                        ></i>
+
+                                        <p class="mt-2 text-sm text-gray-500">
+                                            Nenhum objetivo cadastrado.
+                                        </p>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="mt-2 text-xs leading-5 text-gray-500">
+                        Associe competências ou resultados pedagógicos trabalhados
+                        pelo exercício.
+                    </p>
+
+                    {% if form.objectives.errors %}
+                        <p class="mt-1.5 text-sm text-red-600">
+                            {{ form.objectives.errors.0 }}
+                        </p>
+                    {% endif %}
+                </div>
+
+                <!-- Tags -->
+                <div class="relative">
+                    <label
+                        for="id_tags"
+                        class="mb-2 block text-sm font-medium text-gray-700"
+                    >
+                        Tags
+                        <span class="text-xs font-normal text-gray-400">
+                            (opcional)
+                        </span>
+                    </label>
+
+                    <!-- Campo real enviado ao Django -->
+                    <select
+                        name="{{ form.tags.name }}"
+                        id="id_tags"
+                        multiple
+                        class="hidden"
+                    >
+                        {% for tag in form.tags.field.queryset %}
+                            <option
+                                value="{{ tag.id }}"
+                                {% if tag.id|stringformat:"s" in form.tags.value %}selected{% endif %}
+                            >
+                                {{ tag.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+
+                    <!-- Seletor visual -->
+                    <div class="relative">
+                        <div
+                            id="tag-trigger"
+                            role="button"
+                            tabindex="0"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            class="flex min-h-12 w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white p-3 text-sm shadow-sm transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        >
+                            <div
+                                id="selected-tags"
+                                class="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+                            >
+                                {% if form.tags.value %}
+                                    {% for tag in form.tags.field.queryset %}
+                                        {% if tag.id|stringformat:"s" in form.tags.value %}
+                                            <span
+                                                class="rounded-full px-2.5 py-1 text-xs font-medium"
+                                                style="background-color: {{ tag.color }}20; color: {{ tag.color }};"
+                                            >
+                                                {{ tag.name }}
+                                            </span>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <span
+                                        id="tags-placeholder"
+                                        class="text-gray-500"
+                                    >
+                                        Selecionar tags
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <i
+                                id="tag-dropdown-arrow"
+                                data-lucide="chevron-down"
+                                class="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform"
+                            ></i>
+                        </div>
+
+                        <div
+                            id="tag-dropdown"
+                            class="absolute left-0 top-full z-30 mt-1 hidden w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+                        >
+                            <div class="border-b border-gray-100 p-3">
+                                <div class="relative">
+                                    <i
+                                        data-lucide="search"
+                                        class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                    ></i>
+
+                                    <input
+                                        id="tag-filter"
+                                        type="text"
+                                        autocomplete="off"
+                                        placeholder="Buscar tag..."
+                                        class="h-10 w-full rounded-lg border border-gray-300 pl-9 pr-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                    >
+                                </div>
+                            </div>
+
+                            <div
+                                id="tag-list"
+                                class="max-h-64 overflow-y-auto py-1"
+                                role="listbox"
+                                aria-multiselectable="true"
+                            >
+                                {% for tag in form.tags.field.queryset %}
+                                    <label class="flex cursor-pointer items-center gap-3 px-3 py-3 transition-colors hover:bg-gray-50">
+                                        <input
+                                            type="checkbox"
+                                            value="{{ tag.id }}"
+                                            class="h-4 w-4 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
+                                            {% if tag.id|stringformat:"s" in form.tags.value %}checked{% endif %}
+                                            data-tag-select
+                                            data-tag-name="{{ tag.name }}"
+                                            data-tag-color="{{ tag.color }}"
+                                        >
+
+                                        <span
+                                            class="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                                            style="background-color: {{ tag.color }};"
+                                        ></span>
+
+                                        <span class="min-w-0 truncate text-sm text-gray-700">
+                                            {{ tag.name }}
+                                        </span>
+                                    </label>
+                                {% empty %}
+                                    <div class="px-4 py-6 text-center">
+                                        <i
+                                            data-lucide="tags"
+                                            class="mx-auto h-6 w-6 text-gray-300"
+                                        ></i>
+
+                                        <p class="mt-2 text-sm text-gray-500">
+                                            Nenhuma tag cadastrada.
+                                        </p>
+
+                                        <a
+                                            href="{% url 'tag_form' %}"
+                                            class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                                        >
+                                            <i data-lucide="plus" class="h-4 w-4"></i>
+                                            Criar tag
+                                        </a>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="mt-2 text-xs leading-5 text-gray-500">
+                        Use tags para facilitar buscas, filtros e organização da
+                        biblioteca.
+                    </p>
+
+                    {% if form.tags.errors %}
+                        <p class="mt-1.5 text-sm text-red-600">
+                            {{ form.tags.errors.0 }}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <!-- Tipo do recurso -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+            <div class="mb-6 flex items-center gap-2">
+                <i
+                    data-lucide="{% if form.instance.is_template %}copy{% else %}notebook-text{% endif %}"
+                    class="h-5 w-5 text-primary"
+                ></i>
+
+                <h2 class="text-lg font-semibold text-gray-900">
+                    Tipo do recurso
+                </h2>
+            </div>
+
+            {% if form.instance.pk %}
+
+                <!-- Tipo imutável durante a edição -->
+                <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white">
+                            {% if form.instance.is_template %}
+                                <i
+                                    data-lucide="copy"
+                                    class="h-5 w-5 text-blue-600"
+                                ></i>
+                            {% else %}
+                                <i
+                                    data-lucide="notebook-text"
+                                    class="h-5 w-5 text-gray-600"
+                                ></i>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">
+                                {% if form.instance.is_template %}
+                                    Modelo reutilizável
+                                {% else %}
+                                    Exercício
+                                {% endif %}
+                            </p>
+
+                            <p class="mt-1 text-sm leading-6 text-gray-500">
+                                O tipo deste recurso foi definido durante sua criação
+                                e não pode mais ser alterado.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {% if form.instance.is_template %}
+                    <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-4">
+                        <div class="flex items-start gap-3">
+                            <i
+                                data-lucide="copy-plus"
+                                class="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600"
+                            ></i>
+
+                            <div>
+                                <p class="text-sm font-semibold text-blue-900">
+                                    Modelo reutilizável
+                                </p>
+
+                                <p class="mt-1 text-sm leading-6 text-blue-800">
+                                    Ao escolher <strong>Usar modelo</strong>, o TeachFlow
+                                    criará uma cópia independente para edição. O modelo
+                                    original permanecerá preservado e não será adicionado
+                                    diretamente às aulas.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {% elif form.instance.source_template %}
+                    <div class="mt-4 rounded-lg border border-gray-200 bg-white px-4 py-4">
+                        <div class="flex items-start gap-3">
+                            <i
+                                data-lucide="git-branch"
+                                class="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-500"
+                            ></i>
+
+                            <div>
+                                <p class="text-sm font-semibold text-gray-800">
+                                    Exercício criado a partir de um modelo
+                                </p>
+
+                                <p class="mt-1 text-sm leading-6 text-gray-600">
+                                    Este exercício é uma cópia independente e continuará
+                                    sendo tratado como exercício.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+            {% else %}
+
+                <!-- Escolha disponível somente durante a criação -->
+                <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-4">
+                    <div class="flex items-start gap-3">
+                        <input
+                            id="id_is_template"
+                            type="checkbox"
+                            name="{{ form.is_template.name }}"
+                            {% if form.is_template.value %}checked{% endif %}
+                            class="mt-0.5 h-5 w-5 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
+                        >
+
+                        <div>
+                            <label
+                                for="id_is_template"
+                                class="cursor-pointer text-sm font-semibold text-gray-900"
+                            >
+                                Criar como modelo reutilizável
+                            </label>
+
+                            <p class="mt-1 text-sm leading-6 text-gray-500">
+                                Modelos servem como matrizes para novos exercícios.
+                                Eles não são utilizados diretamente nas aulas.
+                            </p>
+
+                            {% if form.is_template.errors %}
+                                <p class="mt-1.5 text-sm text-red-600">
+                                    {{ form.is_template.errors.0 }}
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    id="template-info-card"
+                    class="{% if not form.is_template.value %}hidden {% endif %}mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-4"
+                >
+                    <div class="flex items-start gap-3">
+                        <i
+                            data-lucide="copy-plus"
+                            class="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600"
+                        ></i>
+
+                        <div>
+                            <p class="text-sm font-semibold text-blue-900">
+                                Modelo reutilizável
+                            </p>
+
+                            <p class="mt-1 text-sm leading-6 text-blue-800">
+                                Ao escolher <strong>Usar modelo</strong>, o TeachFlow
+                                criará uma cópia independente para edição. O modelo
+                                original permanecerá preservado e não será adicionado
+                                diretamente às aulas.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            {% endif %}
+        </section>
+
+        <!-- Ações -->
+        <div class="flex flex-col-reverse gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <a
+                href="{% if form.instance.pk %}{% url 'exercise_detail' form.instance.pk %}{% else %}{% url 'exercise_list' %}{% endif %}"
+                class="inline-flex h-11 items-center justify-center rounded-lg border border-gray-300 bg-white px-5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
+            >
+                Cancelar
+            </a>
+
+            <button
+                type="submit"
+                class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            >
+                <i
+                    data-lucide="{% if form.instance.pk %}save{% else %}plus{% endif %}"
+                    class="h-4 w-4"
+                ></i>
+
+                {% if form.instance.pk %}
+                    {% if form.instance.is_template %}
+                        Salvar modelo
+                    {% else %}
+                        Salvar alterações
+                    {% endif %}
+                {% else %}
+                    Criar exercício
+                {% endif %}
+            </button>
+        </div>
+    </form>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/forms.js' %}"></script>
+    {{ block.super }}
+
+    <script
+        src="{% static 'js/forms.js' %}"
+        defer
+    ></script>
+
+    <script
+        src="{% static 'js/exercise_form.js' %}"
+        defer
+    ></script>
 {% endblock %}

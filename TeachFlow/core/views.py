@@ -6,6 +6,7 @@ from django.contrib.auth import logout
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Q, Case, IntegerField, Value, When
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
@@ -436,25 +437,263 @@ class ExerciseListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     model = Exercise
     template_name = 'exercises/exercise_list.html'
     context_object_name = 'exercises'
-    
+    paginate_by = 18
+
+    def get_selected_status(self):
+        status = self.request.GET.get('status', 'active')
+
+        if status not in {'active', 'archived', 'all'}:
+            status = 'active'
+
+        return status
+
+    def get_selected_type(self):
+        exercise_type = self.request.GET.get('type', 'all')
+
+        if exercise_type not in {'exercise', 'template', 'all'}:
+            exercise_type = 'all'
+
+        return exercise_type
+
+    def get_selected_duration(self):
+        duration = self.request.GET.get('duration', '')
+
+        valid_durations = {
+            '',
+            'up-to-15',
+            '16-to-30',
+            '31-to-60',
+            '61-to-120',
+            'over-120',
+            'without-duration',
+        }
+
+        return duration if duration in valid_durations else ''
+
     def get_queryset(self):
-        return Exercise.objects.filter(
-        Q(created_by=self.request.user.teacher_profile) |
-        Q(lessons__class_group__teacher=self.request.user.teacher_profile)
-    ).distinct().select_related('created_by')
+        queryset = Exercise.objects.filter(
+            created_by=self.request.user.teacher_profile
+        ).select_related(
+            'created_by'
+        ).prefetch_related(
+            'tags',
+            'objectives',
+        )
+
+        status = self.get_selected_status()
+        exercise_type = self.get_selected_type()
+        duration = self.get_selected_duration()
+
+        search = self.request.GET.get('search', '').strip()
+        tag_ids = [
+            tag_id for tag_id in self.request.GET.getlist('tag') if tag_id.isdigit()
+        ]
+
+        objective_ids = [
+            objective_id for objective_id in self.request.GET.getlist('objective') if objective_id.isdigit()
+        ]
+
+        if status == 'active':
+            queryset = queryset.filter(is_active=True)
+        elif status == 'archived':
+            queryset = queryset.filter(is_active=False)
+
+        if exercise_type == 'exercise':
+            queryset = queryset.filter(is_template=False)
+        elif exercise_type == 'template':
+            queryset = queryset.filter(is_template=True)
+
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search) |
+                Q(materials__icontains=search)
+            )
+
+        if duration == 'up-to-15':
+            queryset = queryset.filter(
+                duration__gte=1,
+                duration__lte=15,
+            )
+        elif duration == '16-to-30':
+            queryset = queryset.filter(
+                duration__gte=16,
+                duration__lte=30,
+            )
+        elif duration == '31-to-60':
+            queryset = queryset.filter(
+                duration__gte=31,
+                duration__lte=60,
+            )
+        elif duration == '61-to-120':
+            queryset = queryset.filter(
+                duration__gte=61,
+                duration__lte=120,
+            )
+        elif duration == 'over-120':
+            queryset = queryset.filter(duration__gt=120)
+        elif duration == 'without-duration':
+            queryset = queryset.filter(duration__isnull=True)
+
+        if tag_ids:
+            queryset = queryset.filter(
+                tags__id__in=tag_ids
+            )
+
+        if objective_ids:
+            queryset = queryset.filter(
+                objectives__id__in=objective_ids
+            )
+
+        return queryset.distinct().order_by('title', 'id')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        teacher = self.request.user.teacher_profile
+
+        base_exercises = Exercise.objects.filter(created_by=teacher)
+
+        query_parameters = self.request.GET.copy()
+        query_parameters.pop('page', None)
+
+        context['search'] = self.request.GET.get('search', '').strip()
+        context['selected_status'] = self.get_selected_status()
+        context['selected_type'] = self.get_selected_type()
+        context['selected_duration'] = self.get_selected_duration()
+        context['selected_tags'] = [
+            tag_id
+            for tag_id in self.request.GET.getlist('tag')
+            if tag_id.isdigit()
+        ]
+
+        context['selected_objectives'] = [
+            objective_id
+            for objective_id in self.request.GET.getlist('objective')
+            if objective_id.isdigit()
+        ]
+
+        context['tags'] = Tag.objects.filter(
+            teacher=teacher,
+            type__in=['exercise', 'general'],
+        ).order_by('name')
+
+        context['objectives'] = LearningObjective.objects.filter(
+            teacher=teacher
+        ).order_by('title')
+
+        context['has_any_exercises'] = base_exercises.exists()
+        context['has_active_exercises'] = base_exercises.filter(
+            is_active=True
+        ).exists()
+        context['has_archived_exercises'] = base_exercises.filter(
+            is_active=False
+        ).exists()
+        context['has_templates'] = base_exercises.filter(
+            is_template=True
+        ).exists()
+        context['has_regular_exercises'] = base_exercises.filter(
+            is_template=False
+        ).exists()
+
+        context['query_string'] = query_parameters.urlencode()
+
+        if context.get('paginator'):
+            context['results_count'] = context['paginator'].count
+        else:
+            context['results_count'] = len(context['exercises'])
+
+        return context
         
 @method_decorator(csrf_protect, name='dispatch')
-class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView):
+class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView,):
     model = Exercise
     template_name = 'exercises/exercise_detail.html'
     context_object_name = 'exercise'
 
     def get_queryset(self):
-        # Filtra para mostrar apenas exercícios do professor
         return Exercise.objects.filter(
-            Q(created_by=self.request.user.teacher_profile) |
-            Q(lessons__class_group__teacher=self.request.user.teacher_profile)
-        ).distinct()
+            created_by=self.request.user.teacher_profile
+        ).select_related(
+            'created_by__user',
+            'source_template',
+        ).prefetch_related(
+            'tags',
+            'objectives',
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        related_lessons = self.object.lessons.select_related(
+            'class_group'
+        ).order_by(
+            '-date',
+            '-id',
+        )
+
+        lessons_count = related_lessons.count()
+
+        generated_exercises = Exercise.objects.none()
+        generated_exercises_count = 0
+
+        if self.object.is_template:
+            generated_exercises = (
+                self.object.generated_exercises.order_by(
+                    'title',
+                    'id',
+                )
+            )
+
+            generated_exercises_count = (
+                generated_exercises.count()
+            )
+
+        context['related_lessons'] = related_lessons
+        context['lessons_count'] = lessons_count
+
+        context['generated_exercises'] = generated_exercises
+        context['generated_exercises_count'] = (
+            generated_exercises_count
+        )
+
+        context['can_delete_exercise'] = (
+            lessons_count == 0
+            and generated_exercises_count == 0
+        )
+
+        return context
+        
+@method_decorator(csrf_protect, name='dispatch')
+class UseExerciseTemplateView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    @transaction.atomic
+    def post(self, request, pk):
+        exercise_template = get_object_or_404(
+            Exercise,
+            pk=pk,
+            created_by=request.user.teacher_profile,
+            is_template=True,
+            is_active=True,
+        )
+
+        new_exercise = Exercise.objects.create(
+            title=exercise_template.title,
+            description=exercise_template.description,
+            duration=exercise_template.duration,
+            materials=exercise_template.materials,
+            created_by=request.user.teacher_profile,
+            is_template=False,
+            source_template=exercise_template,
+        )
+
+        new_exercise.objectives.set(exercise_template.objectives.all())
+        new_exercise.tags.set(exercise_template.tags.all())
+
+        messages.success(
+            request,
+            'Exercício criado a partir do modelo. Revise os dados antes de utilizá-lo.',
+        )
+
+        return redirect('exercise_form', pk=new_exercise.pk)
         
 @method_decorator(csrf_protect, name='dispatch')
 class ExerciseUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
@@ -462,6 +701,11 @@ class ExerciseUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
     form_class = ExerciseForm
     template_name = 'exercises/exercise_form.html'
     
+    def get_queryset(self):
+        return Exercise.objects.filter(
+            created_by=self.request.user.teacher_profile
+        )
+       
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['teacher'] = self.request.user.teacher_profile
@@ -470,16 +714,141 @@ class ExerciseUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
     def get_success_url(self):
         messages.success(self.request, "Exercício atualizado com sucesso!")
         return reverse('exercise_detail', kwargs={'pk': self.object.pk})
+    
+@method_decorator(csrf_protect, name='dispatch')
+class ExerciseArchiveView(
+    LoginRequiredMixin,
+    TeacherRequiredMixin,
+    View,
+):
+    def post(self, request, pk):
+        exercise = get_object_or_404(
+            Exercise,
+            pk=pk,
+            created_by=request.user.teacher_profile,
+        )
+
+        if not exercise.is_active:
+            messages.info(
+                request,
+                'Este exercício já está arquivado.'
+            )
+            return redirect('exercise_detail', pk=exercise.pk)
+
+        exercise.is_active = False
+        exercise.save(update_fields=['is_active'])
+
+        messages.success(
+            request,
+            (
+                'Exercício arquivado com sucesso. '
+                'Ele não aparecerá para uso em novas aulas, '
+                'mas continuará preservado nas aulas anteriores.'
+            )
+        )
+
+        return redirect('exercise_detail', pk=exercise.pk)
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class ExerciseRestoreView(
+    LoginRequiredMixin,
+    TeacherRequiredMixin,
+    View,
+):
+    def post(self, request, pk):
+        exercise = get_object_or_404(
+            Exercise,
+            pk=pk,
+            created_by=request.user.teacher_profile,
+        )
+
+        if exercise.is_active:
+            messages.info(
+                request,
+                'Este exercício já está ativo.'
+            )
+            return redirect('exercise_detail', pk=exercise.pk)
+
+        exercise.is_active = True
+        exercise.save(update_fields=['is_active'])
+
+        messages.success(
+            request,
+            'Exercício reativado com sucesso.'
+        )
+
+        return redirect('exercise_detail', pk=exercise.pk)
 
 @method_decorator(csrf_protect, name='dispatch')
 class ExerciseDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
     model = Exercise
-    template_name = 'exercises/exercise_confirm_delete.html'
     success_url = reverse_lazy('exercise_list')
+    http_method_names = ['post']
     
     def get_queryset(self):
-        # Só permite deletar exercícios que o professor criou
-        return Exercise.objects.filter(created_by=self.request.user.teacher_profile)
+        return Exercise.objects.filter(
+            created_by=self.request.user.teacher_profile
+        )
+
+    def form_valid(self, form):
+        lessons_count = self.object.lessons.count()
+
+        generated_exercises_count = (
+            self.object.generated_exercises.count()
+            if self.object.is_template
+            else 0
+        )
+
+        if lessons_count > 0 or generated_exercises_count > 0:
+            if (
+                lessons_count > 0
+                and generated_exercises_count > 0
+            ):
+                message = (
+                    'Este recurso não pode ser excluído porque está '
+                    f'vinculado a {lessons_count} '
+                    f'{"aula" if lessons_count == 1 else "aulas"} '
+                    f'e possui {generated_exercises_count} '
+                    f'{"cópia gerada" if generated_exercises_count == 1 else "cópias geradas"}. '
+                    'Você pode arquivá-lo para removê-lo da lista principal '
+                    'sem perder o histórico.'
+                )
+
+            elif lessons_count > 0:
+                message = (
+                    'Este exercício não pode ser excluído porque está '
+                    f'vinculado a {lessons_count} '
+                    f'{"aula" if lessons_count == 1 else "aulas"}. '
+                    'Você pode arquivá-lo para removê-lo da lista principal '
+                    'sem perder o histórico.'
+                )
+
+            else:
+                message = (
+                    'Este modelo não pode ser excluído porque já gerou '
+                    f'{generated_exercises_count} '
+                    f'{"exercício" if generated_exercises_count == 1 else "exercícios"}. '
+                    'Você pode arquivá-lo para removê-lo da lista principal '
+                    'sem perder a referência de origem das cópias.'
+                )
+
+            messages.error(
+                self.request,
+                message,
+            )
+
+            return redirect(
+                'exercise_detail',
+                pk=self.object.pk,
+            )
+
+        messages.success(
+            self.request,
+            'Exercício excluído com sucesso.'
+        )
+
+        return super().form_valid(form)
     
     
 @require_POST
@@ -962,96 +1331,184 @@ class CheckTagAPIView(LoginRequiredMixin, View):
                 'error': f'Erro interno: {str(e)}'
             }, status=500)
 
-# Versão melhorada da QuickAddTagView
-@method_decorator(csrf_exempt, name='dispatch')
-class QuickAddTagView(LoginRequiredMixin, View):
+@method_decorator(csrf_protect, name='dispatch')
+class QuickAddTagView(
+    LoginRequiredMixin,
+    TeacherRequiredMixin,
+    View,
+):
+    ALLOWED_MODEL_TYPES = {
+        'lesson',
+        'exercise',
+    }
+
+    @transaction.atomic
     def post(self, request, model_type=None, model_id=None):
-        try:
-            tag_name = ''
-
-            # Compatível com form-data e JSON
-            if request.method == 'POST':
-                if request.content_type == 'application/json':
-                    try:
-                        data = json.loads(request.body)
-                        tag_name = data.get('tag_name', '').strip()
-                    except json.JSONDecodeError:
-                        tag_name = ''
-                else:
-                    tag_name = request.POST.get('tag_name', '').strip()
-
-            # Validações básicas
-            if not tag_name:
-                return JsonResponse({
+        if model_type not in self.ALLOWED_MODEL_TYPES:
+            return JsonResponse(
+                {
                     'success': False,
-                    'error': 'O nome da tag não pode estar vazio'
-                }, status=400)
+                    'error': 'Tipo de recurso inválido.',
+                },
+                status=400,
+            )
 
-            if len(tag_name) < 2:
-                return JsonResponse({
+        tag_name = self.get_tag_name(request)
+
+        validation_error = self.validate_tag_name(tag_name)
+
+        if validation_error:
+            return JsonResponse(
+                {
                     'success': False,
-                    'error': 'O nome da tag deve ter pelo menos 2 caracteres'
-                }, status=400)
+                    'error': validation_error,
+                },
+                status=400,
+            )
 
-            if not re.match(r'^[\w\sÀ-ÿ\-]+$', tag_name):
-                return JsonResponse({
+        teacher = request.user.teacher_profile
+
+        target_object = self.get_target_object(
+            model_type=model_type,
+            model_id=model_id,
+            teacher=teacher,
+        )
+
+        if target_object is None:
+            return JsonResponse(
+                {
                     'success': False,
-                    'error': 'Use apenas letras, números, espaços, hífens e underscores'
-                }, status=400)
+                    'error': 'Recurso não encontrado.',
+                },
+                status=404,
+            )
 
-            # Verifica se a tag já existe (case-insensitive)
-            existing_tag = Tag.objects.filter(
-                name__iexact=tag_name,
-                teacher=request.user.teacher_profile
+        tag = Tag.objects.filter(
+            teacher=teacher,
+            name__iexact=tag_name,
+            type__in=[
+                model_type,
+                'general',
+            ],
+        ).order_by(
+            'type',
+            'id',
+        ).first()
+
+        created = False
+
+        if tag is None:
+            tag = Tag.objects.create(
+                name=tag_name,
+                teacher=teacher,
+                type=model_type,
+                color=Tag.generate_random_color(),
+            )
+
+            created = True
+
+        target_object.tags.add(tag)
+
+        if not target_object.tags.filter(pk=tag.pk).exists():
+            transaction.set_rollback(True)
+
+            return JsonResponse(
+                {
+                    'success': False,
+                    'error': 'Não foi possível associar a tag ao recurso.',
+                },
+                status=500,
+            )
+
+        if created:
+            message = (
+                f'Tag "{tag.name}" criada e adicionada com sucesso.'
+            )
+        else:
+            message = (
+                f'Tag "{tag.name}" associada com sucesso.'
+            )
+
+        return JsonResponse(
+            {
+                'success': True,
+                'message': message,
+                'tag': {
+                    'id': tag.pk,
+                    'name': tag.name,
+                    'color': tag.color,
+                    'type': tag.type,
+                },
+            },
+            status=201 if created else 200,
+        )
+
+    def get_tag_name(self, request):
+        content_type = request.content_type.split(';')[0]
+
+        if content_type == 'application/json':
+            try:
+                data = json.loads(
+                    request.body.decode('utf-8')
+                )
+            except (
+                json.JSONDecodeError,
+                UnicodeDecodeError,
+            ):
+                return ''
+
+            raw_tag_name = data.get('tag_name', '')
+        else:
+            raw_tag_name = request.POST.get(
+                'tag_name',
+                ''
+            )
+
+        return ' '.join(
+            str(raw_tag_name).split()
+        )
+
+    def validate_tag_name(self, tag_name):
+        if not tag_name:
+            return 'O nome da tag não pode estar vazio.'
+
+        if len(tag_name) < 2:
+            return (
+                'O nome da tag deve ter pelo menos 2 caracteres.'
+            )
+
+        if len(tag_name) > 50:
+            return (
+                'O nome da tag não pode ultrapassar 50 caracteres.'
+            )
+
+        if not re.fullmatch(
+            r'[\w\sÀ-ÿ\-]+',
+            tag_name,
+        ):
+            return (
+                'Use apenas letras, números, espaços, '
+                'hífens e underscores.'
+            )
+
+        return None
+
+    def get_target_object(
+        self,
+        model_type,
+        model_id,
+        teacher,
+    ):
+        if model_type == 'exercise':
+            return Exercise.objects.filter(
+                pk=model_id,
+                created_by=teacher,
             ).first()
 
-            if existing_tag:
-                tag = existing_tag
-                created = False
-            else:
-                tag = Tag.objects.create(
-                    name=tag_name,
-                    teacher=request.user.teacher_profile,
-                    type=model_type if model_type else 'general',
-                    color=Tag.generate_random_color()
-                )
-                created = True
+        if model_type == 'lesson':
+            return Lesson.objects.filter(
+                pk=model_id,
+                class_group__teacher=teacher,
+            ).first()
 
-            # Associa a tag ao modelo
-            model = self.get_model_instance(model_type, model_id)
-            if model and hasattr(model, 'tags'):
-                model.tags.add(tag)
-
-            return JsonResponse({
-                'success': True,
-                'message': f'Tag "{tag_name}" {"criada e adicionada" if created else "já existia e foi associada"} com sucesso!',
-                'tag': {
-                    'id': tag.id,
-                    'name': tag.name,
-                    'color': tag.color
-                }
-            })
-
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'error': f'Erro interno: {str(e)}'
-            }, status=500)
-
-    def get_model_instance(self, model_type, model_id):
-        if not model_type or not model_id:
-            return None
-
-        try:
-            if model_type == 'lesson':
-                return Lesson.objects.get(
-                    pk=model_id,
-                    class_group__teacher=self.request.user.teacher_profile
-                )
-            elif model_type == 'exercise':
-                return Exercise.objects.get(
-                    pk=model_id,
-                    lessons__class_group__teacher=self.request.user.teacher_profile
-                )
-        except (Lesson.DoesNotExist, Exercise.DoesNotExist):
-            return None
+        return None

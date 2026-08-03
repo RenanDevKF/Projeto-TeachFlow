@@ -141,22 +141,39 @@ class Lesson(models.Model):
 class Exercise(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
-    duration = models.IntegerField(help_text="Duration in minutes", null=True, blank=True)
+    duration = models.PositiveIntegerField(
+        null=True, blank=True,
+        validators=[
+            MinValueValidator(1, message='A duração deve ser de pelo menos 1 minuto.'),
+            MaxValueValidator(1440, message='A duração não pode ultrapassar 1440 minutos.'),
+        ],
+        verbose_name='Duração',
+        help_text='Duração estimada em minutos, entre 1 e 1440.',
+    )
     materials = models.TextField(blank=True)
     created_by = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='exercises')
     objectives = models.ManyToManyField(LearningObjective, blank=True, related_name='exercises')
     tags = models.ManyToManyField(Tag, blank=True, related_name='exercises')
     is_template = models.BooleanField(default=False, help_text="Exercício modelo para reutilização")
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Ativo',
+        help_text='Indica se o exercício está disponível para uso.',
+    )
+    source_template = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='generated_exercises',
+        verbose_name='Modelo de origem',
+        help_text='Modelo utilizado para gerar este exercício.',
+    )
     
     class Meta:
         ordering = ['title']
         verbose_name = 'Exercício'
         verbose_name_plural = 'Exercícios'
-        
-    def belongs_to_teacher(self, teacher):
-        return self.created_by == teacher or self.lessons.filter(
-            class_group__teacher=teacher
-        ).exists()
     
     def __str__(self):
         return self.title

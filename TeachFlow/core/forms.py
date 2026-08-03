@@ -162,7 +162,7 @@ class LessonForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         if teacher:
-            self.fields['exercises'].queryset = Exercise.objects.filter(created_by=teacher)
+            self.fields['exercises'].queryset = Exercise.objects.filter(created_by=teacher, is_template=False, is_active=True,)
             self.fields['class_group'].queryset = ClassGroup.objects.filter(teacher=teacher)
             # Filtra tags apenas do tipo 'lesson' ou 'general'
             self.fields['tags'].queryset = Tag.objects.filter(
@@ -177,7 +177,7 @@ class ExerciseForm(forms.ModelForm):
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-input'}),
             'description': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 4}),
-            'duration': forms.NumberInput(attrs={'class': 'form-input'}),
+            'duration': forms.NumberInput(attrs={'class': 'form-input', 'min': 1, 'max': 1440, 'step': 1, 'placeholder': 'Ex.: 50'}),
             'materials': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
             'objectives': forms.SelectMultiple(attrs={'class': 'hidden'}),  # Custom widget
             'tags': forms.SelectMultiple(attrs={'class': 'hidden'}),  # Custom widget
@@ -186,11 +186,59 @@ class ExerciseForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         teacher = kwargs.pop('teacher', None)
         super().__init__(*args, **kwargs)
+        
         if teacher:
             self.fields['objectives'].queryset = LearningObjective.objects.filter(teacher=teacher)
             # Filtra tags apenas do tipo 'exercise' ou 'general'
             self.fields['tags'].queryset = Tag.objects.filter(
                 teacher=teacher,
                 type__in=['exercise', 'general']
-            ).distinct()
+            ).distinct().order_by('name')
+            
+        if self.instance.pk:
+            self.fields['is_template'].disabled = True
+            
+    def clean_is_template(self):
+        """
+        O tipo do recurso é definido apenas na criação.
+        Após salvo, não pode mais ser alterado.
+        """
+
+        if self.instance.pk:
+            return self.instance.is_template
+
+        return self.cleaned_data.get('is_template', False)
     
+    def clean_title(self):
+        """
+        Remove espaços externos do título sem alterar
+        os espaços existentes entre as palavras.
+        """
+        title = self.cleaned_data.get('title', '')
+
+        return title.strip()
+
+
+    def clean_description(self):
+        """
+        Remove espaços e quebras de linha apenas das extremidades,
+        preservando a formatação interna da descrição.
+        """
+        description = self.cleaned_data.get('description', '')
+
+        return description.strip()
+
+
+    def clean_materials(self):
+        """
+        Normaliza o campo opcional de materiais, preservando
+        parágrafos e quebras de linha internas.
+        """
+        materials = self.cleaned_data.get('materials')
+
+        if not materials:
+            return ''
+
+        return materials.strip()
+    
+            

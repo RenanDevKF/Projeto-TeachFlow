@@ -1,83 +1,192 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // Elementos do modal
-    const addTagsBtn = document.getElementById('add-tags-btn');
-    const tagModal = document.getElementById('tag-modal');
-    const cancelModalBtn = document.getElementById('cancel-tag-modal');
-    const closeModalX = document.getElementById('close-modal-x');
-    const tagForm = document.getElementById('tag-form');
-    const tagNameInput = document.getElementById('tag_name');
-    const submitBtn = document.getElementById('submit-tag-btn');
-    
-    // Funções básicas do modal
-    function openModal() {
-        tagModal.classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-        tagNameInput.focus();
+document.addEventListener('DOMContentLoaded', () => {
+    const openButton = document.getElementById('add-tags-btn');
+    const modal = document.getElementById('tag-modal');
+    const cancelButton = document.getElementById('cancel-tag-modal');
+    const closeButton = document.getElementById('close-modal-x');
+    const form = document.getElementById('tag-form');
+    const nameInput = document.getElementById('tag_name');
+    const submitButton = document.getElementById('submit-tag-btn');
+    const feedback = document.getElementById('tag-modal-feedback');
+
+    if (
+        !openButton ||
+        !modal ||
+        !form ||
+        !nameInput ||
+        !submitButton
+    ) {
+        return;
     }
-    
-    function closeModal() {
-        tagModal.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-        tagForm.reset();
-    }
-    
-    // Event listeners
-    addTagsBtn?.addEventListener('click', openModal);
-    cancelModalBtn?.addEventListener('click', closeModal);
-    closeModalX?.addEventListener('click', closeModal);
-    
-    // Fechar ao clicar fora ou pressionar ESC
-    tagModal?.addEventListener('click', function(e) {
-        if (e.target === tagModal) closeModal();
-    });
-    
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && !tagModal.classList.contains('hidden')) {
-            closeModal();
-        }
-    });
-    
-    // Envio do formulário
-    tagForm?.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const tagName = tagNameInput.value.trim();
-        
-        if (!tagName) {
-            alert('Por favor, insira um nome para a tag');
+
+    let isSubmitting = false;
+
+    function clearFeedback() {
+        if (!feedback) {
             return;
         }
-        
-        submitBtn.disabled = true;
-        
-        try {
-            const tagName = tagNameInput.value.trim();
-            const formData = JSON.stringify({ tag_name: tagName });
-            const response = await fetch(tagForm.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            
-            const data = await response.json();
-            
-            if (!response.ok) {
-                alert(data.error || 'Erro ao adicionar tag');
-                return;
-            }
-            
-            alert(data.message);
+
+        feedback.textContent = '';
+        feedback.className = 'mt-2 hidden text-sm';
+    }
+
+    function showFeedback(message, type = 'error') {
+        if (!feedback) {
+            return;
+        }
+
+        feedback.textContent = message;
+        feedback.className = [
+            'mt-2',
+            'text-sm',
+            type === 'success'
+                ? 'text-green-600'
+                : 'text-red-600',
+        ].join(' ');
+    }
+
+    function updateSubmitButton() {
+        submitButton.disabled = (
+            isSubmitting ||
+            nameInput.value.trim() === ''
+        );
+    }
+
+    function openModal() {
+        clearFeedback();
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        document.body.classList.add('overflow-hidden');
+
+        window.setTimeout(() => {
+            nameInput.focus();
+        }, 0);
+
+        updateSubmitButton();
+    }
+
+    function closeModal() {
+        if (isSubmitting) {
+            return;
+        }
+
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+
+        document.body.classList.remove('overflow-hidden');
+
+        form.reset();
+        clearFeedback();
+        updateSubmitButton();
+    }
+
+    openButton.addEventListener('click', openModal);
+    cancelButton?.addEventListener('click', closeModal);
+    closeButton?.addEventListener('click', closeModal);
+
+    nameInput.addEventListener('input', () => {
+        clearFeedback();
+        updateSubmitButton();
+    });
+
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
             closeModal();
-            window.location.reload(); // Recarrega para atualizar as tags
-            
-        } catch (error) {
-            console.error('Erro:', error);
-            alert('Erro ao comunicar com o servidor');
-        } finally {
-            submitBtn.disabled = false;
         }
     });
+
+    document.addEventListener('keydown', (event) => {
+        if (
+            event.key === 'Escape' &&
+            !modal.classList.contains('hidden')
+        ) {
+            closeModal();
+        }
+    });
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        if (isSubmitting) {
+            return;
+        }
+
+        const tagName = nameInput.value.trim();
+
+        if (!tagName) {
+            showFeedback('Informe um nome para a tag.');
+            nameInput.focus();
+            updateSubmitButton();
+            return;
+        }
+
+        const csrfInput = form.querySelector(
+            '[name="csrfmiddlewaretoken"]'
+        );
+
+        if (!csrfInput) {
+            showFeedback(
+                'Não foi possível validar a requisição. Recarregue a página.'
+            );
+            return;
+        }
+
+        isSubmitting = true;
+        submitButton.disabled = true;
+        submitButton.textContent = 'Criando...';
+        clearFeedback();
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: JSON.stringify({
+                    tag_name: tagName,
+                }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfInput.value,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            let data = {};
+
+            try {
+                data = await response.json();
+            } catch {
+                data = {};
+            }
+
+            if (!response.ok) {
+                throw new Error(
+                    data.error ||
+                    'Não foi possível criar a tag.'
+                );
+            }
+
+            showFeedback(
+                data.message || 'Tag criada com sucesso.',
+                'success'
+            );
+
+            window.setTimeout(() => {
+                window.location.reload();
+            }, 500);
+
+        } catch (error) {
+            console.error('Erro ao criar tag:', error);
+
+            showFeedback(
+                error.message ||
+                'Erro ao comunicar com o servidor.'
+            );
+
+            isSubmitting = false;
+            submitButton.textContent = 'Criar tag';
+            updateSubmitButton();
+        }
+    });
+
+    updateSubmitButton();
 });
