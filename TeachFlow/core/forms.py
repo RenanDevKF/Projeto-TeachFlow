@@ -209,4 +209,36 @@ class ExerciseForm(forms.ModelForm):
 
         return self.cleaned_data.get('is_template', False)
     
+    def clean_title(self):
+        """
+        Remove espaços externos do título sem alterar
+        os espaços existentes entre as palavras.
+        """
+        title = self.cleaned_data.get('title', '')
+
+        return title.strip()
+
+
+    def clean_description(self):
+        """
+        Remove espaços e quebras de linha apenas das extremidades,
+        preservando a formatação interna da descrição.
+        """
+        description = self.cleaned_data.get('description', '')
+
+        return description.strip()
+
+
+    def clean_materials(self):
+        """
+        Normaliza o campo opcional de materiais, preservando
+        parágrafos e quebras de linha internas.
+        """
+        materials = self.cleaned_data.get('materials')
+
+        if not materials:
+            return ''
+
+        return materials.strip()
+    
             
