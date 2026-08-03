@@ -1331,96 +1331,184 @@ class CheckTagAPIView(LoginRequiredMixin, View):
                 'error': f'Erro interno: {str(e)}'
             }, status=500)
 
-# Versão melhorada da QuickAddTagView
-@method_decorator(csrf_exempt, name='dispatch')
-class QuickAddTagView(LoginRequiredMixin, View):
+@method_decorator(csrf_protect, name='dispatch')
+class QuickAddTagView(
+    LoginRequiredMixin,
+    TeacherRequiredMixin,
+    View,
+):
+    ALLOWED_MODEL_TYPES = {
+        'lesson',
+        'exercise',
+    }
+
+    @transaction.atomic
     def post(self, request, model_type=None, model_id=None):
-        try:
-            tag_name = ''
-
-            # Compatível com form-data e JSON
-            if request.method == 'POST':
-                if request.content_type == 'application/json':
-                    try:
-                        data = json.loads(request.body)
-                        tag_name = data.get('tag_name', '').strip()
-                    except json.JSONDecodeError:
-                        tag_name = ''
-                else:
-                    tag_name = request.POST.get('tag_name', '').strip()
-
-            # Validações básicas
-            if not tag_name:
-                return JsonResponse({
+        if model_type not in self.ALLOWED_MODEL_TYPES:
+            return JsonResponse(
+                {
                     'success': False,
-                    'error': 'O nome da tag não pode estar vazio'
-                }, status=400)
+                    'error': 'Tipo de recurso inválido.',
+                },
+                status=400,
+            )
 
-            if len(tag_name) < 2:
-                return JsonResponse({
+        tag_name = self.get_tag_name(request)
+
+        validation_error = self.validate_tag_name(tag_name)
+
+        if validation_error:
+            return JsonResponse(
+                {
                     'success': False,
-                    'error': 'O nome da tag deve ter pelo menos 2 caracteres'
-                }, status=400)
+                    'error': validation_error,
+                },
+                status=400,
+            )
 
-            if not re.match(r'^[\w\sÀ-ÿ\-]+$', tag_name):
-                return JsonResponse({
+        teacher = request.user.teacher_profile
+
+        target_object = self.get_target_object(
+            model_type=model_type,
+            model_id=model_id,
+            teacher=teacher,
+        )
+
+        if target_object is None:
+            return JsonResponse(
+                {
                     'success': False,
-                    'error': 'Use apenas letras, números, espaços, hífens e underscores'
-                }, status=400)
+                    'error': 'Recurso não encontrado.',
+                },
+                status=404,
+            )
 
-            # Verifica se a tag já existe (case-insensitive)
-            existing_tag = Tag.objects.filter(
-                name__iexact=tag_name,
-                teacher=request.user.teacher_profile
+        tag = Tag.objects.filter(
+            teacher=teacher,
+            name__iexact=tag_name,
+            type__in=[
+                model_type,
+                'general',
+            ],
+        ).order_by(
+            'type',
+            'id',
+        ).first()
+
+        created = False
+
+        if tag is None:
+            tag = Tag.objects.create(
+                name=tag_name,
+                teacher=teacher,
+                type=model_type,
+                color=Tag.generate_random_color(),
+            )
+
+            created = True
+
+        target_object.tags.add(tag)
+
+        if not target_object.tags.filter(pk=tag.pk).exists():
+            transaction.set_rollback(True)
+
+            return JsonResponse(
+                {
+                    'success': False,
+                    'error': 'Não foi possível associar a tag ao recurso.',
+                },
+                status=500,
+            )
+
+        if created:
+            message = (
+                f'Tag "{tag.name}" criada e adicionada com sucesso.'
+            )
+        else:
+            message = (
+                f'Tag "{tag.name}" associada com sucesso.'
+            )
+
+        return JsonResponse(
+            {
+                'success': True,
+                'message': message,
+                'tag': {
+                    'id': tag.pk,
+                    'name': tag.name,
+                    'color': tag.color,
+                    'type': tag.type,
+                },
+            },
+            status=201 if created else 200,
+        )
+
+    def get_tag_name(self, request):
+        content_type = request.content_type.split(';')[0]
+
+        if content_type == 'application/json':
+            try:
+                data = json.loads(
+                    request.body.decode('utf-8')
+                )
+            except (
+                json.JSONDecodeError,
+                UnicodeDecodeError,
+            ):
+                return ''
+
+            raw_tag_name = data.get('tag_name', '')
+        else:
+            raw_tag_name = request.POST.get(
+                'tag_name',
+                ''
+            )
+
+        return ' '.join(
+            str(raw_tag_name).split()
+        )
+
+    def validate_tag_name(self, tag_name):
+        if not tag_name:
+            return 'O nome da tag não pode estar vazio.'
+
+        if len(tag_name) < 2:
+            return (
+                'O nome da tag deve ter pelo menos 2 caracteres.'
+            )
+
+        if len(tag_name) > 50:
+            return (
+                'O nome da tag não pode ultrapassar 50 caracteres.'
+            )
+
+        if not re.fullmatch(
+            r'[\w\sÀ-ÿ\-]+',
+            tag_name,
+        ):
+            return (
+                'Use apenas letras, números, espaços, '
+                'hífens e underscores.'
+            )
+
+        return None
+
+    def get_target_object(
+        self,
+        model_type,
+        model_id,
+        teacher,
+    ):
+        if model_type == 'exercise':
+            return Exercise.objects.filter(
+                pk=model_id,
+                created_by=teacher,
             ).first()
 
-            if existing_tag:
-                tag = existing_tag
-                created = False
-            else:
-                tag = Tag.objects.create(
-                    name=tag_name,
-                    teacher=request.user.teacher_profile,
-                    type=model_type if model_type else 'general',
-                    color=Tag.generate_random_color()
-                )
-                created = True
+        if model_type == 'lesson':
+            return Lesson.objects.filter(
+                pk=model_id,
+                class_group__teacher=teacher,
+            ).first()
 
-            # Associa a tag ao modelo
-            model = self.get_model_instance(model_type, model_id)
-            if model and hasattr(model, 'tags'):
-                model.tags.add(tag)
-
-            return JsonResponse({
-                'success': True,
-                'message': f'Tag "{tag_name}" {"criada e adicionada" if created else "já existia e foi associada"} com sucesso!',
-                'tag': {
-                    'id': tag.id,
-                    'name': tag.name,
-                    'color': tag.color
-                }
-            })
-
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'error': f'Erro interno: {str(e)}'
-            }, status=500)
-
-    def get_model_instance(self, model_type, model_id):
-        if not model_type or not model_id:
-            return None
-
-        try:
-            if model_type == 'lesson':
-                return Lesson.objects.get(
-                    pk=model_id,
-                    class_group__teacher=self.request.user.teacher_profile
-                )
-            elif model_type == 'exercise':
-                return Exercise.objects.get(
-                    pk=model_id,
-                    lessons__class_group__teacher=self.request.user.teacher_profile
-                )
-        except (Lesson.DoesNotExist, Exercise.DoesNotExist):
-            return None
+        return None
