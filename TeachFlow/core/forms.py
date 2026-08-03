@@ -186,11 +186,27 @@ class ExerciseForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         teacher = kwargs.pop('teacher', None)
         super().__init__(*args, **kwargs)
+        
         if teacher:
             self.fields['objectives'].queryset = LearningObjective.objects.filter(teacher=teacher)
             # Filtra tags apenas do tipo 'exercise' ou 'general'
             self.fields['tags'].queryset = Tag.objects.filter(
                 teacher=teacher,
                 type__in=['exercise', 'general']
-            ).distinct()
+            ).distinct().order_by('name')
+            
+        if self.instance.pk:
+            self.fields['is_template'].disabled = True
+            
+    def clean_is_template(self):
+        """
+        O tipo do recurso é definido apenas na criação.
+        Após salvo, não pode mais ser alterado.
+        """
+
+        if self.instance.pk:
+            return self.instance.is_template
+
+        return self.cleaned_data.get('is_template', False)
     
+            

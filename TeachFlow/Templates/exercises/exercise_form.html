@@ -631,69 +631,157 @@
         <!-- Tipo do recurso -->
         <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
             <div class="mb-6 flex items-center gap-2">
-                <i data-lucide="copy" class="h-5 w-5 text-primary"></i>
+                <i
+                    data-lucide="{% if form.instance.is_template %}copy{% else %}notebook-text{% endif %}"
+                    class="h-5 w-5 text-primary"
+                ></i>
 
                 <h2 class="text-lg font-semibold text-gray-900">
                     Tipo do recurso
                 </h2>
             </div>
 
-            <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-4">
-                <div class="flex items-start gap-3">
-                    <input
-                        id="id_is_template"
-                        type="checkbox"
-                        name="{{ form.is_template.name }}"
-                        {% if form.is_template.value %}checked{% endif %}
-                        class="mt-0.5 h-5 w-5 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
-                    >
+            {% if form.instance.pk %}
 
-                    <div>
-                        <label
-                            for="id_is_template"
-                            class="cursor-pointer text-sm font-semibold text-gray-900"
-                        >
-                            Criar como modelo reutilizável
-                        </label>
+                <!-- Tipo imutável durante a edição -->
+                <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white">
+                            {% if form.instance.is_template %}
+                                <i
+                                    data-lucide="copy"
+                                    class="h-5 w-5 text-blue-600"
+                                ></i>
+                            {% else %}
+                                <i
+                                    data-lucide="notebook-text"
+                                    class="h-5 w-5 text-gray-600"
+                                ></i>
+                            {% endif %}
+                        </div>
 
-                        <p class="mt-1 text-sm leading-6 text-gray-500">
-                            Modelos servem como matrizes para novos exercícios.
-                            Eles não são utilizados diretamente nas aulas.
-                        </p>
-
-                        {% if form.is_template.errors %}
-                            <p class="mt-1.5 text-sm text-red-600">
-                                {{ form.is_template.errors.0 }}
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">
+                                {% if form.instance.is_template %}
+                                    Modelo reutilizável
+                                {% else %}
+                                    Exercício
+                                {% endif %}
                             </p>
-                        {% endif %}
+
+                            <p class="mt-1 text-sm leading-6 text-gray-500">
+                                O tipo deste recurso foi definido durante sua criação
+                                e não pode mais ser alterado.
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div
-                id="template-info-card"
-                class="{% if not form.is_template.value %}hidden {% endif %}mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-4"
-            >
-                <div class="flex items-start gap-3">
-                    <i
-                        data-lucide="copy-plus"
-                        class="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600"
-                    ></i>
+                {% if form.instance.is_template %}
+                    <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-4">
+                        <div class="flex items-start gap-3">
+                            <i
+                                data-lucide="copy-plus"
+                                class="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600"
+                            ></i>
 
-                    <div>
-                        <p class="text-sm font-semibold text-blue-900">
-                            Modelo reutilizável
-                        </p>
+                            <div>
+                                <p class="text-sm font-semibold text-blue-900">
+                                    Modelo reutilizável
+                                </p>
 
-                        <p class="mt-1 text-sm leading-6 text-blue-800">
-                            Ao escolher <strong>Usar modelo</strong>, o TeachFlow
-                            criará uma cópia independente para edição. O modelo
-                            original permanecerá preservado e não será adicionado
-                            diretamente às aulas.
-                        </p>
+                                <p class="mt-1 text-sm leading-6 text-blue-800">
+                                    Ao escolher <strong>Usar modelo</strong>, o TeachFlow
+                                    criará uma cópia independente para edição. O modelo
+                                    original permanecerá preservado e não será adicionado
+                                    diretamente às aulas.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {% elif form.instance.source_template %}
+                    <div class="mt-4 rounded-lg border border-gray-200 bg-white px-4 py-4">
+                        <div class="flex items-start gap-3">
+                            <i
+                                data-lucide="git-branch"
+                                class="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-500"
+                            ></i>
+
+                            <div>
+                                <p class="text-sm font-semibold text-gray-800">
+                                    Exercício criado a partir de um modelo
+                                </p>
+
+                                <p class="mt-1 text-sm leading-6 text-gray-600">
+                                    Este exercício é uma cópia independente e continuará
+                                    sendo tratado como exercício.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+            {% else %}
+
+                <!-- Escolha disponível somente durante a criação -->
+                <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-4">
+                    <div class="flex items-start gap-3">
+                        <input
+                            id="id_is_template"
+                            type="checkbox"
+                            name="{{ form.is_template.name }}"
+                            {% if form.is_template.value %}checked{% endif %}
+                            class="mt-0.5 h-5 w-5 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
+                        >
+
+                        <div>
+                            <label
+                                for="id_is_template"
+                                class="cursor-pointer text-sm font-semibold text-gray-900"
+                            >
+                                Criar como modelo reutilizável
+                            </label>
+
+                            <p class="mt-1 text-sm leading-6 text-gray-500">
+                                Modelos servem como matrizes para novos exercícios.
+                                Eles não são utilizados diretamente nas aulas.
+                            </p>
+
+                            {% if form.is_template.errors %}
+                                <p class="mt-1.5 text-sm text-red-600">
+                                    {{ form.is_template.errors.0 }}
+                                </p>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-            </div>
+
+                <div
+                    id="template-info-card"
+                    class="{% if not form.is_template.value %}hidden {% endif %}mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-4"
+                >
+                    <div class="flex items-start gap-3">
+                        <i
+                            data-lucide="copy-plus"
+                            class="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600"
+                        ></i>
+
+                        <div>
+                            <p class="text-sm font-semibold text-blue-900">
+                                Modelo reutilizável
+                            </p>
+
+                            <p class="mt-1 text-sm leading-6 text-blue-800">
+                                Ao escolher <strong>Usar modelo</strong>, o TeachFlow
+                                criará uma cópia independente para edição. O modelo
+                                original permanecerá preservado e não será adicionado
+                                diretamente às aulas.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            {% endif %}
         </section>
 
         <!-- Ações -->
