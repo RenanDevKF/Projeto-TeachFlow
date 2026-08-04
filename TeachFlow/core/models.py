@@ -126,7 +126,7 @@ class Lesson(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
     performance_notes = models.TextField(blank=True)
-    exercises = models.ManyToManyField('Exercise', blank=True, related_name='lessons')
+    exercises = models.ManyToManyField('Exercise', through='LessonExercise', through_fields=('lesson', 'exercise'), blank=True, related_name='lessons')
     objectives = models.ManyToManyField(LearningObjective, blank=True, related_name='lessons')
     tags = models.ManyToManyField(Tag, blank=True, related_name='lessons')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -177,6 +177,66 @@ class Exercise(models.Model):
     
     def __str__(self):
         return self.title
+    
+class LessonExercise(models.Model):
+    """
+    Representa o vínculo entre uma aula e um exercício.
+
+    O vínculo armazena informações específicas sobre a utilização
+    do exercício naquela aula, começando pelo estado de aplicação.
+    """
+
+    lesson = models.ForeignKey(
+        Lesson,
+        on_delete=models.CASCADE,
+        related_name='lesson_exercises',
+        verbose_name='Aula',
+    )
+
+    exercise = models.ForeignKey(
+        Exercise,
+        on_delete=models.PROTECT,
+        related_name='lesson_exercises',
+        verbose_name='Exercício',
+    )
+
+    is_applied = models.BooleanField(
+        default=False,
+        verbose_name='Aplicado',
+        help_text=(
+            'Indica se o exercício foi efetivamente aplicado nesta aula.'
+        ),
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Criado em',
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Atualizado em',
+    )
+
+    class Meta:
+        ordering = [
+            'lesson',
+            'id',
+        ]
+        verbose_name = 'Exercício da aula'
+        verbose_name_plural = 'Exercícios da aula'
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'lesson',
+                    'exercise',
+                ],
+                name='unique_lesson_exercise',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.lesson} — {self.exercise}'
     
 class FutureIdea(models.Model):
     """Storage for future lesson ideas and notes"""

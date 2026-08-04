@@ -86,7 +86,9 @@
             {% if lesson.exercises.all %}
             <div class="space-y-4">
                 {% for exercise in lesson.exercises.all %}
-                <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                <div
+                    data-lesson-exercise-card
+                    class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                     <div class="flex items-start gap-3">
                         <!-- Checkbox para marcar como aplicado (CORRIGIDO) -->
                         <div class="flex-shrink-0 mt-0.5">
@@ -117,12 +119,13 @@
                                                {% else %}
                                                    bg-gray-100 text-gray-600
                                                {% endif %}">
-                                            <span class="w-1.5 h-1.5 rounded-full mr-1.5
+                                            <span class="exercise-status-dot w-1.5 h-1.5 rounded-full mr-1.5
                                                    {% if exercise.id in applied_exercises %}
                                                        bg-green-600
                                                    {% else %}
                                                        bg-gray-400
-                                                   {% endif %}"></span>
+                                                   {% endif %}">
+                                            </span>
                                             <span class="status-text">
                                                 {% if exercise.id in applied_exercises %}
                                                     Aplicado
@@ -171,21 +174,24 @@
                 <div class="flex items-center justify-between text-sm">
                     <span class="text-gray-600">
                         Exercícios aplicados: 
-                        <span class="font-medium applied-count">{{ applied_exercises|length }}</span> 
+                        <span class="font-medium applied-count">
+                            {{ applied_exercises_count }}
+                        </span> 
                         de 
-                        <span class="font-medium">{{ lesson.exercises.all|length }}</span>
+                        <span class="font-medium total-exercises-count">
+                            {{ total_exercises_count }}
+                        </span>
                     </span>
                     <div class="flex items-center gap-2">
-                        <div class="w-32 bg-gray-200 rounded-full h-2">
-                            <div class="bg-green-500 h-2 rounded-full progress-bar" 
-                                 style="width: {% if lesson.exercises.all %}{{ applied_exercises|length|floatformat:0 }}{% widthratio applied_exercises|length lesson.exercises.all|length 100 %}{% else %}0{% endif %}%"></div>
+                        <div class="w-32 bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div
+                                class="bg-green-500 h-2 rounded-full progress-bar transition-all"
+                                style="width: {{ applied_exercises_percentage }}%;"
+                            ></div>
                         </div>
+
                         <span class="text-gray-500 progress-text">
-                            {% if lesson.exercises.all %}
-                                {% widthratio applied_exercises|length lesson.exercises.all|length 100 %}%
-                            {% else %}
-                                0%
-                            {% endif %}
+                            {{ applied_exercises_percentage }}%
                         </span>
                     </div>
                 </div>

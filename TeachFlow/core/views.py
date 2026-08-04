@@ -13,7 +13,7 @@ from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, Http404, HttpResponseRedirect
 from datetime import date
-from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea
+from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea, LessonExercise
 from .forms import *
 from django.utils import timezone
 from datetime import date
@@ -300,23 +300,42 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         
         return context
 
-# Suas outras views permanecem iguais...
 @method_decorator(csrf_protect, name='dispatch')
-class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView):
+class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView,):
     model = Lesson
     template_name = 'lessons/lesson_detail.html'
     context_object_name = 'lesson'
-    
+
+    def get_queryset(self):
+        return Lesson.objects.filter(
+            class_group__teacher=self.request.user.teacher_profile
+        ).select_related('class_group').prefetch_related(
+            'tags',
+            'objectives',
+            'lesson_exercises__exercise__tags',
+        )
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        # Adicionar informações sobre exercícios aplicados
-        applied_exercises_key = f'applied_exercises_lesson_{self.object.id}'
-        applied_exercises = self.request.session.get(applied_exercises_key, [])
-        context['applied_exercises'] = applied_exercises
-        
-        return context
 
+        applied_exercises = list(
+            self.object.lesson_exercises.filter(
+                is_applied=True
+            ).values_list('exercise_id', flat=True)
+        )
+
+        applied_exercises_count = len(applied_exercises)
+        total_exercises_count = self.object.lesson_exercises.count()
+        applied_exercises_percentage = round(
+            (applied_exercises_count / total_exercises_count) * 100
+        ) if total_exercises_count else 0
+
+        context['applied_exercises'] = applied_exercises
+        context['applied_exercises_count'] = applied_exercises_count
+        context['total_exercises_count'] = total_exercises_count
+        context['applied_exercises_percentage'] = applied_exercises_percentage
+
+        return context
 
 @method_decorator(csrf_protect, name='dispatch')
 class LessonCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
@@ -856,60 +875,68 @@ class ExerciseDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
 @login_required
 def toggle_exercise_applied(request, lesson_id, exercise_id):
     """
-    Marca/desmarca um exercício como aplicado em uma aula específica
+    Atualiza o estado de aplicação de um exercício já vinculado à aula.
     """
     try:
-        # Verificar se o professor tem acesso à aula
-        lesson = get_object_or_404(
-            Lesson, 
-            pk=lesson_id, 
-            class_group__teacher=request.user.teacher_profile
-        )
-        
-        # Verificar se o exercício existe e está relacionado à aula
-        exercise = get_object_or_404(Exercise, pk=exercise_id)
-        
-        # Verificar se o exercício já está na aula
-        if exercise in lesson.exercises.all():
-            # Se já está, verificar se está marcado como aplicado
-            # Vamos usar um campo personalizado ou relacionamento
-            # Primeiro, vamos verificar se existe um modelo intermediário
-            
-            # Como não há um modelo intermediário explícito, vamos usar
-            # a abordagem de adicionar/remover da lista de exercícios aplicados
-            
-            # Vamos criar um campo separado para exercícios aplicados
-            # Por enquanto, usando a abordagem com session ou cache
-            
-            applied_exercises_key = f'applied_exercises_lesson_{lesson_id}'
-            applied_exercises = request.session.get(applied_exercises_key, [])
-            
-            if exercise_id in applied_exercises:
-                applied_exercises.remove(exercise_id)
-                is_applied = False
-            else:
-                applied_exercises.append(exercise_id)
-                is_applied = True
-                
-            request.session[applied_exercises_key] = applied_exercises
-            request.session.modified = True
-            
-            return JsonResponse({
-                'success': True,
-                'is_applied': is_applied,
-                'message': 'Exercício marcado como aplicado' if is_applied else 'Exercício desmarcado'
-            })
-        else:
-            return JsonResponse({
-                'success': False,
-                'message': 'Exercício não está relacionado a esta aula'
-            })
-            
-    except Exception as e:
+        teacher = request.user.teacher_profile
+    except AttributeError:
         return JsonResponse({
             'success': False,
-            'message': f'Erro ao processar solicitação: {str(e)}'
-        })
+            'message': 'Perfil de professor não encontrado.',
+        }, status=403)
+
+    lesson_exercise = get_object_or_404(
+        LessonExercise.objects.select_related('lesson', 'exercise'),
+        lesson_id=lesson_id,
+        exercise_id=exercise_id,
+        lesson__class_group__teacher=teacher,
+    )
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({
+            'success': False,
+            'message': 'Dados da requisição inválidos.',
+        }, status=400)
+
+    is_applied = data.get('is_applied')
+
+    if not isinstance(is_applied, bool):
+        return JsonResponse({
+            'success': False,
+            'message': 'O estado de aplicação deve ser verdadeiro ou falso.',
+        }, status=400)
+
+    if lesson_exercise.is_applied != is_applied:
+        lesson_exercise.is_applied = is_applied
+        lesson_exercise.save(update_fields=['is_applied', 'updated_at'])
+
+    applied_count = LessonExercise.objects.filter(
+        lesson_id=lesson_id,
+        is_applied=True,
+    ).count()
+
+    total_count = LessonExercise.objects.filter(
+        lesson_id=lesson_id,
+    ).count()
+
+    percentage = round(
+        (applied_count / total_count) * 100
+    ) if total_count else 0
+
+    return JsonResponse({
+        'success': True,
+        'is_applied': lesson_exercise.is_applied,
+        'applied_count': applied_count,
+        'total_count': total_count,
+        'percentage': percentage,
+        'message': (
+            'Exercício marcado como aplicado.'
+            if lesson_exercise.is_applied
+            else 'Exercício marcado como não aplicado.'
+        ),
+    })
     
 # Learning Objective Views
 @method_decorator(csrf_protect, name='dispatch')
