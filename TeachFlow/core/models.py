@@ -1,4 +1,5 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.functions import Lower
 from django.utils import timezone
@@ -120,21 +121,39 @@ class LearningObjective(models.Model):
         return self.title
     
 class Lesson(models.Model):
-    """Represents a lesson taught to a class group"""
+    
+    class Status(models.TextChoices):
+        PLANNED = 'planned', 'Planejada'
+        COMPLETED = 'completed', 'Realizada'
+        CANCELLED = 'cancelled', 'Cancelada'
+
     class_group = models.ForeignKey(ClassGroup, on_delete=models.CASCADE, related_name='lessons')
-    date = models.DateField()
+    date = models.DateField(verbose_name='Data de aplicação')
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PLANNED, verbose_name='Status')
     title = models.CharField(max_length=200)
     content = models.TextField()
     performance_notes = models.TextField(blank=True)
-    exercises = models.ManyToManyField('Exercise', through='LessonExercise', through_fields=('lesson', 'exercise'), blank=True, related_name='lessons')
+    exercises = models.ManyToManyField(
+        'Exercise',
+        through='LessonExercise',
+        through_fields=('lesson', 'exercise'),
+        blank=True,
+        related_name='lessons',
+    )
     objectives = models.ManyToManyField(LearningObjective, blank=True, related_name='lessons')
     tags = models.ManyToManyField(Tag, blank=True, related_name='lessons')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
+    def clean(self):
+        super().clean()
+
+        if self.status == self.Status.COMPLETED and self.date and self.date > timezone.localdate():
+            raise ValidationError({'date': 'Uma aula realizada não pode possuir data de aplicação futura.'})
+
     def __str__(self):
-        return f"{self.title} - {self.date}"
-    
+        return f'{self.title} - {self.date}'
+
     class Meta:
         ordering = ['-date']
         

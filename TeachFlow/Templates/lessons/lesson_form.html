@@ -300,7 +300,7 @@
         {% endif %}
       </div>
 
-    <div class="flex justify-between pt-6">
+    <div class="flex flex-col gap-4 pt-6 sm:flex-row sm:items-center sm:justify-between">
       <a
         href="
           {% if is_duplicate %}
@@ -311,32 +311,116 @@
             {% url 'lesson_list' %}
           {% endif %}
         "
-        class="px-4 py-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition-all"
+        class="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
       >
-          Cancelar
+        Cancelar
       </a>
-      <div class="flex gap-3">
-        {% if object %}
-        <a href="{% url 'duplicate_lesson' object.pk %}" 
-            class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm transition-all">
-            Duplicar Aula
-        </a>
-        {% endif %}
-        <button type="submit" name="save_as_planning" class="bg-purple-500 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm transition-all">
-          Salvar como Planejamento
-        </button>
-        <button
-          type="submit"
-          class="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-all"
-        >
-          {% if is_duplicate %}
-            Criar aula
-          {% elif object %}
-            Atualizar
+
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+        {% if object and not is_duplicate %}
+          <a
+            href="{% url 'duplicate_lesson' object.pk %}"
+            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 text-sm font-medium text-green-700 transition-colors hover:bg-green-100"
+          >
+            <i data-lucide="copy-plus" class="h-4 w-4"></i>
+            Duplicar aula
+          </a>
+
+          {% if object.status == 'planned' %}
+            <button
+              type="submit"
+              name="submission_status"
+              value="cancelled"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+            >
+              <i data-lucide="calendar-x" class="h-4 w-4"></i>
+              Cancelar aula
+            </button>
+
+            <button
+              type="submit"
+              name="submission_status"
+              value="planned"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100"
+            >
+              <i data-lucide="calendar-clock" class="h-4 w-4"></i>
+              Salvar como planejada
+            </button>
+
+            <button
+              type="submit"
+              name="submission_status"
+              value="completed"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+            >
+              <i data-lucide="circle-check" class="h-4 w-4"></i>
+              Registrar como realizada
+            </button>
+
+          {% elif object.status == 'completed' %}
+            <button
+              type="submit"
+              name="submission_status"
+              value="planned"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100"
+            >
+              <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+              Voltar para planejada
+            </button>
+
+            <button
+              type="submit"
+              name="submission_status"
+              value="completed"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+            >
+              <i data-lucide="save" class="h-4 w-4"></i>
+              Salvar alterações
+            </button>
+
           {% else %}
-            Salvar
+            <button
+              type="submit"
+              name="submission_status"
+              value="planned"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 text-sm font-medium text-white transition-colors hover:bg-purple-700"
+            >
+              <i data-lucide="calendar-plus" class="h-4 w-4"></i>
+              Reabrir como planejada
+            </button>
+
+            <button
+              type="submit"
+              name="submission_status"
+              value="cancelled"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              <i data-lucide="save" class="h-4 w-4"></i>
+              Salvar alterações
+            </button>
           {% endif %}
-        </button>
+
+        {% else %}
+          <button
+            type="submit"
+            name="submission_status"
+            value="planned"
+            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100"
+          >
+            <i data-lucide="calendar-clock" class="h-4 w-4"></i>
+            Salvar como planejada
+          </button>
+
+          <button
+            type="submit"
+            name="submission_status"
+            value="completed"
+            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+          >
+            <i data-lucide="circle-check" class="h-4 w-4"></i>
+            Registrar como realizada
+          </button>
+        {% endif %}
       </div>
     </div>
   </form>

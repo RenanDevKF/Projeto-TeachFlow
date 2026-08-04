@@ -147,11 +147,8 @@ class StudentForm(forms.ModelForm):
         return cleaned_data
     
 class LessonForm(forms.ModelForm):
-    """
-    Formulário responsável pelos dados principais da aula e pela
-    sincronização dos vínculos entre aula e exercícios.
-    """
 
+    submission_status = forms.ChoiceField(choices=Lesson.Status.choices, required=False, widget=forms.HiddenInput())
     exercises = forms.ModelMultipleChoiceField(
         queryset=Exercise.objects.none(),
         required=False,
@@ -180,6 +177,10 @@ class LessonForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.teacher = kwargs.pop('teacher', None)
         super().__init__(*args, **kwargs)
+        
+        self.fields['submission_status'].initial = (
+            self.instance.status if self.instance.pk else Lesson.Status.PLANNED
+        )        
 
         current_exercise_ids = []
 
@@ -240,14 +241,33 @@ class LessonForm(forms.ModelForm):
         performance_notes = self.cleaned_data.get('performance_notes')
         return performance_notes.strip() if performance_notes else ''
 
+    def clean(self):
+        cleaned_data = super().clean()
+        date = cleaned_data.get('date')
+        submission_status = cleaned_data.get('submission_status')
+
+        if not submission_status:
+            submission_status = (
+                self.instance.status if self.instance.pk else Lesson.Status.PLANNED
+            )
+            cleaned_data['submission_status'] = submission_status
+
+        if submission_status == Lesson.Status.COMPLETED and date and date > timezone.localdate():
+            self.add_error(
+                'date',
+                'Uma aula realizada não pode possuir data de aplicação futura.'
+            )
+
+        return cleaned_data
+
     @transaction.atomic
     def save(self, commit=True):
-        """
-        Salva a aula e sincroniza os vínculos LessonExercise.
-
-        Vínculos existentes preservam is_applied.
-        Novos vínculos começam como não aplicados.
-        """
+       
+        self.instance.status = self.cleaned_data.get(
+            'submission_status',
+            Lesson.Status.PLANNED,
+        )
+       
         lesson = super().save(commit=commit)
 
         if not commit:

@@ -350,7 +350,16 @@ class LessonCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        messages.success(self.request, "Aula criada com sucesso!")
+
+        messages.success(
+            self.request,
+            {
+                Lesson.Status.PLANNED: 'Aula planejada com sucesso.',
+                Lesson.Status.COMPLETED: 'Aula registrada como realizada com sucesso.',
+                Lesson.Status.CANCELLED: 'Aula cancelada com sucesso.',
+            }[self.object.status]
+        )
+
         return response
 
     def get_success_url(self):
@@ -375,6 +384,20 @@ class LessonUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
         kwargs = super().get_form_kwargs()
         kwargs['teacher'] = self.request.user.teacher_profile
         return kwargs
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+
+        messages.success(
+            self.request,
+            {
+                Lesson.Status.PLANNED: 'Aula salva como planejada.',
+                Lesson.Status.COMPLETED: 'Aula registrada como realizada.',
+                Lesson.Status.CANCELLED: 'Aula registrada como cancelada.',
+            }[self.object.status]
+        )
+
+        return response
 
     def get_success_url(self):
         return reverse('lesson_detail', kwargs={'pk': self.object.pk})
@@ -426,6 +449,7 @@ class DuplicateLessonView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
             'performance_notes': '',
             'exercises': list(source_lesson.exercises.values_list('pk', flat=True)),
             'tags': list(source_lesson.tags.values_list('pk', flat=True)),
+            'submission_status': Lesson.Status.PLANNED,
         }
 
     def get_context_data(self, **kwargs):
