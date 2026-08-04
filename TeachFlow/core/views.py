@@ -397,38 +397,59 @@ class LessonDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
         return reverse_lazy('lesson-list', kwargs={'class_group_id': self.object.class_group_id})
     
 @method_decorator(csrf_protect, name='dispatch')
-class DuplicateLessonView(LoginRequiredMixin, TeacherRequiredMixin, View):
-    def get(self, request, pk):
-        original_lesson = get_object_or_404(
-            Lesson, 
-            pk=pk, 
-            class_group__teacher=request.user.teacher_profile
-        )
-        
-        new_lesson = Lesson.objects.create(
-            title=f"Cópia de {original_lesson.title}",
-            date=original_lesson.date,
-            content=original_lesson.content,
-            performance_notes=original_lesson.performance_notes,
-            class_group=original_lesson.class_group,
-        )
-        
-        # Copia relacionamentos ManyToMany
-        new_lesson.tags.set(original_lesson.tags.all())
-        new_lesson.objectives.set(original_lesson.objectives.all())
-        
-        # Copia exercícios (se necessário)
-        for exercise in original_lesson.exercises.all():
-            Exercise.objects.create(
-                lesson=new_lesson,
-                title=exercise.title,
-                description=exercise.description,
-                duration=exercise.duration,
-                materials=exercise.materials
+class DuplicateLessonView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
+    model = Lesson
+    form_class = LessonForm
+    template_name = 'lessons/lesson_form.html'
+
+    def get_source_lesson(self):
+        if not hasattr(self, '_source_lesson'):
+            self._source_lesson = get_object_or_404(
+                Lesson.objects.select_related('class_group').prefetch_related('tags', 'objectives', 'exercises'),
+                pk=self.kwargs['pk'],
+                class_group__teacher=self.request.user.teacher_profile,
             )
-        
-        messages.success(request, "Aula duplicada com sucesso!")
-        return redirect('lesson_update', pk=new_lesson.pk)
+
+        return self._source_lesson
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
+
+    def get_initial(self):
+        source_lesson = self.get_source_lesson()
+
+        return {
+            'title': f'Cópia de {source_lesson.title}',
+            'content': source_lesson.content,
+            'performance_notes': '',
+            'exercises': list(source_lesson.exercises.values_list('pk', flat=True)),
+            'tags': list(source_lesson.tags.values_list('pk', flat=True)),
+        }
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_duplicate'] = True
+        context['duplicate_source'] = self.get_source_lesson()
+        return context
+
+    @transaction.atomic
+    def form_valid(self, form):
+        response = super().form_valid(form)
+
+        source_lesson = self.get_source_lesson()
+        self.object.objectives.set(source_lesson.objectives.all())
+
+        messages.success(
+            self.request,
+            'Aula criada a partir da original. A turma, a data e os estados de aplicação foram definidos para esta nova aula.',
+        )
+
+        return response
+
+    def get_success_url(self):
+        return reverse('lesson_detail', kwargs={'pk': self.object.pk})
     
 # Exercise Views
 @method_decorator(csrf_protect, name='dispatch')
