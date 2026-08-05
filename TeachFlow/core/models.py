@@ -111,12 +111,17 @@ class Tag(models.Model):
 
     
 class LearningObjective(models.Model):
-    """Learning objectives defined by curriculum or teacher"""
+
     title = models.CharField(max_length=200)
-    description = models.TextField()
+    description = models.TextField(blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='learning_objectives')
     tags = models.ManyToManyField(Tag, blank=True, related_name='objectives')
-    
+
+    class Meta:
+        ordering = ['title']
+        verbose_name = 'Objetivo de aprendizagem'
+        verbose_name_plural = 'Objetivos de aprendizagem'
+
     def __str__(self):
         return self.title
     

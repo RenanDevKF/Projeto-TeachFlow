@@ -1058,14 +1058,79 @@ class LearningObjectiveListView(LoginRequiredMixin, TeacherRequiredMixin, ListVi
 @method_decorator(csrf_protect, name='dispatch')
 class LearningObjectiveCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = LearningObjective
+    form_class = LearningObjectiveForm
     template_name = 'core/learning_objective_form.html'
-    fields = ['title', 'description', 'tags']
     success_url = reverse_lazy('objective-list')
-    
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
+
     def form_valid(self, form):
         form.instance.teacher = self.request.user.teacher_profile
-        messages.success(self.request, "Learning objective created successfully!")
+        messages.success(self.request, 'Objetivo de aprendizagem criado com sucesso.')
         return super().form_valid(form)
+    
+@method_decorator(csrf_protect, name='dispatch')
+class QuickCreateLearningObjectiveView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Dados inválidos.',
+            }, status=400)
+
+        title = data.get('title', '').strip()
+        description = data.get('description', '').strip()
+
+        if not title:
+            return JsonResponse({
+                'success': False,
+                'error': 'Informe o título do objetivo.',
+            }, status=400)
+
+        if len(title) > LearningObjective._meta.get_field('title').max_length:
+            return JsonResponse({
+                'success': False,
+                'error': 'O título deve possuir no máximo 200 caracteres.',
+            }, status=400)
+
+        existing_objective = LearningObjective.objects.filter(
+            teacher=request.user.teacher_profile,
+            title__iexact=title,
+        ).first()
+
+        if existing_objective:
+            return JsonResponse({
+                'success': True,
+                'created': False,
+                'message': 'Este objetivo já estava cadastrado e foi selecionado.',
+                'item': {
+                    'id': existing_objective.id,
+                    'title': existing_objective.title,
+                    'description': existing_objective.description,
+                },
+            })
+
+        objective = LearningObjective.objects.create(
+            teacher=request.user.teacher_profile,
+            title=title,
+            description=description,
+        )
+
+        return JsonResponse({
+            'success': True,
+            'created': True,
+            'message': 'Objetivo de aprendizagem criado e selecionado.',
+            'item': {
+                'id': objective.id,
+                'title': objective.title,
+                'description': objective.description,
+            },
+        }, status=201)
     
 # Future Ideas Views
 @method_decorator(csrf_protect, name='dispatch')
@@ -1423,6 +1488,73 @@ class TagUpdateView(LoginRequiredMixin, UpdateView):  # Removido TeacherRequired
     
     def get_success_url(self):
         return reverse('tag_list')
+    
+@method_decorator(csrf_protect, name='dispatch')
+class QuickCreateExerciseTagView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Dados inválidos.',
+            }, status=400)
+
+        tag_name = data.get('name', '').strip()
+
+        if not tag_name:
+            return JsonResponse({
+                'success': False,
+                'error': 'Informe o nome da tag.',
+            }, status=400)
+
+        if len(tag_name) > Tag._meta.get_field('name').max_length:
+            return JsonResponse({
+                'success': False,
+                'error': 'O nome da tag deve possuir no máximo 50 caracteres.',
+            }, status=400)
+
+        if not re.match(r'^[\w\sÀ-ÿ\-]+$', tag_name):
+            return JsonResponse({
+                'success': False,
+                'error': 'Use apenas letras, números, espaços, hífens e underscores.',
+            }, status=400)
+
+        existing_tag = Tag.objects.filter(
+            teacher=request.user.teacher_profile,
+            name__iexact=tag_name,
+            type__in=['exercise', 'general'],
+        ).first()
+
+        if existing_tag:
+            return JsonResponse({
+                'success': True,
+                'created': False,
+                'message': 'Esta tag já estava cadastrada e foi selecionada.',
+                'item': {
+                    'id': existing_tag.id,
+                    'name': existing_tag.name,
+                    'color': existing_tag.color,
+                },
+            })
+
+        tag = Tag.objects.create(
+            teacher=request.user.teacher_profile,
+            name=tag_name,
+            type='exercise',
+            color=Tag.generate_random_color(),
+        )
+
+        return JsonResponse({
+            'success': True,
+            'created': True,
+            'message': 'Tag criada e selecionada.',
+            'item': {
+                'id': tag.id,
+                'name': tag.name,
+                'color': tag.color,
+            },
+        }, status=201)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class CheckTagAPIView(LoginRequiredMixin, View):

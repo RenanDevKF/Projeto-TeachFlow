@@ -327,7 +327,7 @@ class ExerciseForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         if teacher:
-            self.fields['objectives'].queryset = LearningObjective.objects.filter(teacher=teacher)
+            self.fields['objectives'].queryset = LearningObjective.objects.filter(teacher=teacher).order_by('title')
             # Filtra tags apenas do tipo 'exercise' ou 'general'
             self.fields['tags'].queryset = Tag.objects.filter(
                 teacher=teacher,
@@ -380,4 +380,47 @@ class ExerciseForm(forms.ModelForm):
 
         return materials.strip()
     
-            
+class LearningObjectiveForm(forms.ModelForm):
+    class Meta:
+        model = LearningObjective
+        fields = ['title', 'description', 'tags']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Ex.: Interpretar gráficos',
+                'autocomplete': 'off',
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-textarea',
+                'rows': 4,
+                'placeholder': 'Descrição complementar opcional.',
+            }),
+            'tags': forms.SelectMultiple(attrs={'class': 'hidden'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.teacher = kwargs.pop('teacher', None)
+        super().__init__(*args, **kwargs)
+
+        if self.teacher:
+            self.fields['tags'].queryset = Tag.objects.filter(
+                teacher=self.teacher,
+                type__in=['exercise', 'general'],
+            ).distinct().order_by('name')
+
+    def clean_title(self):
+        title = self.cleaned_data.get('title', '').strip()
+
+        if not title:
+            raise forms.ValidationError('Informe um título para o objetivo.')
+
+        if self.teacher and LearningObjective.objects.filter(
+            teacher=self.teacher,
+            title__iexact=title,
+        ).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError('Já existe um objetivo com este título.')
+
+        return title
+
+    def clean_description(self):
+        return self.cleaned_data.get('description', '').strip()

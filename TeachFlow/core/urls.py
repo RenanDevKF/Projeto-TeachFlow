@@ -44,6 +44,7 @@ urlpatterns = [
     # Learning Objective URLs
     path('objectives/', views.LearningObjectiveListView.as_view(), name='objective-list'),
     path('objectives/new/', views.LearningObjectiveCreateView.as_view(), name='objective-create'),
+    path('objectives/quick-create/', views.QuickCreateLearningObjectiveView.as_view(), name='quick_create_objective'),
     
     # Future Ideas URLs
     path('ideas/', views.FutureIdeaListView.as_view(), name='idea-list'),
@@ -56,6 +57,7 @@ urlpatterns = [
     path('tags/new/', views.TagCreateView.as_view(), name='tag_form'),
     path('tags/<int:pk>/edit/', views.TagUpdateView.as_view(), name='tag_update'),
     path('tags/add/<str:model_type>/<int:model_id>/', views.QuickAddTagView.as_view(), name='quick_add_tag'),
+    path('tags/quick-create/exercise/', views.QuickCreateExerciseTagView.as_view(), name='quick_create_exercise_tag'),
     
     # API para verificar se tag existe (se ainda for necessário)
     path('api/check-tag/', views.CheckTagAPIView.as_view(), name='check_tag_api'),
