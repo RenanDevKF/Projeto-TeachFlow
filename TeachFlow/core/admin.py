@@ -104,7 +104,7 @@ class LessonAdmin(SecureModelAdmin):
     list_filter = ('date', 'class_group', 'class_group__teacher')
     search_fields = ('title', 'content', 'class_group__name')
     readonly_fields = ('created_at', 'updated_at')
-    filter_horizontal = ('objectives', 'tags')
+    filter_horizontal = ('tags',)
     date_hierarchy = 'date'
     
     def teacher_name(self, obj):

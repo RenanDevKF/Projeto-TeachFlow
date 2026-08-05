@@ -140,7 +140,6 @@ class Lesson(models.Model):
         blank=True,
         related_name='lessons',
     )
-    objectives = models.ManyToManyField(LearningObjective, blank=True, related_name='lessons')
     tags = models.ManyToManyField(Tag, blank=True, related_name='lessons')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

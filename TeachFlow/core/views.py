@@ -372,7 +372,6 @@ class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
             'class_group',
         ).prefetch_related(
             'tags',
-            'objectives',
             'exercises__tags',
             'exercises__objectives',
         )
@@ -385,12 +384,17 @@ class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
         applied_exercises_count = len(applied_exercises)
         total_exercises_count = self.object.lesson_exercises.count()
         applied_exercises_percentage = round((applied_exercises_count / total_exercises_count) * 100) if total_exercises_count else 0
+        lesson_objectives = LearningObjective.objects.filter(
+            teacher=self.request.user.teacher_profile,
+            exercises__lessons=self.object,
+        ).distinct().order_by('title')
 
         context['today'] = timezone.localdate()
         context['applied_exercises'] = applied_exercises
         context['applied_exercises_count'] = applied_exercises_count
         context['total_exercises_count'] = total_exercises_count
         context['applied_exercises_percentage'] = applied_exercises_percentage
+        context['lesson_objectives'] = lesson_objectives
 
         return context
 
@@ -485,7 +489,10 @@ class DuplicateLessonView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     def get_source_lesson(self):
         if not hasattr(self, '_source_lesson'):
             self._source_lesson = get_object_or_404(
-                Lesson.objects.select_related('class_group').prefetch_related('tags', 'objectives', 'exercises'),
+                Lesson.objects.select_related('class_group').prefetch_related(
+                    'tags',
+                    'exercises',
+                ),
                 pk=self.kwargs['pk'],
                 class_group__teacher=self.request.user.teacher_profile,
             )
@@ -518,9 +525,6 @@ class DuplicateLessonView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     @transaction.atomic
     def form_valid(self, form):
         response = super().form_valid(form)
-
-        source_lesson = self.get_source_lesson()
-        self.object.objectives.set(source_lesson.objectives.all())
 
         messages.success(
             self.request,

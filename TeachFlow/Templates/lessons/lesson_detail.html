@@ -160,17 +160,35 @@
                 <h2 class="text-lg font-semibold text-gray-900">Objetivos de aprendizagem</h2>
             </div>
 
-            {% if lesson.objectives.all %}
+            {% if lesson_objectives %}
                 <ul class="mt-5 space-y-3">
-                    {% for objective in lesson.objectives.all %}
+                    {% for objective in lesson_objectives %}
                         <li class="flex items-start gap-3">
-                            <i data-lucide="circle-check" class="mt-0.5 h-5 w-5 flex-shrink-0 text-green-500"></i>
-                            <span class="text-sm leading-6 text-gray-700">{% if objective.description %}{{ objective.description }}{% else %}{{ objective.title }}{% endif %}</span>
+                            <i
+                                data-lucide="circle-check"
+                                class="mt-0.5 h-5 w-5 flex-shrink-0 text-green-500"
+                            ></i>
+
+                            <span class="text-sm leading-6 text-gray-700">
+                                {% if objective.description %}
+                                    {{ objective.description }}
+                                {% else %}
+                                    {{ objective.title }}
+                                {% endif %}
+                            </span>
                         </li>
                     {% endfor %}
                 </ul>
+
+                <p class="mt-5 border-t border-gray-100 pt-4 text-xs leading-5 text-gray-500">
+                    Estes objetivos são definidos pelos exercícios vinculados à aula.
+                </p>
             {% else %}
-                <div class="mt-4 rounded-lg bg-gray-50 px-4 py-5"><p class="text-sm text-gray-500">Nenhum objetivo de aprendizagem foi associado.</p></div>
+                <div class="mt-4 rounded-lg bg-gray-50 px-4 py-5">
+                    <p class="text-sm text-gray-500">
+                        Os exercícios desta aula ainda não possuem objetivos de aprendizagem associados.
+                    </p>
+                </div>
             {% endif %}
         </section>
 
