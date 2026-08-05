@@ -247,7 +247,6 @@ class ClassGroupDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
         messages.success(request, "Turma excluída com sucesso.")
         return super().delete(request, *args, **kwargs)
     
-# Lesson Views
 @method_decorator(csrf_protect, name='dispatch')
 class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     model = Lesson
@@ -255,49 +254,111 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     context_object_name = 'lessons'
     paginate_by = 10
 
-    def get_queryset(self):
-        queryset = Lesson.objects.filter(
-            class_group__teacher=self.request.user.teacher_profile
-        ).select_related('class_group').prefetch_related('tags')
-        
-        # Filtros
-        class_group_id = self.request.GET.get('class')
-        tag_id = self.request.GET.get('tag')
-        date_filter = self.request.GET.get('date')
-        
+    VALID_SECTIONS = {'upcoming', 'pending', 'completed', 'cancelled'}
+
+    def dispatch(self, request, *args, **kwargs):
+        self.class_group = None
+        class_group_id = self.kwargs.get('class_group_id')
+
         if class_group_id:
-            queryset = queryset.filter(class_group_id=class_group_id)
-        
-        if tag_id:
+            self.class_group = get_object_or_404(ClassGroup, pk=class_group_id, teacher=request.user.teacher_profile)
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_selected_section(self):
+        section = self.request.GET.get('section', 'upcoming')
+
+        if section not in self.VALID_SECTIONS:
+            return 'upcoming'
+
+        return section
+
+    def get_selected_class_group(self):
+        if self.class_group:
+            return str(self.class_group.pk)
+
+        class_group_id = self.request.GET.get('class', '')
+        return class_group_id if class_group_id.isdigit() else ''
+
+    def get_filtered_queryset(self):
+        teacher = self.request.user.teacher_profile
+        queryset = Lesson.objects.filter(class_group__teacher=teacher).select_related('class_group').prefetch_related('tags')
+
+        if self.class_group:
+            queryset = queryset.filter(class_group=self.class_group)
+        else:
+            selected_class_group = self.get_selected_class_group()
+
+            if selected_class_group:
+                queryset = queryset.filter(class_group_id=selected_class_group)
+
+        tag_id = self.request.GET.get('tag', '')
+        date_filter = self.request.GET.get('date', '')
+
+        if tag_id.isdigit():
             queryset = queryset.filter(tags__id=tag_id)
-        
+
         if date_filter:
             queryset = queryset.filter(date=date_filter)
-        
-        return queryset.order_by('date', 'title')
+
+        return queryset.distinct()
+
+    def get_queryset(self):
+        queryset = self.get_filtered_queryset()
+        section = self.get_selected_section()
+        today = timezone.localdate()
+
+        if section == 'upcoming':
+            queryset = queryset.filter(status=Lesson.Status.PLANNED, date__gte=today).order_by('date', 'title', 'id')
+        elif section == 'pending':
+            queryset = queryset.filter(status=Lesson.Status.PLANNED, date__lt=today).order_by('-date', 'title', 'id')
+        elif section == 'completed':
+            queryset = queryset.filter(status=Lesson.Status.COMPLETED).order_by('-date', 'title', 'id')
+        else:
+            queryset = queryset.filter(status=Lesson.Status.CANCELLED).order_by('-date', 'title', 'id')
+
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         teacher = self.request.user.teacher_profile
-        
-        # Filtros para o template
-        context['class_groups'] = ClassGroup.objects.filter(teacher=teacher)
-        context['tags'] = Tag.objects.filter(teacher=teacher)
-        
-        # Separar aulas por data
-        today = date.today()
-        all_lessons = self.get_queryset()
-        
-        # Aulas futuras (ordenadas da mais próxima para a mais distante)
-        future_lessons = all_lessons.filter(date__gte=today).order_by('date', 'title')
-        
-        # Aulas passadas (ordenadas da mais recente para a mais antiga)
-        past_lessons = all_lessons.filter(date__lt=today).order_by('-date', 'title')
-        
-        context['future_lessons'] = future_lessons
-        context['past_lessons'] = past_lessons
+        today = timezone.localdate()
+        filtered_lessons = self.get_filtered_queryset()
+
+        query_parameters = self.request.GET.copy()
+        query_parameters.pop('page', None)
+
+        context['class_group'] = self.class_group
+        context['is_class_group_scope'] = self.class_group is not None
+        context['selected_section'] = self.get_selected_section()
+        context['selected_class_group'] = self.get_selected_class_group()
+        context['selected_tag'] = self.request.GET.get('tag', '')
+        context['selected_date'] = self.request.GET.get('date', '')
+        context['has_active_filters'] = bool(
+            context['selected_tag']
+            or context['selected_date']
+            or (
+                context['selected_class_group']
+                and not context['is_class_group_scope']
+            )
+        )
         context['today'] = today
-        
+        context['query_string'] = query_parameters.urlencode()
+
+        context['class_groups'] = ClassGroup.objects.filter(teacher=teacher).order_by('-is_active', 'name', 'year')
+        context['tags'] = Tag.objects.filter(teacher=teacher, type__in=['lesson', 'general']).distinct().order_by('name')
+
+        context['upcoming_count'] = filtered_lessons.filter(status=Lesson.Status.PLANNED, date__gte=today).count()
+        context['pending_count'] = filtered_lessons.filter(status=Lesson.Status.PLANNED, date__lt=today).count()
+        context['completed_count'] = filtered_lessons.filter(status=Lesson.Status.COMPLETED).count()
+        context['cancelled_count'] = filtered_lessons.filter(status=Lesson.Status.CANCELLED).count()
+        context['has_any_lessons'] = Lesson.objects.filter(class_group__teacher=teacher).exists()
+
+        if context.get('paginator'):
+            context['results_count'] = context['paginator'].count
+        else:
+            context['results_count'] = len(context['lessons'])
+
         return context
 
 @method_decorator(csrf_protect, name='dispatch')
