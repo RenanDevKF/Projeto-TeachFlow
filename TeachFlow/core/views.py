@@ -362,35 +362,31 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         return context
 
 @method_decorator(csrf_protect, name='dispatch')
-class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView,):
+class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView):
     model = Lesson
     template_name = 'lessons/lesson_detail.html'
     context_object_name = 'lesson'
 
     def get_queryset(self):
-        return Lesson.objects.filter(
-            class_group__teacher=self.request.user.teacher_profile
-        ).select_related('class_group').prefetch_related(
+        return Lesson.objects.filter(class_group__teacher=self.request.user.teacher_profile).select_related(
+            'class_group',
+        ).prefetch_related(
             'tags',
             'objectives',
-            'lesson_exercises__exercise__tags',
+            'exercises__tags',
+            'exercises__objectives',
         )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        applied_exercises = list(
-            self.object.lesson_exercises.filter(
-                is_applied=True
-            ).values_list('exercise_id', flat=True)
-        )
+        applied_exercises = list(self.object.lesson_exercises.filter(is_applied=True).values_list('exercise_id', flat=True))
 
         applied_exercises_count = len(applied_exercises)
         total_exercises_count = self.object.lesson_exercises.count()
-        applied_exercises_percentage = round(
-            (applied_exercises_count / total_exercises_count) * 100
-        ) if total_exercises_count else 0
+        applied_exercises_percentage = round((applied_exercises_count / total_exercises_count) * 100) if total_exercises_count else 0
 
+        context['today'] = timezone.localdate()
         context['applied_exercises'] = applied_exercises
         context['applied_exercises_count'] = applied_exercises_count
         context['total_exercises_count'] = total_exercises_count

@@ -1,294 +1,342 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block title %}Detalhes da aula{% endblock %}
+
 {% block page_title %}
 <span class="inline-flex items-center gap-2">
-    <i data-lucide="book-open-check" class="w-6 h-6 text-primary"></i>
-    <span>Detalhe Aula - {{ lesson.title }}</span>
+    <i data-lucide="book-open-check" class="h-6 w-6 text-primary"></i>
+    <span>Detalhes da aula</span>
 </span>
 {% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Botões de ação -->
-    <div class="flex justify-end gap-3">
-        <a href="{% url 'lesson_form' lesson.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark">
-            <i data-lucide="edit" class="w-4 h-4 mr-2"></i>
-            Editar Aula
-        </a>
-        
-        <button type="button" id="add-tags-btn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
-            <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
-            Tags para Aula
-        </button>
-    </div>
-    
-    <div class="bg-white shadow-sm rounded-lg overflow-hidden">
-        <div class="p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">{{ lesson.title }}</h1>
-                    <p class="text-gray-500 mt-1">{{ lesson.class_group.name }} - {{ lesson.date|date:"d/m/Y" }}</p>
+<div class="mx-auto max-w-6xl">
+
+    <!-- Cabeçalho -->
+    <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-3">
+                    <h1 class="break-words text-2xl font-bold text-gray-900">{{ lesson.title }}</h1>
+
+                    {% if lesson.status == 'completed' %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                            Realizada
+                        </span>
+                    {% elif lesson.status == 'cancelled' %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
+                            <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                            Cancelada
+                        </span>
+                    {% elif lesson.date < today %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                            <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                            Pendente
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                            <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                            Planejada
+                        </span>
+                    {% endif %}
+
+                    {% if lesson.date == today and lesson.status == 'planned' %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-600/20">
+                            <i data-lucide="calendar-days" class="h-3.5 w-3.5"></i>
+                            Hoje
+                        </span>
+                    {% endif %}
                 </div>
-            </div>
-            
-            <div class="mt-6">
-                <h3 class="text-lg font-bold text-gray-900 mb-3">Conteúdo:</h3>
-                <div class="text-gray-600 whitespace-pre-line">{{ lesson.content }}</div>
-            </div>
-            
-            {% if lesson.performance_notes %}
-            <div class="mt-6">
-                <h3 class="text-lg font-bold text-gray-900 mb-3">Observações de Desempenho:</h3>
-                <div class="text-gray-600 whitespace-pre-line">{{ lesson.performance_notes }}</div>
-            </div>
-            {% endif %}
-            
-            {% if lesson.objectives.all %}
-            <div class="mt-6">
-                <h3 class="text-lg font-bold text-gray-900 mb-3">Objetivos de Aprendizagem:</h3>
-                <ul class="space-y-2">
-                    {% for objective in lesson.objectives.all %}
-                    <li class="text-gray-600">• {{ objective.title }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-            
-            {% if lesson.tags.all %}
-            <div class="mt-6">
-                <h3 class="text-lg font-bold text-gray-900 mb-3">Tags:</h3>
-                <div class="flex flex-wrap gap-2">
-                    {% for tag in lesson.tags.all %}
-                    <span class="px-2 py-1 text-xs rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
-                        {{ tag.name }}
+
+                <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-gray-500">
+                    <a href="{% url 'class_group_detail' lesson.class_group.id %}" class="inline-flex items-center gap-2 font-medium text-gray-700 transition-colors hover:text-primary">
+                        <i data-lucide="users-round" class="h-4 w-4 text-gray-400"></i>
+                        {{ lesson.class_group.name }}
+                    </a>
+
+                    <span class="inline-flex items-center gap-2">
+                        <i data-lucide="calendar-days" class="h-4 w-4 text-gray-400"></i>
+                        {% if lesson.status == 'completed' %}
+                            Aplicada em {{ lesson.date|date:"d/m/Y" }}
+                        {% elif lesson.status == 'cancelled' %}
+                            Prevista para {{ lesson.date|date:"d/m/Y" }}
+                        {% else %}
+                            Aplicação prevista para {{ lesson.date|date:"d/m/Y" }}
+                        {% endif %}
                     </span>
-                    {% endfor %}
+
+                    <span class="inline-flex items-center gap-2">
+                        <i data-lucide="clipboard-list" class="h-4 w-4 text-gray-400"></i>
+                        {{ total_exercises_count }} {% if total_exercises_count == 1 %}exercício{% else %}exercícios{% endif %}
+                    </span>
                 </div>
+
+                {% if total_exercises_count %}
+                    <div class="mt-5 max-w-xl">
+                        <div class="mb-2 flex items-center justify-between gap-4 text-sm">
+                            <span class="text-gray-600">
+                                Progresso dos exercícios:
+                                <strong class="applied-count font-semibold text-gray-900">{{ applied_exercises_count }}</strong>
+                                de
+                                <strong class="total-exercises-count font-semibold text-gray-900">{{ total_exercises_count }}</strong>
+                            </span>
+
+                            <span class="progress-text flex-shrink-0 font-medium text-gray-600">{{ applied_exercises_percentage }}%</span>
+                        </div>
+
+                        <div class="h-2.5 overflow-hidden rounded-full bg-gray-200">
+                            <div class="progress-bar h-2.5 rounded-full bg-green-500 transition-all duration-300" style="width: {{ applied_exercises_percentage }}%;"></div>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
-            {% endif %}
-        </div>
-    </div>
-    
-    <!-- Exercises Section -->
-    <div class="bg-white shadow-sm rounded-lg overflow-hidden">
-        <div class="p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-bold text-gray-900">Exercícios Aplicados:</h2>
-                <a href="{% url 'exercise_form' %}?lesson={{ lesson.id }}" class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    Novo Exercício
+
+            <div class="flex flex-shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+                <a href="{% url 'duplicate_lesson' lesson.id %}" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 text-sm font-medium text-green-700 shadow-sm transition-colors hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                    <i data-lucide="copy-plus" class="h-4 w-4"></i>
+                    Duplicar
+                </a>
+
+                <button type="button" id="add-tags-btn" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 text-sm font-medium text-purple-700 shadow-sm transition-colors hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
+                    <i data-lucide="tag" class="h-4 w-4"></i>
+                    Nova tag
+                </button>
+
+                <a href="{% url 'lesson_form' lesson.id %}" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    <i data-lucide="pencil" class="h-4 w-4"></i>
+                    Editar aula
                 </a>
             </div>
-            
-            {% if lesson.exercises.all %}
-            <div class="space-y-4">
-                {% for exercise in lesson.exercises.all %}
-                <div
-                    data-lesson-exercise-card
-                    class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div class="flex items-start gap-3">
-                        <!-- Checkbox para marcar como aplicado (CORRIGIDO) -->
-                        <div class="flex-shrink-0 mt-0.5">
-                            <label class="inline-flex items-start cursor-pointer group">
-                                <input type="checkbox" 
-                                       class="exercise-applied-checkbox h-5 w-5 text-green-600 bg-white border-2 border-gray-300 rounded focus:ring-green-500 focus:ring-2 group-hover:border-green-400 transition-colors" 
-                                       data-lesson-id="{{ lesson.id }}"
-                                       data-exercise-id="{{ exercise.id }}"
-                                       {% if exercise.id in applied_exercises %}checked{% endif %}>
-                            </label>
-                        </div>
-                        
-                        <!-- Conteúdo do exercício -->
-                        <div class="flex-1 min-w-0">
-                            <div class="flex justify-between items-start gap-4">
-                                <div class="flex-1 min-w-0">
-                                    <!-- Título e descrição -->
-                                    <div class="mb-3">
-                                        <h3 class="font-medium text-gray-900 mb-1">{{ exercise.title }}</h3>
-                                        <p class="text-sm text-gray-500 line-clamp-2">{{ exercise.description }}</p>
-                                    </div>
-                                    
-                                    <!-- Status e badges -->
-                                    <div class="flex items-center gap-2 mb-2">
-                                        <span class="exercise-status-badge inline-flex items-center px-2 py-1 text-xs font-medium rounded-full transition-colors
-                                               {% if exercise.id in applied_exercises %}
-                                                   bg-green-100 text-green-800
-                                               {% else %}
-                                                   bg-gray-100 text-gray-600
-                                               {% endif %}">
-                                            <span class="exercise-status-dot w-1.5 h-1.5 rounded-full mr-1.5
-                                                   {% if exercise.id in applied_exercises %}
-                                                       bg-green-600
-                                                   {% else %}
-                                                       bg-gray-400
-                                                   {% endif %}">
-                                            </span>
-                                            <span class="status-text">
-                                                {% if exercise.id in applied_exercises %}
-                                                    Aplicado
-                                                {% else %}
-                                                    Não aplicado
-                                                {% endif %}
-                                            </span>
-                                        </span>
-                                        
-                                        {% if exercise.duration %}
-                                        <span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                                            <i data-lucide="clock" class="w-3 h-3 mr-1"></i>
-                                            {{ exercise.duration }} min
-                                        </span>
-                                        {% endif %}
-                                    </div>
-                                    
-                                    <!-- Tags do exercício -->
-                                    {% if exercise.tags.all %}
-                                    <div class="flex flex-wrap gap-2">
-                                        {% for tag in exercise.tags.all %}
-                                        <span class="px-2 py-1 text-xs rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
-                                            {{ tag.name }}
-                                        </span>
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                
-                                <!-- Link Ver detalhes -->
-                                <div class="flex-shrink-0">
-                                    <a href="{% url 'exercise_detail' exercise.id %}" 
-                                       class="text-primary text-sm hover:underline">
-                                        Ver detalhes
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            
-            <!-- Resumo dos exercícios aplicados -->
-            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-                <div class="flex items-center justify-between text-sm">
-                    <span class="text-gray-600">
-                        Exercícios aplicados: 
-                        <span class="font-medium applied-count">
-                            {{ applied_exercises_count }}
-                        </span> 
-                        de 
-                        <span class="font-medium total-exercises-count">
-                            {{ total_exercises_count }}
-                        </span>
-                    </span>
-                    <div class="flex items-center gap-2">
-                        <div class="w-32 bg-gray-200 rounded-full h-2 overflow-hidden">
-                            <div
-                                class="bg-green-500 h-2 rounded-full progress-bar transition-all"
-                                style="width: {{ applied_exercises_percentage }}%;"
-                            ></div>
-                        </div>
-
-                        <span class="text-gray-500 progress-text">
-                            {{ applied_exercises_percentage }}%
-                        </span>
-                    </div>
-                </div>
-            </div>
-            
-            {% else %}
-            <div class="text-center py-8 text-gray-500">
-                <div class="mb-4">
-                    <i data-lucide="clipboard-list" class="w-12 h-12 mx-auto text-gray-300"></i>
-                </div>
-                <p class="text-lg font-medium mb-2">Nenhum exercício foi aplicado nesta aula ainda.</p>
-                <p class="text-sm">Adicione exercícios para começar a organizá-los.</p>
-            </div>
-            {% endif %}
         </div>
-    </div>
-</div>
 
-<!-- Modal de Tags (melhorado) -->
-<div id="tag-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-    <div class="relative mx-auto w-full max-w-xl px-8 py-6 border shadow-2xl rounded-2xl bg-white">
-        <div class="mt-3">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-medium text-gray-900" id="modal-title">
-                    Adicionar Tag à Aula
-                </h3>
-                <button type="button" id="close-modal-x" class="text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600" aria-label="Fechar modal">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
+        {% if lesson.status == 'planned' and lesson.date < today %}
+            <div class="mt-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-4">
+                <i data-lucide="triangle-alert" class="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600"></i>
+                <div>
+                    <p class="text-sm font-semibold text-amber-900">Esta aula está pendente de confirmação</p>
+                    <p class="mt-1 text-sm leading-6 text-amber-800">A data prevista já passou. Edite a aula para registrá-la como realizada, cancelá-la ou definir uma nova data de aplicação.</p>
+                </div>
+            </div>
+        {% elif lesson.status == 'completed' %}
+            <div class="mt-6 flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-4">
+                <i data-lucide="circle-check-big" class="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600"></i>
+                <div>
+                    <p class="text-sm font-semibold text-green-900">Aula registrada como realizada</p>
+                    <p class="mt-1 text-sm leading-6 text-green-800">Este registro faz parte do histórico pedagógico da turma. O conteúdo, os exercícios aplicados e as observações permanecem disponíveis para consulta.</p>
+                </div>
+            </div>
+        {% elif lesson.status == 'cancelled' %}
+            <div class="mt-6 flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-4">
+                <i data-lucide="calendar-x-2" class="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-500"></i>
+                <div>
+                    <p class="text-sm font-semibold text-gray-800">Esta aula foi cancelada</p>
+                    <p class="mt-1 text-sm leading-6 text-gray-600">O planejamento foi preservado no histórico. Edite a aula caso queira reabri-la como planejada.</p>
+                </div>
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- Conteúdo -->
+    <section class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="flex items-center gap-2">
+            <i data-lucide="file-text" class="h-5 w-5 text-primary"></i>
+            <h2 class="text-lg font-semibold text-gray-900">Conteúdo da aula</h2>
+        </div>
+
+        {% if lesson.content %}
+            <div class="mt-4 whitespace-pre-line text-sm leading-7 text-gray-700">{{ lesson.content }}</div>
+        {% else %}
+            <div class="mt-4 rounded-lg bg-gray-50 px-4 py-5"><p class="text-sm text-gray-500">Nenhum conteúdo foi informado para esta aula.</p></div>
+        {% endif %}
+    </section>
+
+    <!-- Organização pedagógica -->
+    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="flex items-center gap-2">
+                <i data-lucide="target" class="h-5 w-5 text-primary"></i>
+                <h2 class="text-lg font-semibold text-gray-900">Objetivos de aprendizagem</h2>
+            </div>
+
+            {% if lesson.objectives.all %}
+                <ul class="mt-5 space-y-3">
+                    {% for objective in lesson.objectives.all %}
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="circle-check" class="mt-0.5 h-5 w-5 flex-shrink-0 text-green-500"></i>
+                            <span class="text-sm leading-6 text-gray-700">{% if objective.description %}{{ objective.description }}{% else %}{{ objective.title }}{% endif %}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="mt-4 rounded-lg bg-gray-50 px-4 py-5"><p class="text-sm text-gray-500">Nenhum objetivo de aprendizagem foi associado.</p></div>
+            {% endif %}
+        </section>
+
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="tags" class="h-5 w-5 text-primary"></i>
+                    <h2 class="text-lg font-semibold text-gray-900">Tags</h2>
+                </div>
+
+                <button type="button" id="add-tags-btn-secondary" class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-3 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
+                    <i data-lucide="plus" class="h-4 w-4"></i>
+                    Nova tag
                 </button>
             </div>
-            
-            <form method="POST" action="{% url 'quick_add_tag' 'lesson' lesson.id %}" id="tag-form">
-                {% csrf_token %}
-                <div class="space-y-4">
-                    <div>
-                        <label for="tag_name" class="block text-sm font-medium text-gray-700 mb-1">
-                            Nome da Tag
-                        </label>
-                        <input type="text" name="tag_name" id="tag_name"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                               placeholder="Digite o nome da tag..."
-                               maxlength="50"
-                               required>
-                        <p class="mt-1 text-xs text-gray-500">
-                            Máximo 50 caracteres. Use apenas letras, números, espaços, hífens e underscores.
-                        </p>
-                    </div>
-                    
-                    <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-                        <a href="{% url 'tag_list' %}" class="text-sm text-purple-600 hover:text-purple-800 hover:underline focus:outline-none focus:underline">
-                            Ver todas as tags
-                        </a>
-                        
-                        <div class="flex gap-3">
-                            <button type="button" id="cancel-tag-modal" 
-                                    class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
-                                Cancelar
-                            </button>
-                            <button type="submit" id="submit-tag-btn"
-                                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
-                                Salvar Tag
-                            </button>
+
+            {% if lesson.tags.all %}
+                <div class="mt-5 flex flex-wrap gap-2">
+                    {% for tag in lesson.tags.all %}<span class="rounded-full px-2.5 py-1 text-xs font-medium" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">{{ tag.name }}</span>{% endfor %}
+                </div>
+            {% else %}
+                <div class="mt-4 rounded-lg bg-gray-50 px-4 py-5"><p class="text-sm text-gray-500">Nenhuma tag foi associada a esta aula.</p></div>
+            {% endif %}
+        </section>
+    </div>
+
+    <!-- Exercícios -->
+    <section class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <div class="flex items-center gap-2">
+                    <i data-lucide="clipboard-list" class="h-5 w-5 text-primary"></i>
+                    <h2 class="text-lg font-semibold text-gray-900">Exercícios da aula</h2>
+                </div>
+                <p class="mt-1 text-sm leading-6 text-gray-500">Marque os exercícios efetivamente aplicados durante a aula.</p>
+            </div>
+
+            <a href="{% url 'exercise_form' %}?lesson={{ lesson.id }}" class="inline-flex h-10 flex-shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                <i data-lucide="plus" class="h-4 w-4"></i>
+                Novo exercício
+            </a>
+        </div>
+
+        {% if lesson.exercises.all %}
+            <div class="mt-6 divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200">
+                {% for exercise in lesson.exercises.all %}
+                    <article data-lesson-exercise-card class="transition-colors hover:bg-gray-50">
+                        <div class="flex items-start gap-4 px-4 py-5 sm:px-5">
+                            <label class="mt-0.5 inline-flex flex-shrink-0 cursor-pointer items-center">
+                                <input type="checkbox" class="exercise-applied-checkbox h-5 w-5 rounded border-2 border-gray-300 text-green-600 transition-colors focus:ring-2 focus:ring-green-500" data-lesson-id="{{ lesson.id }}" data-exercise-id="{{ exercise.id }}" {% if exercise.id in applied_exercises %}checked{% endif %}>
+                                <span class="sr-only">Marcar {{ exercise.title }} como aplicado</span>
+                            </label>
+
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div class="min-w-0">
+                                        <a href="{% url 'exercise_detail' exercise.id %}" class="font-semibold text-gray-900 transition-colors hover:text-primary">{{ exercise.title }}</a>
+                                        {% if exercise.description %}<p class="mt-1 line-clamp-2 text-sm leading-6 text-gray-500">{{ exercise.description }}</p>{% endif %}
+                                    </div>
+
+                                    <span class="exercise-status-badge inline-flex flex-shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors {% if exercise.id in applied_exercises %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-600{% endif %}">
+                                        <span class="exercise-status-dot h-1.5 w-1.5 rounded-full {% if exercise.id in applied_exercises %}bg-green-600{% else %}bg-gray-400{% endif %}"></span>
+                                        <span class="status-text">{% if exercise.id in applied_exercises %}Aplicado{% else %}Não aplicado{% endif %}</span>
+                                    </span>
+                                </div>
+
+                                <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500">
+                                    {% if exercise.duration %}<span class="inline-flex items-center gap-1.5"><i data-lucide="clock-3" class="h-3.5 w-3.5"></i>{{ exercise.duration }} min</span>{% endif %}
+                                    <span class="inline-flex items-center gap-1.5"><i data-lucide="target" class="h-3.5 w-3.5"></i>{{ exercise.objectives.count }} {% if exercise.objectives.count == 1 %}objetivo{% else %}objetivos{% endif %}</span>
+                                </div>
+
+                                {% if exercise.tags.all %}
+                                    <div class="mt-3 flex flex-wrap gap-1.5">
+                                        {% for tag in exercise.tags.all|slice:":5" %}<span class="rounded-full px-2 py-1 text-xs font-medium" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">{{ tag.name }}</span>{% endfor %}
+                                        {% if exercise.tags.count > 5 %}<span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-500">+{{ exercise.tags.count|add:"-5" }}</span>{% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
+                    </article>
+                {% endfor %}
+            </div>
+
+            <div class="mt-6 rounded-lg bg-gray-50 p-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <span class="text-sm text-gray-600">Exercícios aplicados: <strong class="applied-count font-semibold text-gray-900">{{ applied_exercises_count }}</strong> de <strong class="total-exercises-count font-semibold text-gray-900">{{ total_exercises_count }}</strong></span>
+
+                    <div class="flex items-center gap-3">
+                        <div class="h-2 w-36 overflow-hidden rounded-full bg-gray-200"><div class="progress-bar h-2 rounded-full bg-green-500 transition-all duration-300" style="width: {{ applied_exercises_percentage }}%;"></div></div>
+                        <span class="progress-text min-w-10 text-right text-sm font-medium text-gray-600">{{ applied_exercises_percentage }}%</span>
                     </div>
                 </div>
-            </form>
+            </div>
+        {% else %}
+            <div class="mt-6 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center">
+                <i data-lucide="clipboard-list" class="mx-auto h-9 w-9 text-gray-300"></i>
+                <h3 class="mt-4 text-base font-semibold text-gray-900">Nenhum exercício vinculado</h3>
+                <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">Edite a aula para selecionar exercícios existentes ou crie um novo recurso para sua biblioteca.</p>
+
+                <div class="mt-5 flex flex-wrap items-center justify-center gap-3">
+                    <a href="{% url 'lesson_form' lesson.id %}" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"><i data-lucide="pencil" class="h-4 w-4"></i>Editar aula</a>
+                    <a href="{% url 'exercise_form' %}?lesson={{ lesson.id }}" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600"><i data-lucide="plus" class="h-4 w-4"></i>Criar exercício</a>
+                </div>
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- Observações e informações -->
+    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="flex items-center gap-2"><i data-lucide="notebook-pen" class="h-5 w-5 text-primary"></i><h2 class="text-lg font-semibold text-gray-900">Observações pedagógicas</h2></div>
+            {% if lesson.performance_notes %}<div class="mt-4 whitespace-pre-line text-sm leading-7 text-gray-700">{{ lesson.performance_notes }}</div>{% else %}<div class="mt-4 rounded-lg bg-gray-50 px-4 py-5"><p class="text-sm text-gray-500">Nenhuma observação pedagógica foi registrada.</p></div>{% endif %}
+        </section>
+
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="flex items-center gap-2"><i data-lucide="info" class="h-5 w-5 text-primary"></i><h2 class="text-lg font-semibold text-gray-900">Informações do registro</h2></div>
+            <dl class="mt-6 space-y-5">
+                <div><dt class="text-sm font-medium text-gray-500">Status oficial</dt><dd class="mt-1 text-sm font-medium text-gray-900">{{ lesson.get_status_display }}</dd></div>
+                <div class="border-t border-gray-100 pt-5"><dt class="text-sm font-medium text-gray-500">Turma</dt><dd class="mt-1"><a href="{% url 'class_group_detail' lesson.class_group.id %}" class="text-sm font-medium text-primary hover:underline">{{ lesson.class_group.name }}</a></dd></div>
+                <div class="border-t border-gray-100 pt-5"><dt class="text-sm font-medium text-gray-500">Criada em</dt><dd class="mt-1 text-sm text-gray-900">{{ lesson.created_at|date:"d/m/Y \à\s H:i" }}</dd></div>
+                <div class="border-t border-gray-100 pt-5"><dt class="text-sm font-medium text-gray-500">Última atualização</dt><dd class="mt-1 text-sm text-gray-900">{{ lesson.updated_at|date:"d/m/Y \à\s H:i" }}</dd></div>
+            </dl>
+        </section>
+    </div>
+
+    <!-- Navegação -->
+    <div class="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <a href="{% url 'lesson_list' %}" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"><i data-lucide="arrow-left" class="h-4 w-4"></i>Voltar às aulas</a>
+
+        <div class="flex flex-col gap-3 sm:flex-row">
+            <a href="{% url 'group_lessons' lesson.class_group.id %}" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"><i data-lucide="books" class="h-4 w-4"></i>Aulas desta turma</a>
+            <a href="{% url 'class_group_detail' lesson.class_group.id %}" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"><i data-lucide="users-round" class="h-4 w-4"></i>Ver turma</a>
         </div>
     </div>
 </div>
 
-<!-- CSS customizado simplificado -->
-<style>
-.line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
+<!-- Modal de criação rápida de tag -->
+<div id="tag-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/50 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="tag-modal-title">
+    <div class="w-full max-w-md rounded-xl border border-gray-200 bg-white shadow-xl">
+        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <div><h2 id="tag-modal-title" class="text-lg font-semibold text-gray-900">Criar nova tag</h2><p class="mt-1 text-sm text-gray-500">A nova tag será associada automaticamente a esta aula.</p></div>
+            <button type="button" id="close-modal-x" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600" aria-label="Fechar modal"><i data-lucide="x" class="h-5 w-5"></i></button>
+        </div>
 
-.progress-bar {
-    transition: width 0.3s ease;
-}
+        <form method="post" action="{% url 'quick_add_tag' 'lesson' lesson.id %}" id="tag-form" class="p-6">
+            {% csrf_token %}
+            <div>
+                <label for="tag_name" class="mb-2 block text-sm font-medium text-gray-700">Nome da tag <span class="text-red-500">*</span></label>
+                <input type="text" name="tag_name" id="tag_name" maxlength="50" autocomplete="off" placeholder="Ex.: Revisão" class="h-11 w-full rounded-lg border border-gray-300 px-4 text-sm text-gray-700 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" required>
+                <p id="tag-modal-feedback" class="mt-2 hidden text-sm" role="alert"></p>
+            </div>
 
-/* Customização do checkbox para usar o estilo nativo do Tailwind */
-.exercise-applied-checkbox:checked {
-    background-color: #10b981;
-    border-color: #10b981;
-}
+            <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <a href="{% url 'tag_list' %}" class="text-center text-sm font-medium text-primary hover:underline">Ver todas as tags</a>
+                <div class="flex flex-col-reverse gap-2 sm:flex-row">
+                    <button type="button" id="cancel-tag-modal" class="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">Cancelar</button>
+                    <button type="submit" id="submit-tag-btn" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"><i data-lucide="plus" class="h-4 w-4"></i>Criar tag</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
 
-.exercise-applied-checkbox:focus {
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-}
-</style>
-
-<!-- Scripts JavaScript -->
-<script src="{% static 'js/lesson-detail.js' %}"></script>
-<script src="{% static 'js/tagModal.js' %}"></script>
+{% block scripts %}
+    {{ block.super }}
+    <script src="{% static 'js/tag_modal.js' %}" defer></script>
+    <script src="{% static 'js/lesson_detail.js' %}" defer></script>
 {% endblock %}
