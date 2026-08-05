@@ -345,16 +345,16 @@
 
                     <select name="{{ form.objectives.name }}" id="id_objectives" multiple class="hidden">
                         {% for objective in form.objectives.field.queryset %}
-                            <option value="{{ objective.id }}" {% if objective.id|stringformat:"s" in form.objectives.value %}selected{% endif %}>{{ objective.title }}</option>
+                            <option value="{{ objective.id }}" {% if objective.id|stringformat:"s" in form.selected_objective_ids %}selected{% endif %}>{{ objective.title }}</option>
                         {% endfor %}
                     </select>
 
                     <div class="relative">
                         <div id="objective-trigger" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false" class="flex min-h-12 w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white p-3 text-sm shadow-sm transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
                             <div id="selected-objectives" class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                                {% if form.objectives.value %}
+                                {% if form.selected_objective_ids %}
                                     {% for objective in form.objectives.field.queryset %}
-                                        {% if objective.id|stringformat:"s" in form.objectives.value %}
+                                        {% if objective.id|stringformat:"s" in form.selected_objective_ids %}
                                             <span class="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{{ objective.title }}</span>
                                         {% endif %}
                                     {% endfor %}
@@ -376,7 +376,7 @@
                             <div id="objective-list" class="max-h-64 overflow-y-auto py-1" role="listbox" aria-multiselectable="true">
                                 {% for objective in form.objectives.field.queryset %}
                                     <label data-selector-item class="flex cursor-pointer items-start gap-3 px-3 py-3 transition-colors hover:bg-gray-50">
-                                        <input type="checkbox" value="{{ objective.id }}" class="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary" {% if objective.id|stringformat:"s" in form.objectives.value %}checked{% endif %} data-objective-select data-objective-title="{{ objective.title }}" data-objective-description="{{ objective.description }}">
+                                        <input type="checkbox" value="{{ objective.id }}" class="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary" {% if objective.id|stringformat:"s" in form.selected_objective_ids %}checked{% endif %} data-objective-select data-objective-title="{{ objective.title }}" data-objective-description="{{ objective.description }}">
 
                                         <span class="min-w-0">
                                             <span class="block text-sm font-medium leading-5 text-gray-700">{{ objective.title }}</span>
@@ -419,16 +419,16 @@
 
                     <select name="{{ form.tags.name }}" id="id_tags" multiple class="hidden">
                         {% for tag in form.tags.field.queryset %}
-                            <option value="{{ tag.id }}" {% if tag.id|stringformat:"s" in form.tags.value %}selected{% endif %}>{{ tag.name }}</option>
+                            <option value="{{ tag.id }}" {% if tag.id|stringformat:"s" in form.selected_tag_ids %}selected{% endif %}>{{ tag.name }}</option>
                         {% endfor %}
                     </select>
 
                     <div class="relative">
                         <div id="tag-trigger" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false" class="flex min-h-12 w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white p-3 text-sm shadow-sm transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
                             <div id="selected-tags" class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                                {% if form.tags.value %}
+                                {% if form.selected_tag_ids %}
                                     {% for tag in form.tags.field.queryset %}
-                                        {% if tag.id|stringformat:"s" in form.tags.value %}
+                                        {% if tag.id|stringformat:"s" in form.selected_tag_ids %}
                                             <span class="rounded-full px-2.5 py-1 text-xs font-medium" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">{{ tag.name }}</span>
                                         {% endif %}
                                     {% endfor %}
@@ -450,7 +450,7 @@
                             <div id="tag-list" class="max-h-64 overflow-y-auto py-1" role="listbox" aria-multiselectable="true">
                                 {% for tag in form.tags.field.queryset %}
                                     <label data-selector-item class="flex cursor-pointer items-center gap-3 px-3 py-3 transition-colors hover:bg-gray-50">
-                                        <input type="checkbox" value="{{ tag.id }}" class="h-4 w-4 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary" {% if tag.id|stringformat:"s" in form.tags.value %}checked{% endif %} data-tag-select data-tag-name="{{ tag.name }}" data-tag-color="{{ tag.color }}">
+                                        <input type="checkbox" value="{{ tag.id }}" class="h-4 w-4 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary" {% if tag.id|stringformat:"s" in form.selected_tag_ids %}checked{% endif %} data-tag-select data-tag-name="{{ tag.name }}" data-tag-color="{{ tag.color }}">
                                         <span class="h-2.5 w-2.5 flex-shrink-0 rounded-full" style="background-color: {{ tag.color }};"></span>
                                         <span class="min-w-0 truncate text-sm text-gray-700">{{ tag.name }}</span>
                                     </label>

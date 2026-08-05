@@ -325,17 +325,33 @@ class ExerciseForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         teacher = kwargs.pop('teacher', None)
         super().__init__(*args, **kwargs)
-        
+
         if teacher:
-            self.fields['objectives'].queryset = LearningObjective.objects.filter(teacher=teacher).order_by('title')
-            # Filtra tags apenas do tipo 'exercise' ou 'general'
+            self.fields['objectives'].queryset = LearningObjective.objects.filter(
+                teacher=teacher
+            ).order_by('title')
+
             self.fields['tags'].queryset = Tag.objects.filter(
                 teacher=teacher,
-                type__in=['exercise', 'general']
+                type__in=['exercise', 'general'],
             ).distinct().order_by('name')
-            
+
         if self.instance.pk:
             self.fields['is_template'].disabled = True
+
+        self.selected_objective_ids = self._normalize_selected_ids(
+            self['objectives'].value()
+        )
+        self.selected_tag_ids = self._normalize_selected_ids(
+            self['tags'].value()
+        )
+        
+    @staticmethod
+    def _normalize_selected_ids(values):
+        return {
+            str(getattr(value, 'pk', value))
+            for value in (values or [])
+        }
             
     def clean_is_template(self):
         """
