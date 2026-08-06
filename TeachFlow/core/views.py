@@ -548,21 +548,79 @@ class DuplicateLessonView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
 @method_decorator(csrf_protect, name='dispatch')
 class ExerciseCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = Exercise
-    form_class = ExerciseForm  # Usando o formulário personalizado
+    form_class = ExerciseForm
     template_name = 'exercises/exercise_form.html'
-    
+
+    def get_source_lesson(self):
+        if hasattr(self, '_source_lesson'):
+            return self._source_lesson
+
+        lesson_id = self.request.GET.get('lesson', '').strip()
+
+        if not lesson_id:
+            self._source_lesson = None
+            return None
+
+        if not lesson_id.isdigit():
+            raise Http404('Aula não encontrada.')
+
+        self._source_lesson = get_object_or_404(
+            Lesson.objects.select_related('class_group'),
+            pk=lesson_id,
+            class_group__teacher=self.request.user.teacher_profile,
+        )
+
+        return self._source_lesson
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['teacher'] = self.request.user.teacher_profile
         return kwargs
-    
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['source_lesson'] = self.get_source_lesson()
+        context['is_lesson_context'] = context['source_lesson'] is not None
+        return context
+
+    @transaction.atomic
     def form_valid(self, form):
+        source_lesson = self.get_source_lesson()
         form.instance.created_by = self.request.user.teacher_profile
-        messages.success(self.request, "Exercício criado com sucesso!")
-        return super().form_valid(form)
-    
+
+        if source_lesson:
+            form.instance.is_template = False
+
+        response = super().form_valid(form)
+
+        if source_lesson:
+            LessonExercise.objects.get_or_create(
+                lesson=source_lesson,
+                exercise=self.object,
+                defaults={'is_applied': False},
+            )
+
+            messages.success(
+                self.request,
+                'Exercício criado e adicionado à aula com sucesso.',
+            )
+        else:
+            messages.success(
+                self.request,
+                'Exercício criado com sucesso.',
+            )
+
+        return response
+
     def get_success_url(self):
-        # Redireciona de volta à lista de exercícios
+        source_lesson = self.get_source_lesson()
+
+        if source_lesson:
+            return reverse(
+                'lesson_detail',
+                kwargs={'pk': source_lesson.pk},
+            )
+
         return reverse('exercise_list')
     
 @method_decorator(csrf_protect, name='dispatch')
