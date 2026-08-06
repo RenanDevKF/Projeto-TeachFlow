@@ -277,7 +277,31 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
             return str(self.class_group.pk)
 
         class_group_id = self.request.GET.get('class', '')
-        return class_group_id if class_group_id.isdigit() else ''
+
+        if not class_group_id.isdigit():
+            return ''
+
+        exists = ClassGroup.objects.filter(
+            pk=class_group_id,
+            teacher=self.request.user.teacher_profile,
+        ).exists()
+
+        return class_group_id if exists else ''
+    
+    def get_selected_tag(self):
+        tag_id = self.request.GET.get('tag', '')
+
+        if not tag_id.isdigit():
+            return ''
+
+        exists = Tag.objects.filter(
+            pk=tag_id,
+            teacher=self.request.user.teacher_profile,
+            type__in=['lesson', 'general'],
+            is_active=True,
+        ).exists()
+
+        return tag_id if exists else ''
 
     def get_filtered_queryset(self):
         teacher = self.request.user.teacher_profile
@@ -291,7 +315,7 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
             if selected_class_group:
                 queryset = queryset.filter(class_group_id=selected_class_group)
 
-        tag_id = self.request.GET.get('tag', '')
+        tag_id = self.get_selected_tag()
         date_filter = self.request.GET.get('date', '')
 
         if tag_id.isdigit():
@@ -331,7 +355,7 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         context['is_class_group_scope'] = self.class_group is not None
         context['selected_section'] = self.get_selected_section()
         context['selected_class_group'] = self.get_selected_class_group()
-        context['selected_tag'] = self.request.GET.get('tag', '')
+        context['selected_tag'] = self.get_selected_tag()
         context['selected_date'] = self.request.GET.get('date', '')
         context['has_active_filters'] = bool(
             context['selected_tag']
@@ -345,7 +369,7 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         context['query_string'] = query_parameters.urlencode()
 
         context['class_groups'] = ClassGroup.objects.filter(teacher=teacher).order_by('-is_active', 'name', 'year')
-        context['tags'] = Tag.objects.filter(teacher=teacher, type__in=['lesson', 'general']).distinct().order_by('name')
+        context['tags'] = Tag.objects.filter(teacher=teacher, type__in=['lesson', 'general'], is_active=True,).distinct().order_by('name')
 
         context['upcoming_count'] = filtered_lessons.filter(status=Lesson.Status.PLANNED, date__gte=today).count()
         context['pending_count'] = filtered_lessons.filter(status=Lesson.Status.PLANNED, date__lt=today).count()
