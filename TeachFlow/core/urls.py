@@ -78,7 +78,4 @@ urlpatterns = [
     path('dashboard/', views.dashboard_view, name='dashboard'),
     
     
-    # API para verificar se tag existe (se ainda for necessário)
-    path('api/check-tag/', views.CheckTagAPIView.as_view(), name='check_tag_api'),
-    
 ]

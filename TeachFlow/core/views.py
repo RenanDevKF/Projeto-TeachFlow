@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q, Case, IntegerField, Value, When, Count
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_protect, csrf_exempt
+from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, Http404, HttpResponseRedirect
 from datetime import date
@@ -1914,46 +1914,6 @@ class QuickCreateExerciseTagView(LoginRequiredMixin, TeacherRequiredMixin, View)
                 'color': tag.color,
             },
         }, status=201)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class CheckTagAPIView(LoginRequiredMixin, View):
-    """
-    API endpoint para verificar se uma tag já existe
-    """
-    
-    def get(self, request):
-        try:
-            tag_name = request.GET.get('name', '').strip().lower()
-            
-            if not tag_name:
-                return JsonResponse({
-                    'exists': False,
-                    'error': 'Nome da tag não fornecido'
-                }, status=400)
-            
-            # Verifica se a tag já existe para este professor
-            tag_exists = Tag.objects.filter(
-                name__iexact=tag_name,
-                teacher=request.user.teacher_profile
-            ).exists()
-            
-            return JsonResponse({
-                'exists': tag_exists,
-                'tag_name': tag_name
-            })
-            
-        except AttributeError:
-            # Usuário não tem teacher_profile
-            return JsonResponse({
-                'exists': False,
-                'error': 'Perfil de professor não encontrado'
-            }, status=403)
-            
-        except Exception as e:
-            return JsonResponse({
-                'exists': False,
-                'error': f'Erro interno: {str(e)}'
-            }, status=500)
 
 @method_decorator(csrf_protect, name='dispatch')
 class QuickAddTagView(
