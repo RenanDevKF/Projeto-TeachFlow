@@ -213,23 +213,18 @@ class TagAdmin(SecureModelAdmin):
 
 @admin.register(LearningObjective)
 class LearningObjectiveAdmin(SecureModelAdmin):
-    list_display = ('title', 'teacher', 'usage_count')
-    list_filter = ('teacher', 'tags')
+    list_display = ('title', 'teacher', 'is_active', 'usage_count')
+    list_filter = ('teacher', 'is_active')
     search_fields = ('title', 'description')
-    filter_horizontal = ('tags',)
-    
+
     def usage_count(self, obj):
-        lessons = obj.lessons.count()
         exercises = obj.exercises.count()
-        return f"{lessons} lessons, {exercises} exercises"
-    usage_count.short_description = "Usage"
-    
+        return f'{exercises} {"exercício" if exercises == 1 else "exercícios"}'
+    usage_count.short_description = 'Utilização'
+
     fieldsets = (
-        ('Objective Information', {
-            'fields': ('title', 'description', 'teacher')
-        }),
-        ('Categorization', {
-            'fields': ('tags',),
+        ('Informações do objetivo', {
+            'fields': ('title', 'description', 'teacher', 'is_active'),
         }),
     )
 

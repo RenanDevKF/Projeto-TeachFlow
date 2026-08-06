@@ -409,7 +409,7 @@ class ExerciseForm(forms.ModelForm):
 class LearningObjectiveForm(forms.ModelForm):
     class Meta:
         model = LearningObjective
-        fields = ['title', 'description', 'tags']
+        fields = ['title', 'description']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-input',
@@ -421,24 +421,11 @@ class LearningObjectiveForm(forms.ModelForm):
                 'rows': 4,
                 'placeholder': 'Descrição complementar opcional.',
             }),
-            'tags': forms.SelectMultiple(attrs={'class': 'hidden'}),
         }
 
     def __init__(self, *args, **kwargs):
         self.teacher = kwargs.pop('teacher', None)
         super().__init__(*args, **kwargs)
-
-        if self.teacher:
-            tag_filter = Q(is_active=True)
-
-            if self.instance.pk:
-                tag_filter |= Q(objectives=self.instance)
-
-            self.fields['tags'].queryset = Tag.objects.filter(
-                tag_filter,
-                teacher=self.teacher,
-                type__in=['exercise', 'general'],
-            ).distinct().order_by('name')
 
     def clean_title(self):
         title = self.cleaned_data.get('title', '').strip()

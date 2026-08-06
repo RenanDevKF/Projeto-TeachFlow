@@ -126,7 +126,6 @@ class LearningObjective(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='learning_objectives')
-    tags = models.ManyToManyField(Tag, blank=True, related_name='objectives')
     is_active = models.BooleanField(
         default=True,
         verbose_name='Ativo',
