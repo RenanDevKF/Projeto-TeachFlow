@@ -17,7 +17,6 @@ from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjectiv
 from .forms import *
 from django.utils import timezone
 from datetime import date
-from collections import defaultdict
 import json
 import re
 
@@ -1637,48 +1636,6 @@ class TagCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     def get_success_url(self):
         return f"{reverse('library')}?section=tags"
 
-@method_decorator(csrf_protect, name='dispatch')    
-class TagListView(LoginRequiredMixin, ListView):  # Removido TeacherRequiredMixin temporariamente
-    model = Tag
-    template_name = 'tag/tag_list.html'
-    context_object_name = 'tags'
-    
-    def get_queryset(self):
-        # Filtra tags apenas do professor logado
-        queryset = Tag.objects.filter(teacher=self.request.user.teacher_profile)
-        
-        # Filtro por tipo (opcional)
-        tag_type = self.request.GET.get('type')
-        if tag_type:
-            queryset = queryset.filter(type=tag_type)
-            
-        return queryset.order_by('name')
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        
-        # Adiciona TYPE_CHOICES se existir no modelo
-        if hasattr(Tag, 'TYPE_CHOICES'):
-            context['type_choices'] = Tag.TYPE_CHOICES
-        
-        # Se não há filtro específico, organiza tags por categoria
-        if not self.request.GET.get('type'):
-            all_tags = Tag.objects.filter(
-                teacher=self.request.user.teacher_profile
-            ).order_by('name')
-            
-            # Organiza as tags por categoria
-            tags_by_type = defaultdict(list)
-            for tag in all_tags:
-                tags_by_type[tag.type].append(tag)
-            
-            # Converte para dict normal
-            context['tags_by_type'] = dict(tags_by_type)
-        else:
-            # Se há filtro, não precisamos organizar por categoria
-            context['tags_by_type'] = {}
-            
-        return context
 
 @method_decorator(csrf_protect, name='dispatch')
 class TagUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
@@ -1695,6 +1652,12 @@ class TagUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
         kwargs = super().get_form_kwargs()
         kwargs['teacher'] = self.request.user.teacher_profile
         return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['lesson_count'] = self.object.lessons.count()
+        context['exercise_count'] = self.object.exercises.count()
+        return context
 
     def form_valid(self, form):
         messages.success(self.request, 'Tag atualizada com sucesso.')

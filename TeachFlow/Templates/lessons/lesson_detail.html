@@ -342,7 +342,7 @@
             </div>
 
             <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <a href="{% url 'tag_list' %}" class="text-center text-sm font-medium text-primary hover:underline">Ver todas as tags</a>
+                <a href="{% url 'library' %}?section=tags" class="text-center text-sm font-medium text-primary hover:underline">Ver todas as tags</a>
                 <div class="flex flex-col-reverse gap-2 sm:flex-row">
                     <button type="button" id="cancel-tag-modal" class="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">Cancelar</button>
                     <button type="submit" id="submit-tag-btn" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"><i data-lucide="plus" class="h-4 w-4"></i>Criar tag</button>
