@@ -208,10 +208,15 @@ class LessonForm(forms.ModelForm):
                 available_exercises.distinct().order_by('title')
             )
 
-            self.fields['class_group'].queryset = (
-                ClassGroup.objects.filter(teacher=self.teacher)
-                .order_by('-is_active', 'name', 'year')
-            )
+            class_group_filter = Q(is_active=True)
+
+            if self.instance.pk and self.instance.class_group_id:
+                class_group_filter |= Q(pk=self.instance.class_group_id)
+
+            self.fields['class_group'].queryset = ClassGroup.objects.filter(
+                class_group_filter,
+                teacher=self.teacher,
+            ).distinct().order_by('name', 'year')
 
             self.fields['tags'].queryset = (
                 Tag.objects.filter(
@@ -225,9 +230,22 @@ class LessonForm(forms.ModelForm):
     def clean_class_group(self):
         class_group = self.cleaned_data.get('class_group')
 
-        if class_group and self.teacher and class_group.teacher_id != self.teacher.pk:
+        if not class_group:
+            return class_group
+
+        if self.teacher and class_group.teacher_id != self.teacher.pk:
             raise forms.ValidationError(
                 'A turma selecionada não pertence ao professor atual.'
+            )
+
+        is_current_class_group = (
+            self.instance.pk
+            and self.instance.class_group_id == class_group.pk
+        )
+
+        if not class_group.is_active and not is_current_class_group:
+            raise forms.ValidationError(
+                'Não é possível criar ou transferir uma aula para uma turma arquivada.'
             )
 
         return class_group
