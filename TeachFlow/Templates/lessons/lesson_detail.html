@@ -220,6 +220,13 @@
         </section>
     </div>
 
+    <div
+        id="exercise-update-feedback"
+        class="mb-4 hidden rounded-lg border px-4 py-3 text-sm font-medium"
+        role="status"
+        aria-live="polite"
+    ></div>
+    
     <!-- Exercícios -->
     <section class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -254,9 +261,9 @@
                                         {% if exercise.description %}<p class="mt-1 line-clamp-2 text-sm leading-6 text-gray-500">{{ exercise.description }}</p>{% endif %}
                                     </div>
 
-                                    <span class="exercise-status-badge inline-flex flex-shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors {% if exercise.id in applied_exercises %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-600{% endif %}">
-                                        <span class="exercise-status-dot h-1.5 w-1.5 rounded-full {% if exercise.id in applied_exercises %}bg-green-600{% else %}bg-gray-400{% endif %}"></span>
-                                        <span class="status-text">{% if exercise.id in applied_exercises %}Aplicado{% else %}Não aplicado{% endif %}</span>
+                                    <span data-applied-status-badge class="exercise-status-badge inline-flex flex-shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors {% if exercise.id in applied_exercises %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-600{% endif %}">
+                                        <span data-applied-status-dot class="exercise-status-dot h-1.5 w-1.5 rounded-full {% if exercise.id in applied_exercises %}bg-green-600{% else %}bg-gray-400{% endif %}"></span>
+                                        <span data-applied-status-text class="status-text">{% if exercise.id in applied_exercises %}Aplicado{% else %}Não aplicado{% endif %}</span>
                                     </span>
                                 </div>
 
