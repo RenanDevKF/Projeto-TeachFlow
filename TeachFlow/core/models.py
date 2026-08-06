@@ -1,6 +1,7 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 from django.db.models.functions import Lower
 from django.utils import timezone
 from django.contrib.admin.models import LogEntry
@@ -76,46 +77,61 @@ class Tag(models.Model):
     TYPE_CHOICES = [
         ('lesson', 'Aula'),
         ('exercise', 'Exercício'),
-        ('general', 'Geral')
+        ('general', 'Geral'),
     ]
-    
-    # Cores pré-definidas (cores Tailwind CSS)
+
     COLOR_CHOICES = [
-        ('#3B82F6', 'Azul'),       # bg-blue-500
-        ('#10B981', 'Verde'),      # bg-green-500
-        ('#F59E0B', 'Amarelo'),    # bg-yellow-500
-        ('#8B5CF6', 'Roxo'),       # bg-purple-500
-        ('#EC4899', 'Rosa'),       # bg-pink-500
-        ('#6366F1', 'Índigo'),     # bg-indigo-500
-        ('#EF4444', 'Vermelho'),   # bg-red-500
-        ('#14B8A6', 'Turquesa'),   # bg-teal-500
+        ('#3B82F6', 'Azul'),
+        ('#10B981', 'Verde'),
+        ('#F59E0B', 'Amarelo'),
+        ('#8B5CF6', 'Roxo'),
+        ('#EC4899', 'Rosa'),
+        ('#6366F1', 'Índigo'),
+        ('#EF4444', 'Vermelho'),
+        ('#14B8A6', 'Turquesa'),
     ]
-    
+
     name = models.CharField(max_length=50)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='tags')
     color = models.CharField(max_length=7, choices=COLOR_CHOICES, default='#3B82F6')
     type = models.CharField(max_length=10, choices=TYPE_CHOICES, default='general')
-    
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Ativa',
+        help_text='Indica se a tag está disponível para novas associações.',
+    )
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Tag'
+        verbose_name_plural = 'Tags'
+
     def __str__(self):
         return self.name
-    
+
     def save(self, *args, **kwargs):
         if not self.color:
-            # Atribui uma cor aleatória se não tiver definida
             self.color = random.choice(self.COLOR_CHOICES)[0]
+
         super().save(*args, **kwargs)
-        
+
     @staticmethod
     def generate_random_color():
         return random.choice([color[0] for color in Tag.COLOR_CHOICES])
 
     
 class LearningObjective(models.Model):
+    """Objetivo de aprendizagem reutilizável definido pelo professor."""
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='learning_objectives')
     tags = models.ManyToManyField(Tag, blank=True, related_name='objectives')
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Ativo',
+        help_text='Indica se o objetivo está disponível para novas associações.',
+    )
 
     class Meta:
         ordering = ['title']

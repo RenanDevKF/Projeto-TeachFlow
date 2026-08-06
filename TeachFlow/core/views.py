@@ -1059,8 +1059,7 @@ class LearningObjectiveListView(LoginRequiredMixin, TeacherRequiredMixin, ListVi
 class LearningObjectiveCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = LearningObjective
     form_class = LearningObjectiveForm
-    template_name = 'core/learning_objective_form.html'
-    success_url = reverse_lazy('objective-list')
+    template_name = 'library/objective_form.html'
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -1071,6 +1070,9 @@ class LearningObjectiveCreateView(LoginRequiredMixin, TeacherRequiredMixin, Crea
         form.instance.teacher = self.request.user.teacher_profile
         messages.success(self.request, 'Objetivo de aprendizagem criado com sucesso.')
         return super().form_valid(form)
+
+    def get_success_url(self):
+        return f"{reverse('library')}?section=objectives"
     
 @method_decorator(csrf_protect, name='dispatch')
 class QuickCreateLearningObjectiveView(LoginRequiredMixin, TeacherRequiredMixin, View):
@@ -1417,18 +1419,23 @@ class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
  
  
 @method_decorator(csrf_protect, name='dispatch')
-class TagCreateView(LoginRequiredMixin, CreateView):  # Removido TeacherRequiredMixin temporariamente
+class TagCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = Tag
-    fields = ['name', 'type', 'color']
-    template_name = 'core/tag_form.html'
-    
+    form_class = TagForm
+    template_name = 'library/tag_form.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
+
     def form_valid(self, form):
         form.instance.teacher = self.request.user.teacher_profile
-        messages.success(self.request, "Tag criada com sucesso!")
+        messages.success(self.request, 'Tag criada com sucesso.')
         return super().form_valid(form)
-    
+
     def get_success_url(self):
-        return reverse('tag_list')
+        return f"{reverse('library')}?section=tags"
 
 @method_decorator(csrf_protect, name='dispatch')    
 class TagListView(LoginRequiredMixin, ListView):  # Removido TeacherRequiredMixin temporariamente
@@ -1474,20 +1481,27 @@ class TagListView(LoginRequiredMixin, ListView):  # Removido TeacherRequiredMixi
         return context
 
 @method_decorator(csrf_protect, name='dispatch')
-class TagUpdateView(LoginRequiredMixin, UpdateView):  # Removido TeacherRequiredMixin temporariamente
+class TagUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
     model = Tag
-    fields = ['name', 'type', 'color']
-    template_name = 'core/tag_form.html'
-    
+    form_class = TagForm
+    template_name = 'library/tag_form.html'
+
     def get_queryset(self):
-        return Tag.objects.filter(teacher=self.request.user.teacher_profile)
-    
+        return Tag.objects.filter(
+            teacher=self.request.user.teacher_profile
+        )
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
+
     def form_valid(self, form):
-        messages.success(self.request, "Tag atualizada com sucesso!")
+        messages.success(self.request, 'Tag atualizada com sucesso.')
         return super().form_valid(form)
-    
+
     def get_success_url(self):
-        return reverse('tag_list')
+        return f"{reverse('library')}?section=tags"
     
 @method_decorator(csrf_protect, name='dispatch')
 class QuickCreateExerciseTagView(LoginRequiredMixin, TeacherRequiredMixin, View):

@@ -1,3 +1,4 @@
+import re
 from django import forms
 from django.db import transaction
 from django.db.models import Q
@@ -327,11 +328,20 @@ class ExerciseForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if teacher:
+            objective_filter = Q(is_active=True)
+            tag_filter = Q(is_active=True)
+
+            if self.instance.pk:
+                objective_filter |= Q(exercises=self.instance)
+                tag_filter |= Q(exercises=self.instance)
+
             self.fields['objectives'].queryset = LearningObjective.objects.filter(
-                teacher=teacher
-            ).order_by('title')
+                objective_filter,
+                teacher=teacher,
+            ).distinct().order_by('title')
 
             self.fields['tags'].queryset = Tag.objects.filter(
+                tag_filter,
                 teacher=teacher,
                 type__in=['exercise', 'general'],
             ).distinct().order_by('name')
@@ -419,7 +429,13 @@ class LearningObjectiveForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if self.teacher:
+            tag_filter = Q(is_active=True)
+
+            if self.instance.pk:
+                tag_filter |= Q(objectives=self.instance)
+
             self.fields['tags'].queryset = Tag.objects.filter(
+                tag_filter,
                 teacher=self.teacher,
                 type__in=['exercise', 'general'],
             ).distinct().order_by('name')
@@ -440,3 +456,48 @@ class LearningObjectiveForm(forms.ModelForm):
 
     def clean_description(self):
         return self.cleaned_data.get('description', '').strip()
+    
+class TagForm(forms.ModelForm):
+    class Meta:
+        model = Tag
+        fields = ['name', 'type', 'color']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Ex.: Revisão',
+                'autocomplete': 'off',
+            }),
+            'type': forms.Select(attrs={'class': 'form-select'}),
+            'color': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.teacher = kwargs.pop('teacher', None)
+        super().__init__(*args, **kwargs)
+
+    def clean_name(self):
+        name = ' '.join(self.cleaned_data.get('name', '').split())
+
+        if not name:
+            raise forms.ValidationError('Informe o nome da tag.')
+
+        if len(name) < 2:
+            raise forms.ValidationError('O nome deve possuir pelo menos 2 caracteres.')
+
+        if not re.fullmatch(r'[\w\sÀ-ÿ\-]+', name):
+            raise forms.ValidationError(
+                'Use apenas letras, números, espaços, hífens e underscores.'
+            )
+
+        tag_type = self.data.get('type') or self.instance.type or 'general'
+
+        if self.teacher and Tag.objects.filter(
+            teacher=self.teacher,
+            name__iexact=name,
+            type=tag_type,
+        ).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError(
+                'Já existe uma tag com este nome e tipo.'
+            )
+
+        return name
