@@ -42,6 +42,24 @@
 
 <!-- Formulário de aula -->
 <div class="max-w-3xl mx-auto px-6 py-2 bg-white rounded-xl shadow border border-gray-200">
+  {% if form.instance.pk and not form.instance.class_group.is_active %}
+      <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
+          <div class="flex items-start gap-3">
+              <i data-lucide="archive" class="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600"></i>
+
+              <div>
+                  <p class="text-sm font-semibold text-amber-900">
+                      Esta aula pertence a uma turma arquivada
+                  </p>
+
+                  <p class="mt-1 text-sm leading-6 text-amber-800">
+                      A turma atual permanece disponível para preservar o histórico.
+                      Você pode manter esse vínculo ou transferir a aula para uma turma ativa.
+                  </p>
+              </div>
+          </div>
+      </div>
+  {% endif %}  
   <form method="POST" class="space-y-6">
     {% csrf_token %}
     {% if is_duplicate %}
