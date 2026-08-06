@@ -475,9 +475,18 @@ class LessonUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
 class LessonDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DeleteView):
     model = Lesson
     template_name = 'lessons/lesson_confirm_delete.html'
-    
+    context_object_name = 'lesson'
+
+    def get_queryset(self):
+        return Lesson.objects.filter(
+            class_group__teacher=self.request.user.teacher_profile
+        ).select_related('class_group')
+
     def get_success_url(self):
-        return reverse_lazy('lesson-list', kwargs={'class_group_id': self.object.class_group_id})
+        return reverse(
+            'group_lessons',
+            kwargs={'class_group_id': self.object.class_group_id},
+        )
     
 @method_decorator(csrf_protect, name='dispatch')
 class DuplicateLessonView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
