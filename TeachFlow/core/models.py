@@ -74,12 +74,6 @@ class Student(models.Model):
         ordering = ['first_name','last_name']
         
 class Tag(models.Model):
-    TYPE_CHOICES = [
-        ('lesson', 'Aula'),
-        ('exercise', 'Exercício'),
-        ('general', 'Geral'),
-    ]
-
     COLOR_CHOICES = [
         ('#3B82F6', 'Azul'),
         ('#10B981', 'Verde'),
@@ -94,7 +88,6 @@ class Tag(models.Model):
     name = models.CharField(max_length=50)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='tags')
     color = models.CharField(max_length=7, choices=COLOR_CHOICES, default='#3B82F6')
-    type = models.CharField(max_length=10, choices=TYPE_CHOICES, default='general')
     is_active = models.BooleanField(
         default=True,
         verbose_name='Ativa',
@@ -105,6 +98,13 @@ class Tag(models.Model):
         ordering = ['name']
         verbose_name = 'Tag'
         verbose_name_plural = 'Tags'
+        constraints = [
+            models.UniqueConstraint(
+                Lower('name'),
+                'teacher',
+                name='unique_tag_name_per_teacher',
+            ),
+        ]
 
     def __str__(self):
         return self.name

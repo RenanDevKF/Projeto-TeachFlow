@@ -297,7 +297,6 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         exists = Tag.objects.filter(
             pk=tag_id,
             teacher=self.request.user.teacher_profile,
-            type__in=['lesson', 'general'],
             is_active=True,
         ).exists()
 
@@ -369,7 +368,7 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         context['query_string'] = query_parameters.urlencode()
 
         context['class_groups'] = ClassGroup.objects.filter(teacher=teacher).order_by('-is_active', 'name', 'year')
-        context['tags'] = Tag.objects.filter(teacher=teacher, type__in=['lesson', 'general'], is_active=True,).distinct().order_by('name')
+        context['tags'] = Tag.objects.filter(teacher=teacher, is_active=True,).distinct().order_by('name')
 
         context['upcoming_count'] = filtered_lessons.filter(status=Lesson.Status.PLANNED, date__gte=today).count()
         context['pending_count'] = filtered_lessons.filter(status=Lesson.Status.PLANNED, date__lt=today).count()
@@ -839,7 +838,6 @@ class ExerciseListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
 
         context['tags'] = Tag.objects.filter(
             teacher=teacher,
-            type__in=['exercise', 'general'],
         ).order_by('name')
 
         context['objectives'] = LearningObjective.objects.filter(
@@ -1638,7 +1636,6 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
 
     VALID_SECTIONS = {'objectives', 'tags'}
     VALID_STATUSES = {'active', 'archived', 'all'}
-    VALID_TAG_TYPES = {'lesson', 'exercise', 'general'}
 
     def get_selected_section(self):
         section = self.request.GET.get('section', 'objectives')
@@ -1651,9 +1648,6 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
     def get_search_query(self):
         return ' '.join(self.request.GET.get('q', '').split())[:100]
 
-    def get_selected_tag_type(self):
-        tag_type = self.request.GET.get('type', '')
-        return tag_type if tag_type in self.VALID_TAG_TYPES else ''
 
     def apply_status_filter(self, queryset):
         status = self.get_selected_status()
@@ -1692,13 +1686,10 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
         )
 
         search_query = self.get_search_query()
-        selected_type = self.get_selected_tag_type()
 
         if search_query:
             queryset = queryset.filter(name__icontains=search_query)
 
-        if selected_type:
-            queryset = queryset.filter(type=selected_type)
 
         return self.apply_status_filter(queryset).order_by('name')
 
@@ -1712,9 +1703,7 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
 
         context['selected_section'] = selected_section
         context['selected_status'] = self.get_selected_status()
-        context['selected_tag_type'] = self.get_selected_tag_type()
         context['search_query'] = self.get_search_query()
-        context['tag_type_choices'] = Tag.TYPE_CHOICES
 
         context['objective_active_count'] = objective_base.filter(is_active=True).count()
         context['objective_archived_count'] = objective_base.filter(is_active=False).count()
@@ -1891,8 +1880,7 @@ class QuickCreateExerciseTagView(LoginRequiredMixin, TeacherRequiredMixin, View)
         existing_tag = Tag.objects.filter(
             teacher=request.user.teacher_profile,
             name__iexact=tag_name,
-            type__in=['exercise', 'general'],
-        ).order_by('type', 'id').first()
+        ).first()
 
         if existing_tag and not existing_tag.is_active:
             return JsonResponse({
@@ -1918,7 +1906,6 @@ class QuickCreateExerciseTagView(LoginRequiredMixin, TeacherRequiredMixin, View)
         tag = Tag.objects.create(
             teacher=request.user.teacher_profile,
             name=tag_name,
-            type='exercise',
             color=Tag.generate_random_color(),
         )
 
@@ -1988,14 +1975,7 @@ class QuickAddTagView(
         tag = Tag.objects.filter(
             teacher=teacher,
             name__iexact=tag_name,
-            type__in=[
-                model_type,
-                'general',
-            ],
             is_active=True,
-        ).order_by(
-            'type',
-            'id',
         ).first()
 
         created = False
@@ -2003,7 +1983,6 @@ class QuickAddTagView(
         archived_tag_exists = Tag.objects.filter(
             teacher=teacher,
             name__iexact=tag_name,
-            type__in=[model_type, 'general'],
             is_active=False,
         ).exists()
 
@@ -2023,7 +2002,6 @@ class QuickAddTagView(
             tag = Tag.objects.create(
                 name=tag_name,
                 teacher=teacher,
-                type=model_type,
                 color=Tag.generate_random_color(),
             )
 
@@ -2059,7 +2037,6 @@ class QuickAddTagView(
                     'id': tag.pk,
                     'name': tag.name,
                     'color': tag.color,
-                    'type': tag.type,
                 },
             },
             status=201 if created else 200,

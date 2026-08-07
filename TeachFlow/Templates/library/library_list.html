@@ -231,37 +231,6 @@
                 </select>
             </div>
 
-            <!-- Tipo da tag -->
-            {% if selected_section == 'tags' %}
-                <div>
-                    <label
-                        for="library-tag-type-filter"
-                        class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
-                    >
-                        Tipo
-                    </label>
-
-                    <select
-                        id="library-tag-type-filter"
-                        name="type"
-                        class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                    >
-                        <option value="">
-                            Todos os tipos
-                        </option>
-
-                        {% for value, label in tag_type_choices %}
-                            <option
-                                value="{{ value }}"
-                                {% if selected_tag_type == value %}selected{% endif %}
-                            >
-                                {{ label }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            {% endif %}
-
             <!-- Ações -->
             <div class="flex items-end gap-2">
                 <button
@@ -633,7 +602,7 @@
             </div>
         {% else %}
             <div class="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-14 text-center">
-                {% if search_query or selected_tag_type %}
+                {% if search_query %}
                     <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
                         <i data-lucide="search-x" class="h-7 w-7 text-primary"></i>
                     </div>

@@ -218,10 +218,15 @@ class LessonForm(forms.ModelForm):
                 teacher=self.teacher,
             ).distinct().order_by('name', 'year')
 
+            tag_filter = Q(is_active=True)
+
+            if self.instance.pk:
+                tag_filter |= Q(lessons=self.instance)
+
             self.fields['tags'].queryset = (
                 Tag.objects.filter(
+                    tag_filter,
                     teacher=self.teacher,
-                    type__in=['lesson', 'general'],
                 )
                 .distinct()
                 .order_by('name')
@@ -358,10 +363,14 @@ class ExerciseForm(forms.ModelForm):
                 teacher=teacher,
             ).distinct().order_by('title')
 
+            tag_filter = Q(is_active=True)
+
+            if self.instance.pk:
+                tag_filter |= Q(exercises=self.instance)
+
             self.fields['tags'].queryset = Tag.objects.filter(
                 tag_filter,
                 teacher=teacher,
-                type__in=['exercise', 'general'],
             ).distinct().order_by('name')
 
         if self.instance.pk:
@@ -465,47 +474,49 @@ class LearningObjectiveForm(forms.ModelForm):
 class TagForm(forms.ModelForm):
     class Meta:
         model = Tag
-        fields = ['name', 'type', 'color']
+        fields = ['name', 'color']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-input',
                 'placeholder': 'Ex.: Revisão',
                 'autocomplete': 'off',
             }),
-            'type': forms.Select(attrs={'class': 'form-select'}),
-            'color': forms.Select(attrs={'class': 'form-select'}),
+            'color': forms.Select(attrs={
+                'class': 'form-select',
+            }),
         }
 
     def __init__(self, *args, **kwargs):
         self.teacher = kwargs.pop('teacher', None)
         super().__init__(*args, **kwargs)
 
-        if self.instance.pk:
-            self.fields['type'].disabled = True
-
     def clean_name(self):
-        name = ' '.join(self.cleaned_data.get('name', '').split())
+        name = ' '.join(
+            self.cleaned_data.get('name', '').split()
+        )
 
         if not name:
-            raise forms.ValidationError('Informe o nome da tag.')
+            raise forms.ValidationError(
+                'Informe o nome da tag.'
+            )
 
         if len(name) < 2:
-            raise forms.ValidationError('O nome deve possuir pelo menos 2 caracteres.')
+            raise forms.ValidationError(
+                'O nome deve possuir pelo menos 2 caracteres.'
+            )
 
         if not re.fullmatch(r'[\w\sÀ-ÿ\-]+', name):
             raise forms.ValidationError(
-                'Use apenas letras, números, espaços, hífens e underscores.'
+                'Use apenas letras, números, espaços, '
+                'hífens e underscores.'
             )
-
-        tag_type = self.data.get('type') or self.instance.type or 'general'
 
         if self.teacher and Tag.objects.filter(
             teacher=self.teacher,
             name__iexact=name,
-            type=tag_type,
         ).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError(
-                'Já existe uma tag com este nome e tipo.'
+                'Já existe uma tag com este nome.'
             )
 
         return name
