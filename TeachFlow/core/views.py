@@ -375,7 +375,16 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         context['pending_count'] = filtered_lessons.filter(status=Lesson.Status.PLANNED, date__lt=today).count()
         context['completed_count'] = filtered_lessons.filter(status=Lesson.Status.COMPLETED).count()
         context['cancelled_count'] = filtered_lessons.filter(status=Lesson.Status.CANCELLED).count()
-        context['has_any_lessons'] = Lesson.objects.filter(class_group__teacher=teacher).exists()
+        available_lessons = Lesson.objects.filter(
+            class_group__teacher=teacher
+        )
+
+        if self.class_group:
+            available_lessons = available_lessons.filter(
+                class_group=self.class_group
+            )
+
+        context['has_any_lessons'] = available_lessons.exists()
 
         if context.get('paginator'):
             context['results_count'] = context['paginator'].count

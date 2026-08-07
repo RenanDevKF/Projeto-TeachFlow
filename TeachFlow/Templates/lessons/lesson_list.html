@@ -743,17 +743,32 @@
                         </div>
 
                         <h2 class="mt-6 text-xl font-semibold text-gray-900 sm:text-2xl">
-                            Nenhuma aula cadastrada
+                            {% if is_class_group_scope %}
+                                Esta turma ainda não possui aulas
+                            {% else %}
+                                Nenhuma aula cadastrada
+                            {% endif %}
                         </h2>
 
                         <p class="mx-auto mt-4 text-sm leading-7 text-gray-600 sm:text-base">
-                            Crie sua primeira aula para começar a organizar conteúdos,
-                            exercícios e registros pedagógicos.
+                            {% if is_class_group_scope %}
+                                Crie a primeira aula de <strong>{{ class_group.name }}</strong>
+                                para começar a organizar seus conteúdos, exercícios e registros
+                                pedagógicos.
+                            {% else %}
+                                Crie sua primeira aula para começar a organizar conteúdos,
+                                exercícios e registros pedagógicos.
+                            {% endif %}
                         </p>
 
                         <p class="mx-auto mt-3 text-sm leading-7 text-gray-600 sm:text-base">
-                            Toda aula salva ficará vinculada a uma turma, a uma data de
-                            aplicação e ao seu respectivo estado.
+                            {% if is_class_group_scope %}
+                                As aulas criadas neste contexto ficarão vinculadas a esta turma
+                                e à data de aplicação escolhida.
+                            {% else %}
+                                Toda aula salva ficará vinculada a uma turma, a uma data de
+                                aplicação e ao seu respectivo estado.
+                            {% endif %}
                         </p>
 
                         <div class="mt-8 text-center">
