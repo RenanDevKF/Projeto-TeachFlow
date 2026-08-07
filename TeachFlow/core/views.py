@@ -7,7 +7,7 @@ from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Q, Case, IntegerField, Value, When, Count
+from django.db.models import Q, Case, IntegerField, Value, When, Count, Prefetch
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
@@ -393,33 +393,74 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
 
         return context
 
-@method_decorator(csrf_protect, name='dispatch')
 class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView):
     model = Lesson
     template_name = 'lessons/lesson_detail.html'
     context_object_name = 'lesson'
 
     def get_queryset(self):
-        return Lesson.objects.filter(class_group__teacher=self.request.user.teacher_profile).select_related(
-            'class_group',
-        ).prefetch_related(
-            'tags',
-            'exercises__tags',
-            'exercises__objectives',
+        lesson_exercises = LessonExercise.objects.only(
+            'id',
+            'lesson_id',
+            'exercise_id',
+            'is_applied',
+        ).order_by('id')
+
+        return (
+            Lesson.objects
+            .filter(
+                class_group__teacher=self.request.user.teacher_profile
+            )
+            .select_related('class_group')
+            .prefetch_related(
+                'tags',
+                'exercises__tags',
+                'exercises__objectives',
+                Prefetch(
+                    'lesson_exercises',
+                    queryset=lesson_exercises,
+                ),
+            )
         )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        applied_exercises = list(self.object.lesson_exercises.filter(is_applied=True).values_list('exercise_id', flat=True))
+        lesson_exercises = list(
+            self.object.lesson_exercises.all()
+        )
+
+        applied_exercises = [
+            lesson_exercise.exercise_id
+            for lesson_exercise in lesson_exercises
+            if lesson_exercise.is_applied
+        ]
 
         applied_exercises_count = len(applied_exercises)
-        total_exercises_count = self.object.lesson_exercises.count()
-        applied_exercises_percentage = round((applied_exercises_count / total_exercises_count) * 100) if total_exercises_count else 0
-        lesson_objectives = LearningObjective.objects.filter(
-            teacher=self.request.user.teacher_profile,
-            exercises__lessons=self.object,
-        ).distinct().order_by('title')
+        total_exercises_count = len(lesson_exercises)
+
+        applied_exercises_percentage = (
+            round(
+                (
+                    applied_exercises_count
+                    / total_exercises_count
+                )
+                * 100
+            )
+            if total_exercises_count
+            else 0
+        )
+
+        lesson_objectives_by_id = {
+            objective.pk: objective
+            for exercise in self.object.exercises.all()
+            for objective in exercise.objectives.all()
+        }
+
+        lesson_objectives = sorted(
+            lesson_objectives_by_id.values(),
+            key=lambda objective: objective.title.casefold(),
+        )
 
         context['today'] = timezone.localdate()
         context['applied_exercises'] = applied_exercises
