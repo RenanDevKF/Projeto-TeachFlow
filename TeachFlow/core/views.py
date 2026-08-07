@@ -13,7 +13,7 @@ from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, Http404, HttpResponseRedirect
 from datetime import date
-from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea, LessonExercise
+from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, LessonExercise
 from .forms import *
 from django.utils import timezone
 from datetime import date
@@ -1381,38 +1381,6 @@ class QuickCreateLearningObjectiveView(LoginRequiredMixin, TeacherRequiredMixin,
             },
         }, status=201)
     
-# Future Ideas Views
-@method_decorator(csrf_protect, name='dispatch')
-class FutureIdeaListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
-    model = FutureIdea
-    template_name = 'core/future_idea_list.html'
-    context_object_name = 'ideas'
-    
-    def get_queryset(self):
-        return FutureIdea.objects.filter(teacher=self.request.user.teacher_profile)
-
-
-@method_decorator(csrf_protect, name='dispatch')
-class FutureIdeaCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
-    model = FutureIdea
-    template_name = 'core/future_idea_form.html'
-    fields = ['title', 'description', 'class_group', 'tags']
-    success_url = reverse_lazy('idea-list')
-    
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        # Limit class group choices to only those owned by this teacher
-        form.fields['class_group'].queryset = ClassGroup.objects.filter(
-            teacher=self.request.user.teacher_profile
-        )
-        return form
-    
-    def form_valid(self, form):
-        form.instance.teacher = self.request.user.teacher_profile
-        messages.success(self.request, "Future idea created successfully!")
-        return super().form_valid(form)
-    
-
 # Student Views
 @method_decorator(csrf_protect, name='dispatch')
 class StudentListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):

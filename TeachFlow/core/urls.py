@@ -71,10 +71,6 @@ urlpatterns = [
     path('tags/add/<str:model_type>/<int:model_id>/', views.QuickAddTagView.as_view(), name='quick_add_tag'),
     path('tags/quick-create/exercise/', views.QuickCreateExerciseTagView.as_view(), name='quick_create_exercise_tag'),    
     
-    # Future Ideas URLs
-    path('ideas/', views.FutureIdeaListView.as_view(), name='idea-list'),
-    path('ideas/new/', views.FutureIdeaCreateView.as_view(), name='idea-create'),
-    
     path('dashboard/', views.dashboard_view, name='dashboard'),
     
     
