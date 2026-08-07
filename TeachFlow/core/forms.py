@@ -480,6 +480,9 @@ class TagForm(forms.ModelForm):
         self.teacher = kwargs.pop('teacher', None)
         super().__init__(*args, **kwargs)
 
+        if self.instance.pk:
+            self.fields['type'].disabled = True
+
     def clean_name(self):
         name = ' '.join(self.cleaned_data.get('name', '').split())
 
