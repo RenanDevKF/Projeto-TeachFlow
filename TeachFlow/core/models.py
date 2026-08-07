@@ -1,5 +1,7 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 from django.db.models.functions import Lower
 from django.utils import timezone
 from django.contrib.admin.models import LogEntry
@@ -75,66 +77,102 @@ class Tag(models.Model):
     TYPE_CHOICES = [
         ('lesson', 'Aula'),
         ('exercise', 'Exercício'),
-        ('general', 'Geral')
+        ('general', 'Geral'),
     ]
-    
-    # Cores pré-definidas (cores Tailwind CSS)
+
     COLOR_CHOICES = [
-        ('#3B82F6', 'Azul'),       # bg-blue-500
-        ('#10B981', 'Verde'),      # bg-green-500
-        ('#F59E0B', 'Amarelo'),    # bg-yellow-500
-        ('#8B5CF6', 'Roxo'),       # bg-purple-500
-        ('#EC4899', 'Rosa'),       # bg-pink-500
-        ('#6366F1', 'Índigo'),     # bg-indigo-500
-        ('#EF4444', 'Vermelho'),   # bg-red-500
-        ('#14B8A6', 'Turquesa'),   # bg-teal-500
+        ('#3B82F6', 'Azul'),
+        ('#10B981', 'Verde'),
+        ('#F59E0B', 'Amarelo'),
+        ('#8B5CF6', 'Roxo'),
+        ('#EC4899', 'Rosa'),
+        ('#6366F1', 'Índigo'),
+        ('#EF4444', 'Vermelho'),
+        ('#14B8A6', 'Turquesa'),
     ]
-    
+
     name = models.CharField(max_length=50)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='tags')
     color = models.CharField(max_length=7, choices=COLOR_CHOICES, default='#3B82F6')
     type = models.CharField(max_length=10, choices=TYPE_CHOICES, default='general')
-    
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Ativa',
+        help_text='Indica se a tag está disponível para novas associações.',
+    )
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Tag'
+        verbose_name_plural = 'Tags'
+
     def __str__(self):
         return self.name
-    
+
     def save(self, *args, **kwargs):
         if not self.color:
-            # Atribui uma cor aleatória se não tiver definida
             self.color = random.choice(self.COLOR_CHOICES)[0]
+
         super().save(*args, **kwargs)
-        
+
     @staticmethod
     def generate_random_color():
         return random.choice([color[0] for color in Tag.COLOR_CHOICES])
 
     
 class LearningObjective(models.Model):
-    """Learning objectives defined by curriculum or teacher"""
+    """Objetivo de aprendizagem reutilizável definido pelo professor."""
+
     title = models.CharField(max_length=200)
-    description = models.TextField()
+    description = models.TextField(blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='learning_objectives')
-    tags = models.ManyToManyField(Tag, blank=True, related_name='objectives')
-    
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Ativo',
+        help_text='Indica se o objetivo está disponível para novas associações.',
+    )
+
+    class Meta:
+        ordering = ['title']
+        verbose_name = 'Objetivo de aprendizagem'
+        verbose_name_plural = 'Objetivos de aprendizagem'
+
     def __str__(self):
         return self.title
     
 class Lesson(models.Model):
-    """Represents a lesson taught to a class group"""
+    
+    class Status(models.TextChoices):
+        PLANNED = 'planned', 'Planejada'
+        COMPLETED = 'completed', 'Realizada'
+        CANCELLED = 'cancelled', 'Cancelada'
+
     class_group = models.ForeignKey(ClassGroup, on_delete=models.CASCADE, related_name='lessons')
-    date = models.DateField()
+    date = models.DateField(verbose_name='Data de aplicação')
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PLANNED, verbose_name='Status')
     title = models.CharField(max_length=200)
     content = models.TextField()
     performance_notes = models.TextField(blank=True)
-    exercises = models.ManyToManyField('Exercise', blank=True, related_name='lessons')
-    objectives = models.ManyToManyField(LearningObjective, blank=True, related_name='lessons')
+    exercises = models.ManyToManyField(
+        'Exercise',
+        through='LessonExercise',
+        through_fields=('lesson', 'exercise'),
+        blank=True,
+        related_name='lessons',
+    )
     tags = models.ManyToManyField(Tag, blank=True, related_name='lessons')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
+    def clean(self):
+        super().clean()
+
+        if self.status == self.Status.COMPLETED and self.date and self.date > timezone.localdate():
+            raise ValidationError({'date': 'Uma aula realizada não pode possuir data de aplicação futura.'})
+
     def __str__(self):
-        return f"{self.title} - {self.date}"
-    
+        return f'{self.title} - {self.date}'
+
     class Meta:
         ordering = ['-date']
         
@@ -177,6 +215,66 @@ class Exercise(models.Model):
     
     def __str__(self):
         return self.title
+    
+class LessonExercise(models.Model):
+    """
+    Representa o vínculo entre uma aula e um exercício.
+
+    O vínculo armazena informações específicas sobre a utilização
+    do exercício naquela aula, começando pelo estado de aplicação.
+    """
+
+    lesson = models.ForeignKey(
+        Lesson,
+        on_delete=models.CASCADE,
+        related_name='lesson_exercises',
+        verbose_name='Aula',
+    )
+
+    exercise = models.ForeignKey(
+        Exercise,
+        on_delete=models.PROTECT,
+        related_name='lesson_exercises',
+        verbose_name='Exercício',
+    )
+
+    is_applied = models.BooleanField(
+        default=False,
+        verbose_name='Aplicado',
+        help_text=(
+            'Indica se o exercício foi efetivamente aplicado nesta aula.'
+        ),
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Criado em',
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Atualizado em',
+    )
+
+    class Meta:
+        ordering = [
+            'lesson',
+            'id',
+        ]
+        verbose_name = 'Exercício da aula'
+        verbose_name_plural = 'Exercícios da aula'
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'lesson',
+                    'exercise',
+                ],
+                name='unique_lesson_exercise',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.lesson} — {self.exercise}'
     
 class FutureIdea(models.Model):
     """Storage for future lesson ideas and notes"""

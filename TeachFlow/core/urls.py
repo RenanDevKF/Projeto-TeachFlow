@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 
 urlpatterns = [
@@ -41,9 +42,34 @@ urlpatterns = [
     path('exercises/<int:pk>/restore/', views.ExerciseRestoreView.as_view(), name='exercise_restore',),
     path('exercises/<int:pk>/delete/', views.ExerciseDeleteView.as_view(), name='exercise_delete'),
     
-    # Learning Objective URLs
-    path('objectives/', views.LearningObjectiveListView.as_view(), name='objective-list'),
+    path('library/', views.LibraryView.as_view(), name='library'),
+    
+    # Biblioteca — Objetivos
     path('objectives/new/', views.LearningObjectiveCreateView.as_view(), name='objective-create'),
+    path('objectives/<int:pk>/edit/', views.LearningObjectiveUpdateView.as_view(), name='objective-update'),
+    path('objectives/<int:pk>/archive/', views.LearningObjectiveArchiveView.as_view(), name='objective-archive'),
+    path('objectives/<int:pk>/restore/', views.LearningObjectiveRestoreView.as_view(), name='objective-restore'),
+    path('objectives/<int:pk>/delete/', views.LearningObjectiveDeleteView.as_view(), name='objective-delete'),
+    path('objectives/quick-create/', views.QuickCreateLearningObjectiveView.as_view(), name='quick_create_objective'),
+    
+    path(
+        'tags/',
+        RedirectView.as_view(
+            pattern_name='library',
+            permanent=False,
+            query_string=True,
+        ),
+        name='tag_list',
+    ),
+    
+    # Biblioteca — Tags
+    path('tags/new/', views.TagCreateView.as_view(), name='tag_form'),
+    path('tags/<int:pk>/edit/', views.TagUpdateView.as_view(), name='tag_update'),
+    path('tags/<int:pk>/archive/', views.TagArchiveView.as_view(), name='tag_archive'),
+    path('tags/<int:pk>/restore/', views.TagRestoreView.as_view(), name='tag_restore'),
+    path('tags/<int:pk>/delete/', views.TagDeleteView.as_view(), name='tag_delete'),
+    path('tags/add/<str:model_type>/<int:model_id>/', views.QuickAddTagView.as_view(), name='quick_add_tag'),
+    path('tags/quick-create/exercise/', views.QuickCreateExerciseTagView.as_view(), name='quick_create_exercise_tag'),    
     
     # Future Ideas URLs
     path('ideas/', views.FutureIdeaListView.as_view(), name='idea-list'),
@@ -51,13 +77,5 @@ urlpatterns = [
     
     path('dashboard/', views.dashboard_view, name='dashboard'),
     
-    # Tags
-    path('tags/', views.TagListView.as_view(), name='tag_list'),
-    path('tags/new/', views.TagCreateView.as_view(), name='tag_form'),
-    path('tags/<int:pk>/edit/', views.TagUpdateView.as_view(), name='tag_update'),
-    path('tags/add/<str:model_type>/<int:model_id>/', views.QuickAddTagView.as_view(), name='quick_add_tag'),
-    
-    # API para verificar se tag existe (se ainda for necessário)
-    path('api/check-tag/', views.CheckTagAPIView.as_view(), name='check_tag_api'),
     
 ]

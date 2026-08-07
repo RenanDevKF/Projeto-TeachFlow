@@ -1,5 +1,5 @@
 from django.template import context
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -7,17 +7,16 @@ from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Q, Case, IntegerField, Value, When
+from django.db.models import Q, Case, IntegerField, Value, When, Count, Prefetch
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_protect, csrf_exempt
+from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, Http404, HttpResponseRedirect
 from datetime import date
-from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea
+from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea, LessonExercise
 from .forms import *
 from django.utils import timezone
 from datetime import date
-from collections import defaultdict
 import json
 import re
 
@@ -247,7 +246,6 @@ class ClassGroupDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRe
         messages.success(request, "Turma excluída com sucesso.")
         return super().delete(request, *args, **kwargs)
     
-# Lesson Views
 @method_decorator(csrf_protect, name='dispatch')
 class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     model = Lesson
@@ -255,68 +253,223 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
     context_object_name = 'lessons'
     paginate_by = 10
 
-    def get_queryset(self):
-        queryset = Lesson.objects.filter(
-            class_group__teacher=self.request.user.teacher_profile
-        ).select_related('class_group').prefetch_related('tags')
-        
-        # Filtros
-        class_group_id = self.request.GET.get('class')
-        tag_id = self.request.GET.get('tag')
-        date_filter = self.request.GET.get('date')
-        
+    VALID_SECTIONS = {'upcoming', 'pending', 'completed', 'cancelled'}
+
+    def dispatch(self, request, *args, **kwargs):
+        self.class_group = None
+        class_group_id = self.kwargs.get('class_group_id')
+
         if class_group_id:
-            queryset = queryset.filter(class_group_id=class_group_id)
-        
-        if tag_id:
+            self.class_group = get_object_or_404(ClassGroup, pk=class_group_id, teacher=request.user.teacher_profile)
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_selected_section(self):
+        section = self.request.GET.get('section', 'upcoming')
+
+        if section not in self.VALID_SECTIONS:
+            return 'upcoming'
+
+        return section
+
+    def get_selected_class_group(self):
+        if self.class_group:
+            return str(self.class_group.pk)
+
+        class_group_id = self.request.GET.get('class', '')
+
+        if not class_group_id.isdigit():
+            return ''
+
+        exists = ClassGroup.objects.filter(
+            pk=class_group_id,
+            teacher=self.request.user.teacher_profile,
+        ).exists()
+
+        return class_group_id if exists else ''
+    
+    def get_selected_tag(self):
+        tag_id = self.request.GET.get('tag', '')
+
+        if not tag_id.isdigit():
+            return ''
+
+        exists = Tag.objects.filter(
+            pk=tag_id,
+            teacher=self.request.user.teacher_profile,
+            type__in=['lesson', 'general'],
+            is_active=True,
+        ).exists()
+
+        return tag_id if exists else ''
+
+    def get_filtered_queryset(self):
+        teacher = self.request.user.teacher_profile
+        queryset = Lesson.objects.filter(class_group__teacher=teacher).select_related('class_group').prefetch_related('tags')
+
+        if self.class_group:
+            queryset = queryset.filter(class_group=self.class_group)
+        else:
+            selected_class_group = self.get_selected_class_group()
+
+            if selected_class_group:
+                queryset = queryset.filter(class_group_id=selected_class_group)
+
+        tag_id = self.get_selected_tag()
+        date_filter = self.request.GET.get('date', '')
+
+        if tag_id.isdigit():
             queryset = queryset.filter(tags__id=tag_id)
-        
+
         if date_filter:
             queryset = queryset.filter(date=date_filter)
-        
-        return queryset.order_by('date', 'title')
+
+        return queryset.distinct()
+
+    def get_queryset(self):
+        queryset = self.get_filtered_queryset()
+        section = self.get_selected_section()
+        today = timezone.localdate()
+
+        if section == 'upcoming':
+            queryset = queryset.filter(status=Lesson.Status.PLANNED, date__gte=today).order_by('date', 'title', 'id')
+        elif section == 'pending':
+            queryset = queryset.filter(status=Lesson.Status.PLANNED, date__lt=today).order_by('-date', 'title', 'id')
+        elif section == 'completed':
+            queryset = queryset.filter(status=Lesson.Status.COMPLETED).order_by('-date', 'title', 'id')
+        else:
+            queryset = queryset.filter(status=Lesson.Status.CANCELLED).order_by('-date', 'title', 'id')
+
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         teacher = self.request.user.teacher_profile
-        
-        # Filtros para o template
-        context['class_groups'] = ClassGroup.objects.filter(teacher=teacher)
-        context['tags'] = Tag.objects.filter(teacher=teacher)
-        
-        # Separar aulas por data
-        today = date.today()
-        all_lessons = self.get_queryset()
-        
-        # Aulas futuras (ordenadas da mais próxima para a mais distante)
-        future_lessons = all_lessons.filter(date__gte=today).order_by('date', 'title')
-        
-        # Aulas passadas (ordenadas da mais recente para a mais antiga)
-        past_lessons = all_lessons.filter(date__lt=today).order_by('-date', 'title')
-        
-        context['future_lessons'] = future_lessons
-        context['past_lessons'] = past_lessons
+        today = timezone.localdate()
+        filtered_lessons = self.get_filtered_queryset()
+
+        query_parameters = self.request.GET.copy()
+        query_parameters.pop('page', None)
+
+        context['class_group'] = self.class_group
+        context['is_class_group_scope'] = self.class_group is not None
+        context['selected_section'] = self.get_selected_section()
+        context['selected_class_group'] = self.get_selected_class_group()
+        context['selected_tag'] = self.get_selected_tag()
+        context['selected_date'] = self.request.GET.get('date', '')
+        context['has_active_filters'] = bool(
+            context['selected_tag']
+            or context['selected_date']
+            or (
+                context['selected_class_group']
+                and not context['is_class_group_scope']
+            )
+        )
         context['today'] = today
-        
+        context['query_string'] = query_parameters.urlencode()
+
+        context['class_groups'] = ClassGroup.objects.filter(teacher=teacher).order_by('-is_active', 'name', 'year')
+        context['tags'] = Tag.objects.filter(teacher=teacher, type__in=['lesson', 'general'], is_active=True,).distinct().order_by('name')
+
+        context['upcoming_count'] = filtered_lessons.filter(status=Lesson.Status.PLANNED, date__gte=today).count()
+        context['pending_count'] = filtered_lessons.filter(status=Lesson.Status.PLANNED, date__lt=today).count()
+        context['completed_count'] = filtered_lessons.filter(status=Lesson.Status.COMPLETED).count()
+        context['cancelled_count'] = filtered_lessons.filter(status=Lesson.Status.CANCELLED).count()
+        available_lessons = Lesson.objects.filter(
+            class_group__teacher=teacher
+        )
+
+        if self.class_group:
+            available_lessons = available_lessons.filter(
+                class_group=self.class_group
+            )
+
+        context['has_any_lessons'] = available_lessons.exists()
+
+        if context.get('paginator'):
+            context['results_count'] = context['paginator'].count
+        else:
+            context['results_count'] = len(context['lessons'])
+
         return context
 
-# Suas outras views permanecem iguais...
-@method_decorator(csrf_protect, name='dispatch')
 class LessonDetailView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DetailView):
     model = Lesson
     template_name = 'lessons/lesson_detail.html'
     context_object_name = 'lesson'
-    
+
+    def get_queryset(self):
+        lesson_exercises = LessonExercise.objects.only(
+            'id',
+            'lesson_id',
+            'exercise_id',
+            'is_applied',
+        ).order_by('id')
+
+        return (
+            Lesson.objects
+            .filter(
+                class_group__teacher=self.request.user.teacher_profile
+            )
+            .select_related('class_group')
+            .prefetch_related(
+                'tags',
+                'exercises__tags',
+                'exercises__objectives',
+                Prefetch(
+                    'lesson_exercises',
+                    queryset=lesson_exercises,
+                ),
+            )
+        )
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        # Adicionar informações sobre exercícios aplicados
-        applied_exercises_key = f'applied_exercises_lesson_{self.object.id}'
-        applied_exercises = self.request.session.get(applied_exercises_key, [])
-        context['applied_exercises'] = applied_exercises
-        
-        return context
 
+        lesson_exercises = list(
+            self.object.lesson_exercises.all()
+        )
+
+        applied_exercises = [
+            lesson_exercise.exercise_id
+            for lesson_exercise in lesson_exercises
+            if lesson_exercise.is_applied
+        ]
+
+        applied_exercises_count = len(applied_exercises)
+        total_exercises_count = len(lesson_exercises)
+
+        applied_exercises_percentage = (
+            round(
+                (
+                    applied_exercises_count
+                    / total_exercises_count
+                )
+                * 100
+            )
+            if total_exercises_count
+            else 0
+        )
+
+        lesson_objectives_by_id = {
+            objective.pk: objective
+            for exercise in self.object.exercises.all()
+            for objective in exercise.objectives.all()
+        }
+
+        lesson_objectives = sorted(
+            lesson_objectives_by_id.values(),
+            key=lambda objective: objective.title.casefold(),
+        )
+
+        context['today'] = timezone.localdate()
+        context['applied_exercises'] = applied_exercises
+        context['applied_exercises_count'] = applied_exercises_count
+        context['total_exercises_count'] = total_exercises_count
+        context['applied_exercises_percentage'] = applied_exercises_percentage
+        context['lesson_objectives'] = lesson_objectives
+
+        return context
 
 @method_decorator(csrf_protect, name='dispatch')
 class LessonCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
@@ -331,7 +484,16 @@ class LessonCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        messages.success(self.request, "Aula criada com sucesso!")
+
+        messages.success(
+            self.request,
+            {
+                Lesson.Status.PLANNED: 'Aula planejada com sucesso.',
+                Lesson.Status.COMPLETED: 'Aula registrada como realizada com sucesso.',
+                Lesson.Status.CANCELLED: 'Aula cancelada com sucesso.',
+            }[self.object.status]
+        )
+
         return response
 
     def get_success_url(self):
@@ -357,6 +519,20 @@ class LessonUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
         kwargs['teacher'] = self.request.user.teacher_profile
         return kwargs
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+
+        messages.success(
+            self.request,
+            {
+                Lesson.Status.PLANNED: 'Aula salva como planejada.',
+                Lesson.Status.COMPLETED: 'Aula registrada como realizada.',
+                Lesson.Status.CANCELLED: 'Aula registrada como cancelada.',
+            }[self.object.status]
+        )
+
+        return response
+
     def get_success_url(self):
         return reverse('lesson_detail', kwargs={'pk': self.object.pk})
     
@@ -373,63 +549,152 @@ class LessonUpdateView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequir
 class LessonDeleteView(LoginRequiredMixin, TeacherRequiredMixin, OwnershipRequiredMixin, DeleteView):
     model = Lesson
     template_name = 'lessons/lesson_confirm_delete.html'
-    
+    context_object_name = 'lesson'
+
+    def get_queryset(self):
+        return Lesson.objects.filter(
+            class_group__teacher=self.request.user.teacher_profile
+        ).select_related('class_group')
+
     def get_success_url(self):
-        return reverse_lazy('lesson-list', kwargs={'class_group_id': self.object.class_group_id})
+        return reverse(
+            'group_lessons',
+            kwargs={'class_group_id': self.object.class_group_id},
+        )
     
 @method_decorator(csrf_protect, name='dispatch')
-class DuplicateLessonView(LoginRequiredMixin, TeacherRequiredMixin, View):
-    def get(self, request, pk):
-        original_lesson = get_object_or_404(
-            Lesson, 
-            pk=pk, 
-            class_group__teacher=request.user.teacher_profile
-        )
-        
-        new_lesson = Lesson.objects.create(
-            title=f"Cópia de {original_lesson.title}",
-            date=original_lesson.date,
-            content=original_lesson.content,
-            performance_notes=original_lesson.performance_notes,
-            class_group=original_lesson.class_group,
-        )
-        
-        # Copia relacionamentos ManyToMany
-        new_lesson.tags.set(original_lesson.tags.all())
-        new_lesson.objectives.set(original_lesson.objectives.all())
-        
-        # Copia exercícios (se necessário)
-        for exercise in original_lesson.exercises.all():
-            Exercise.objects.create(
-                lesson=new_lesson,
-                title=exercise.title,
-                description=exercise.description,
-                duration=exercise.duration,
-                materials=exercise.materials
+class DuplicateLessonView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
+    model = Lesson
+    form_class = LessonForm
+    template_name = 'lessons/lesson_form.html'
+
+    def get_source_lesson(self):
+        if not hasattr(self, '_source_lesson'):
+            self._source_lesson = get_object_or_404(
+                Lesson.objects.select_related('class_group').prefetch_related(
+                    'tags',
+                    'exercises',
+                ),
+                pk=self.kwargs['pk'],
+                class_group__teacher=self.request.user.teacher_profile,
             )
-        
-        messages.success(request, "Aula duplicada com sucesso!")
-        return redirect('lesson_update', pk=new_lesson.pk)
+
+        return self._source_lesson
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
+
+    def get_initial(self):
+        source_lesson = self.get_source_lesson()
+
+        return {
+            'title': f'Cópia de {source_lesson.title}',
+            'content': source_lesson.content,
+            'performance_notes': '',
+            'exercises': list(source_lesson.exercises.values_list('pk', flat=True)),
+            'tags': list(source_lesson.tags.values_list('pk', flat=True)),
+            'submission_status': Lesson.Status.PLANNED,
+        }
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_duplicate'] = True
+        context['duplicate_source'] = self.get_source_lesson()
+        return context
+
+    @transaction.atomic
+    def form_valid(self, form):
+        response = super().form_valid(form)
+
+        messages.success(
+            self.request,
+            'Aula criada a partir da original. A turma, a data e os estados de aplicação foram definidos para esta nova aula.',
+        )
+
+        return response
+
+    def get_success_url(self):
+        return reverse('lesson_detail', kwargs={'pk': self.object.pk})
     
 # Exercise Views
 @method_decorator(csrf_protect, name='dispatch')
 class ExerciseCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = Exercise
-    form_class = ExerciseForm  # Usando o formulário personalizado
+    form_class = ExerciseForm
     template_name = 'exercises/exercise_form.html'
-    
+
+    def get_source_lesson(self):
+        if hasattr(self, '_source_lesson'):
+            return self._source_lesson
+
+        lesson_id = self.request.GET.get('lesson', '').strip()
+
+        if not lesson_id:
+            self._source_lesson = None
+            return None
+
+        if not lesson_id.isdigit():
+            raise Http404('Aula não encontrada.')
+
+        self._source_lesson = get_object_or_404(
+            Lesson.objects.select_related('class_group'),
+            pk=lesson_id,
+            class_group__teacher=self.request.user.teacher_profile,
+        )
+
+        return self._source_lesson
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['teacher'] = self.request.user.teacher_profile
         return kwargs
-    
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['source_lesson'] = self.get_source_lesson()
+        context['is_lesson_context'] = context['source_lesson'] is not None
+        return context
+
+    @transaction.atomic
     def form_valid(self, form):
+        source_lesson = self.get_source_lesson()
         form.instance.created_by = self.request.user.teacher_profile
-        messages.success(self.request, "Exercício criado com sucesso!")
-        return super().form_valid(form)
-    
+
+        if source_lesson:
+            form.instance.is_template = False
+
+        response = super().form_valid(form)
+
+        if source_lesson:
+            LessonExercise.objects.get_or_create(
+                lesson=source_lesson,
+                exercise=self.object,
+                defaults={'is_applied': False},
+            )
+
+            messages.success(
+                self.request,
+                'Exercício criado e adicionado à aula com sucesso.',
+            )
+        else:
+            messages.success(
+                self.request,
+                'Exercício criado com sucesso.',
+            )
+
+        return response
+
     def get_success_url(self):
-        # Redireciona de volta à lista de exercícios
+        source_lesson = self.get_source_lesson()
+
+        if source_lesson:
+            return reverse(
+                'lesson_detail',
+                kwargs={'pk': source_lesson.pk},
+            )
+
         return reverse('exercise_list')
     
 @method_decorator(csrf_protect, name='dispatch')
@@ -856,60 +1121,68 @@ class ExerciseDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
 @login_required
 def toggle_exercise_applied(request, lesson_id, exercise_id):
     """
-    Marca/desmarca um exercício como aplicado em uma aula específica
+    Atualiza o estado de aplicação de um exercício já vinculado à aula.
     """
     try:
-        # Verificar se o professor tem acesso à aula
-        lesson = get_object_or_404(
-            Lesson, 
-            pk=lesson_id, 
-            class_group__teacher=request.user.teacher_profile
-        )
-        
-        # Verificar se o exercício existe e está relacionado à aula
-        exercise = get_object_or_404(Exercise, pk=exercise_id)
-        
-        # Verificar se o exercício já está na aula
-        if exercise in lesson.exercises.all():
-            # Se já está, verificar se está marcado como aplicado
-            # Vamos usar um campo personalizado ou relacionamento
-            # Primeiro, vamos verificar se existe um modelo intermediário
-            
-            # Como não há um modelo intermediário explícito, vamos usar
-            # a abordagem de adicionar/remover da lista de exercícios aplicados
-            
-            # Vamos criar um campo separado para exercícios aplicados
-            # Por enquanto, usando a abordagem com session ou cache
-            
-            applied_exercises_key = f'applied_exercises_lesson_{lesson_id}'
-            applied_exercises = request.session.get(applied_exercises_key, [])
-            
-            if exercise_id in applied_exercises:
-                applied_exercises.remove(exercise_id)
-                is_applied = False
-            else:
-                applied_exercises.append(exercise_id)
-                is_applied = True
-                
-            request.session[applied_exercises_key] = applied_exercises
-            request.session.modified = True
-            
-            return JsonResponse({
-                'success': True,
-                'is_applied': is_applied,
-                'message': 'Exercício marcado como aplicado' if is_applied else 'Exercício desmarcado'
-            })
-        else:
-            return JsonResponse({
-                'success': False,
-                'message': 'Exercício não está relacionado a esta aula'
-            })
-            
-    except Exception as e:
+        teacher = request.user.teacher_profile
+    except AttributeError:
         return JsonResponse({
             'success': False,
-            'message': f'Erro ao processar solicitação: {str(e)}'
-        })
+            'message': 'Perfil de professor não encontrado.',
+        }, status=403)
+
+    lesson_exercise = get_object_or_404(
+        LessonExercise.objects.select_related('lesson', 'exercise'),
+        lesson_id=lesson_id,
+        exercise_id=exercise_id,
+        lesson__class_group__teacher=teacher,
+    )
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({
+            'success': False,
+            'message': 'Dados da requisição inválidos.',
+        }, status=400)
+
+    is_applied = data.get('is_applied')
+
+    if not isinstance(is_applied, bool):
+        return JsonResponse({
+            'success': False,
+            'message': 'O estado de aplicação deve ser verdadeiro ou falso.',
+        }, status=400)
+
+    if lesson_exercise.is_applied != is_applied:
+        lesson_exercise.is_applied = is_applied
+        lesson_exercise.save(update_fields=['is_applied', 'updated_at'])
+
+    applied_count = LessonExercise.objects.filter(
+        lesson_id=lesson_id,
+        is_applied=True,
+    ).count()
+
+    total_count = LessonExercise.objects.filter(
+        lesson_id=lesson_id,
+    ).count()
+
+    percentage = round(
+        (applied_count / total_count) * 100
+    ) if total_count else 0
+
+    return JsonResponse({
+        'success': True,
+        'is_applied': lesson_exercise.is_applied,
+        'applied_count': applied_count,
+        'total_count': total_count,
+        'percentage': percentage,
+        'message': (
+            'Exercício marcado como aplicado.'
+            if lesson_exercise.is_applied
+            else 'Exercício marcado como não aplicado.'
+        ),
+    })
     
 # Learning Objective Views
 @method_decorator(csrf_protect, name='dispatch')
@@ -925,14 +1198,188 @@ class LearningObjectiveListView(LoginRequiredMixin, TeacherRequiredMixin, ListVi
 @method_decorator(csrf_protect, name='dispatch')
 class LearningObjectiveCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
     model = LearningObjective
-    template_name = 'core/learning_objective_form.html'
-    fields = ['title', 'description', 'tags']
-    success_url = reverse_lazy('objective-list')
-    
+    form_class = LearningObjectiveForm
+    template_name = 'library/objective_form.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
+
     def form_valid(self, form):
         form.instance.teacher = self.request.user.teacher_profile
-        messages.success(self.request, "Learning objective created successfully!")
+        messages.success(self.request, 'Objetivo de aprendizagem criado com sucesso.')
         return super().form_valid(form)
+
+    def get_success_url(self):
+        return f"{reverse('library')}?section=objectives"
+
+@method_decorator(csrf_protect, name='dispatch')
+class LearningObjectiveUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
+    model = LearningObjective
+    form_class = LearningObjectiveForm
+    template_name = 'library/objective_form.html'
+
+    def get_queryset(self):
+        return LearningObjective.objects.filter(
+            teacher=self.request.user.teacher_profile
+        )
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            'Objetivo de aprendizagem atualizado com sucesso.',
+        )
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return f"{reverse('library')}?section=objectives"
+    
+@method_decorator(csrf_protect, name='dispatch')
+class LearningObjectiveArchiveView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    def post(self, request, pk):
+        objective = get_object_or_404(
+            LearningObjective,
+            pk=pk,
+            teacher=request.user.teacher_profile,
+        )
+
+        if not objective.is_active:
+            messages.info(request, 'Este objetivo já está arquivado.')
+        else:
+            objective.is_active = False
+            objective.save(update_fields=['is_active'])
+            messages.success(
+                request,
+                'Objetivo arquivado. Ele continuará preservado nos exercícios anteriores.',
+            )
+
+        return redirect(f"{reverse('library')}?section=objectives&status=archived")
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class LearningObjectiveRestoreView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    def post(self, request, pk):
+        objective = get_object_or_404(
+            LearningObjective,
+            pk=pk,
+            teacher=request.user.teacher_profile,
+        )
+
+        if objective.is_active:
+            messages.info(request, 'Este objetivo já está ativo.')
+        else:
+            objective.is_active = True
+            objective.save(update_fields=['is_active'])
+            messages.success(request, 'Objetivo reativado com sucesso.')
+
+        return redirect(f"{reverse('library')}?section=objectives")
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class LearningObjectiveDeleteView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    @transaction.atomic
+    def post(self, request, pk):
+        objective = get_object_or_404(
+            LearningObjective.objects.prefetch_related('exercises'),
+            pk=pk,
+            teacher=request.user.teacher_profile,
+        )
+
+        exercise_count = objective.exercises.count()
+
+        if exercise_count:
+            messages.error(
+                request,
+                (
+                    'Este objetivo não pode ser excluído porque está vinculado '
+                    f'a {exercise_count} '
+                    f'{"exercício" if exercise_count == 1 else "exercícios"}. '
+                    'Arquive-o para removê-lo dos novos cadastros sem perder o histórico.'
+                ),
+            )
+        else:
+            objective.delete()
+            messages.success(
+                request,
+                'Objetivo de aprendizagem excluído com sucesso.',
+            )
+
+        return redirect(f"{reverse('library')}?section=objectives")
+    
+@method_decorator(csrf_protect, name='dispatch')
+class QuickCreateLearningObjectiveView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Dados inválidos.',
+            }, status=400)
+
+        title = data.get('title', '').strip()
+        description = data.get('description', '').strip()
+
+        if not title:
+            return JsonResponse({
+                'success': False,
+                'error': 'Informe o título do objetivo.',
+            }, status=400)
+
+        if len(title) > LearningObjective._meta.get_field('title').max_length:
+            return JsonResponse({
+                'success': False,
+                'error': 'O título deve possuir no máximo 200 caracteres.',
+            }, status=400)
+
+        existing_objective = LearningObjective.objects.filter(
+            teacher=request.user.teacher_profile,
+            title__iexact=title,
+        ).first()
+
+        if existing_objective and not existing_objective.is_active:
+            return JsonResponse({
+                'success': False,
+                'error': (
+                    'Já existe um objetivo arquivado com este título. '
+                    'Reative-o pela Biblioteca para utilizá-lo novamente.'
+                ),
+            }, status=409)
+
+        if existing_objective:
+            return JsonResponse({
+                'success': True,
+                'created': False,
+                'message': 'Este objetivo já estava cadastrado e foi selecionado.',
+                'item': {
+                    'id': existing_objective.id,
+                    'title': existing_objective.title,
+                    'description': existing_objective.description,
+                },
+            })
+
+        objective = LearningObjective.objects.create(
+            teacher=request.user.teacher_profile,
+            title=title,
+            description=description,
+        )
+
+        return JsonResponse({
+            'success': True,
+            'created': True,
+            'message': 'Objetivo de aprendizagem criado e selecionado.',
+            'item': {
+                'id': objective.id,
+                'title': objective.title,
+                'description': objective.description,
+            },
+        }, status=201)
     
 # Future Ideas Views
 @method_decorator(csrf_protect, name='dispatch')
@@ -1217,119 +1664,306 @@ class StudentDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
             class_group_id=class_group_id
         )
  
- 
 @method_decorator(csrf_protect, name='dispatch')
-class TagCreateView(LoginRequiredMixin, CreateView):  # Removido TeacherRequiredMixin temporariamente
-    model = Tag
-    fields = ['name', 'type', 'color']
-    template_name = 'core/tag_form.html'
-    
-    def form_valid(self, form):
-        form.instance.teacher = self.request.user.teacher_profile
-        messages.success(self.request, "Tag criada com sucesso!")
-        return super().form_valid(form)
-    
-    def get_success_url(self):
-        return reverse('tag_list')
+class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
+    template_name = 'library/library_list.html'
 
-@method_decorator(csrf_protect, name='dispatch')    
-class TagListView(LoginRequiredMixin, ListView):  # Removido TeacherRequiredMixin temporariamente
-    model = Tag
-    template_name = 'tag/tag_list.html'
-    context_object_name = 'tags'
-    
-    def get_queryset(self):
-        # Filtra tags apenas do professor logado
-        queryset = Tag.objects.filter(teacher=self.request.user.teacher_profile)
-        
-        # Filtro por tipo (opcional)
-        tag_type = self.request.GET.get('type')
-        if tag_type:
-            queryset = queryset.filter(type=tag_type)
-            
-        return queryset.order_by('name')
-    
+    VALID_SECTIONS = {'objectives', 'tags'}
+    VALID_STATUSES = {'active', 'archived', 'all'}
+    VALID_TAG_TYPES = {'lesson', 'exercise', 'general'}
+
+    def get_selected_section(self):
+        section = self.request.GET.get('section', 'objectives')
+        return section if section in self.VALID_SECTIONS else 'objectives'
+
+    def get_selected_status(self):
+        status = self.request.GET.get('status', 'active')
+        return status if status in self.VALID_STATUSES else 'active'
+
+    def get_search_query(self):
+        return ' '.join(self.request.GET.get('q', '').split())[:100]
+
+    def get_selected_tag_type(self):
+        tag_type = self.request.GET.get('type', '')
+        return tag_type if tag_type in self.VALID_TAG_TYPES else ''
+
+    def apply_status_filter(self, queryset):
+        status = self.get_selected_status()
+
+        if status == 'active':
+            return queryset.filter(is_active=True)
+
+        if status == 'archived':
+            return queryset.filter(is_active=False)
+
+        return queryset
+
+    def get_objectives(self, teacher):
+        queryset = LearningObjective.objects.filter(
+            teacher=teacher
+        ).annotate(
+            exercise_count=Count('exercises', distinct=True),
+        )
+
+        search_query = self.get_search_query()
+
+        if search_query:
+            queryset = queryset.filter(
+                Q(title__icontains=search_query)
+                | Q(description__icontains=search_query)
+            )
+
+        return self.apply_status_filter(queryset).order_by('title')
+
+    def get_tags(self, teacher):
+        queryset = Tag.objects.filter(
+            teacher=teacher
+        ).annotate(
+            lesson_count=Count('lessons', distinct=True),
+            exercise_count=Count('exercises', distinct=True),
+        )
+
+        search_query = self.get_search_query()
+        selected_type = self.get_selected_tag_type()
+
+        if search_query:
+            queryset = queryset.filter(name__icontains=search_query)
+
+        if selected_type:
+            queryset = queryset.filter(type=selected_type)
+
+        return self.apply_status_filter(queryset).order_by('name')
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        # Adiciona TYPE_CHOICES se existir no modelo
-        if hasattr(Tag, 'TYPE_CHOICES'):
-            context['type_choices'] = Tag.TYPE_CHOICES
-        
-        # Se não há filtro específico, organiza tags por categoria
-        if not self.request.GET.get('type'):
-            all_tags = Tag.objects.filter(
-                teacher=self.request.user.teacher_profile
-            ).order_by('name')
-            
-            # Organiza as tags por categoria
-            tags_by_type = defaultdict(list)
-            for tag in all_tags:
-                tags_by_type[tag.type].append(tag)
-            
-            # Converte para dict normal
-            context['tags_by_type'] = dict(tags_by_type)
-        else:
-            # Se há filtro, não precisamos organizar por categoria
-            context['tags_by_type'] = {}
-            
+        teacher = self.request.user.teacher_profile
+        selected_section = self.get_selected_section()
+
+        objective_base = LearningObjective.objects.filter(teacher=teacher)
+        tag_base = Tag.objects.filter(teacher=teacher)
+
+        context['selected_section'] = selected_section
+        context['selected_status'] = self.get_selected_status()
+        context['selected_tag_type'] = self.get_selected_tag_type()
+        context['search_query'] = self.get_search_query()
+        context['tag_type_choices'] = Tag.TYPE_CHOICES
+
+        context['objective_active_count'] = objective_base.filter(is_active=True).count()
+        context['objective_archived_count'] = objective_base.filter(is_active=False).count()
+        context['tag_active_count'] = tag_base.filter(is_active=True).count()
+        context['tag_archived_count'] = tag_base.filter(is_active=False).count()
+
+        context['objectives'] = self.get_objectives(teacher) if selected_section == 'objectives' else LearningObjective.objects.none()
+        context['tags'] = self.get_tags(teacher) if selected_section == 'tags' else Tag.objects.none()
+
         return context
+ 
+@method_decorator(csrf_protect, name='dispatch')
+class TagCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
+    model = Tag
+    form_class = TagForm
+    template_name = 'library/tag_form.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
+
+    def form_valid(self, form):
+        form.instance.teacher = self.request.user.teacher_profile
+        messages.success(self.request, 'Tag criada com sucesso.')
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return f"{reverse('library')}?section=tags"
+
 
 @method_decorator(csrf_protect, name='dispatch')
-class TagUpdateView(LoginRequiredMixin, UpdateView):  # Removido TeacherRequiredMixin temporariamente
+class TagUpdateView(LoginRequiredMixin, TeacherRequiredMixin, UpdateView):
     model = Tag
-    fields = ['name', 'type', 'color']
-    template_name = 'core/tag_form.html'
-    
-    def get_queryset(self):
-        return Tag.objects.filter(teacher=self.request.user.teacher_profile)
-    
-    def form_valid(self, form):
-        messages.success(self.request, "Tag atualizada com sucesso!")
-        return super().form_valid(form)
-    
-    def get_success_url(self):
-        return reverse('tag_list')
+    form_class = TagForm
+    template_name = 'library/tag_form.html'
 
-@method_decorator(csrf_exempt, name='dispatch')
-class CheckTagAPIView(LoginRequiredMixin, View):
-    """
-    API endpoint para verificar se uma tag já existe
-    """
+    def get_queryset(self):
+        return Tag.objects.filter(
+            teacher=self.request.user.teacher_profile
+        )
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['teacher'] = self.request.user.teacher_profile
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['lesson_count'] = self.object.lessons.count()
+        context['exercise_count'] = self.object.exercises.count()
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Tag atualizada com sucesso.')
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return f"{reverse('library')}?section=tags"
     
-    def get(self, request):
+@method_decorator(csrf_protect, name='dispatch')
+class TagArchiveView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    def post(self, request, pk):
+        tag = get_object_or_404(
+            Tag,
+            pk=pk,
+            teacher=request.user.teacher_profile,
+        )
+
+        if not tag.is_active:
+            messages.info(request, 'Esta tag já está arquivada.')
+        else:
+            tag.is_active = False
+            tag.save(update_fields=['is_active'])
+            messages.success(
+                request,
+                'Tag arquivada. Ela continuará preservada nos registros anteriores.',
+            )
+
+        return redirect(f"{reverse('library')}?section=tags&status=archived")
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class TagRestoreView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    def post(self, request, pk):
+        tag = get_object_or_404(
+            Tag,
+            pk=pk,
+            teacher=request.user.teacher_profile,
+        )
+
+        if tag.is_active:
+            messages.info(request, 'Esta tag já está ativa.')
+        else:
+            tag.is_active = True
+            tag.save(update_fields=['is_active'])
+            messages.success(request, 'Tag reativada com sucesso.')
+
+        return redirect(f"{reverse('library')}?section=tags")
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class TagDeleteView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    @transaction.atomic
+    def post(self, request, pk):
+        tag = get_object_or_404(
+            Tag,
+            pk=pk,
+            teacher=request.user.teacher_profile,
+        )
+
+        lesson_count = tag.lessons.count()
+        exercise_count = tag.exercises.count()
+        total_links = lesson_count + exercise_count
+
+        if total_links:
+            links = []
+
+            if lesson_count:
+                links.append(
+                    f'{lesson_count} {"aula" if lesson_count == 1 else "aulas"}'
+                )
+
+            if exercise_count:
+                links.append(
+                    f'{exercise_count} '
+                    f'{"exercício" if exercise_count == 1 else "exercícios"}'
+                )
+
+            messages.error(
+                request,
+                (
+                    'Esta tag não pode ser excluída porque está vinculada a '
+                    f'{", ".join(links)}. Arquive-a para preservar o histórico.'
+                ),
+            )
+        else:
+            tag.delete()
+            messages.success(request, 'Tag excluída com sucesso.')
+
+        return redirect(f"{reverse('library')}?section=tags")
+    
+@method_decorator(csrf_protect, name='dispatch')
+class QuickCreateExerciseTagView(LoginRequiredMixin, TeacherRequiredMixin, View):
+    def post(self, request):
         try:
-            tag_name = request.GET.get('name', '').strip().lower()
-            
-            if not tag_name:
-                return JsonResponse({
-                    'exists': False,
-                    'error': 'Nome da tag não fornecido'
-                }, status=400)
-            
-            # Verifica se a tag já existe para este professor
-            tag_exists = Tag.objects.filter(
-                name__iexact=tag_name,
-                teacher=request.user.teacher_profile
-            ).exists()
-            
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+        except json.JSONDecodeError:
             return JsonResponse({
-                'exists': tag_exists,
-                'tag_name': tag_name
+                'success': False,
+                'error': 'Dados inválidos.',
+            }, status=400)
+
+        tag_name = data.get('name', '').strip()
+
+        if not tag_name:
+            return JsonResponse({
+                'success': False,
+                'error': 'Informe o nome da tag.',
+            }, status=400)
+
+        if len(tag_name) > Tag._meta.get_field('name').max_length:
+            return JsonResponse({
+                'success': False,
+                'error': 'O nome da tag deve possuir no máximo 50 caracteres.',
+            }, status=400)
+
+        if not re.match(r'^[\w\sÀ-ÿ\-]+$', tag_name):
+            return JsonResponse({
+                'success': False,
+                'error': 'Use apenas letras, números, espaços, hífens e underscores.',
+            }, status=400)
+
+        existing_tag = Tag.objects.filter(
+            teacher=request.user.teacher_profile,
+            name__iexact=tag_name,
+            type__in=['exercise', 'general'],
+        ).order_by('type', 'id').first()
+
+        if existing_tag and not existing_tag.is_active:
+            return JsonResponse({
+                'success': False,
+                'error': (
+                    'Já existe uma tag arquivada com este nome. '
+                    'Reative-a pela Biblioteca para utilizá-la novamente.'
+                ),
+            }, status=409)
+
+        if existing_tag:
+            return JsonResponse({
+                'success': True,
+                'created': False,
+                'message': 'Esta tag já estava cadastrada e foi selecionada.',
+                'item': {
+                    'id': existing_tag.id,
+                    'name': existing_tag.name,
+                    'color': existing_tag.color,
+                },
             })
-            
-        except AttributeError:
-            # Usuário não tem teacher_profile
-            return JsonResponse({
-                'exists': False,
-                'error': 'Perfil de professor não encontrado'
-            }, status=403)
-            
-        except Exception as e:
-            return JsonResponse({
-                'exists': False,
-                'error': f'Erro interno: {str(e)}'
-            }, status=500)
+
+        tag = Tag.objects.create(
+            teacher=request.user.teacher_profile,
+            name=tag_name,
+            type='exercise',
+            color=Tag.generate_random_color(),
+        )
+
+        return JsonResponse({
+            'success': True,
+            'created': True,
+            'message': 'Tag criada e selecionada.',
+            'item': {
+                'id': tag.id,
+                'name': tag.name,
+                'color': tag.color,
+            },
+        }, status=201)
 
 @method_decorator(csrf_protect, name='dispatch')
 class QuickAddTagView(
@@ -1390,12 +2024,32 @@ class QuickAddTagView(
                 model_type,
                 'general',
             ],
+            is_active=True,
         ).order_by(
             'type',
             'id',
         ).first()
 
         created = False
+        
+        archived_tag_exists = Tag.objects.filter(
+            teacher=teacher,
+            name__iexact=tag_name,
+            type__in=[model_type, 'general'],
+            is_active=False,
+        ).exists()
+
+        if tag is None and archived_tag_exists:
+            return JsonResponse(
+                {
+                    'success': False,
+                    'error': (
+                        'Já existe uma tag arquivada com este nome. '
+                        'Reative-a pela Biblioteca para utilizá-la novamente.'
+                    ),
+                },
+                status=409,
+            )        
 
         if tag is None:
             tag = Tag.objects.create(

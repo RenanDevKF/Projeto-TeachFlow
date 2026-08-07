@@ -1,97 +1,168 @@
 {% load static %}
 <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <title>{% block title %}TeachFlow{% endblock %}</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link href="{% static 'css/build.css' %}" rel="stylesheet">
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
 
-        {% block vendor_css %}{% endblock %}
-    </head>
+    <title>
+        {% block title %}TeachFlow{% endblock %}
+    </title>
 
-    <body class="bg-gray-50 text-gray-800">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <div class="flex min-h-screen">
+    <link href="{% static 'css/build.css' %}" rel="stylesheet">
 
-        <!-- Sidebar -->
-        <aside class="w-52 bg-white border-r border-gray-200 flex flex-col">
-            <div class="p-6">
-                <h1 class="text-2xl font-extrabold text-primary">TeachFlow</h1>
-            </div>
+    {% block vendor_css %}{% endblock %}
+</head>
 
-            {% with url_name=request.resolver_match.url_name url_path=request.path %}
+<body class="bg-gray-50 text-gray-800">
+<div class="flex min-h-screen">
+
+    <!-- Sidebar -->
+    <aside class="flex w-52 flex-col border-r border-gray-200 bg-white">
+        <div class="p-6">
+            <h1 class="text-2xl font-extrabold text-primary">
+                TeachFlow
+            </h1>
+        </div>
+
+        {% with url_name=request.resolver_match.url_name url_path=request.path %}
             <nav class="flex-1 space-y-2 px-4">
+
                 <!-- Dashboard -->
-                <a href="{% url 'dashboard' %}"
-                class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
-                {% if url_name == 'dashboard' %}bg-blue-100 text-primary{% endif %}">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                <a
+                    href="{% url 'dashboard' %}"
+                    class="flex items-center gap-3 rounded-lg px-4 py-2 text-gray-600 transition hover:bg-blue-100 hover:text-primary
+                    {% if url_name == 'dashboard' %}bg-blue-100 text-primary{% endif %}"
+                >
+                    <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
                     Dashboard
                 </a>
 
                 <!-- Turmas -->
-                <a href="{% url 'class_group_list' %}"
-                class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
-                {% if 'class-group' in url_path and 'student' not in url_path %}bg-blue-100 text-primary{% endif %}">
-                    <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                <a
+                    href="{% url 'class_group_list' %}"
+                    class="flex items-center gap-3 rounded-lg px-4 py-2 text-gray-600 transition hover:bg-blue-100 hover:text-primary
+                    {% if 'class-group' in url_path and 'student' not in url_path %}bg-blue-100 text-primary{% endif %}"
+                >
+                    <i data-lucide="graduation-cap" class="h-5 w-5"></i>
                     Turmas
                 </a>
 
                 <!-- Alunos -->
-                <a href="{% url 'student_list' %}"
-                class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
-                {% if 'student' in url_name or 'students' in url_path %}bg-blue-100 text-primary{% endif %}">
-                    <i data-lucide="users-round" class="w-5 h-5"></i>
+                <a
+                    href="{% url 'student_list' %}"
+                    class="flex items-center gap-3 rounded-lg px-4 py-2 text-gray-600 transition hover:bg-blue-100 hover:text-primary
+                    {% if 'student' in url_name or 'students' in url_path %}bg-blue-100 text-primary{% endif %}"
+                >
+                    <i data-lucide="users-round" class="h-5 w-5"></i>
                     Alunos
                 </a>
 
                 <!-- Aulas -->
-                <a href="{% url 'lesson_list' %}"
-                class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
-                {% if 'lesson' in url_name or 'lessons' in url_path %}bg-blue-100 text-primary{% endif %}">
-                    <i data-lucide="book-open" class="w-5 h-5"></i>
+                <a
+                    href="{% url 'lesson_list' %}"
+                    class="flex items-center gap-3 rounded-lg px-4 py-2 text-gray-600 transition hover:bg-blue-100 hover:text-primary
+                    {% if 'lesson' in url_name or 'lessons' in url_path %}bg-blue-100 text-primary{% endif %}"
+                >
+                    <i data-lucide="book-open" class="h-5 w-5"></i>
                     Aulas
                 </a>
 
                 <!-- Exercícios -->
-                <a href="{% url 'exercise_list' %}"
-                class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
-                {% if 'exercise' in url_name %}bg-blue-100 text-primary{% endif %}">
-                    <i data-lucide="notebook-text" class="w-5 h-5"></i>
+                <a
+                    href="{% url 'exercise_list' %}"
+                    class="flex items-center gap-3 rounded-lg px-4 py-2 text-gray-600 transition hover:bg-blue-100 hover:text-primary
+                    {% if 'exercise' in url_name %}bg-blue-100 text-primary{% endif %}"
+                >
+                    <i data-lucide="notebook-text" class="h-5 w-5"></i>
                     Exercícios
                 </a>
 
+                <!-- Biblioteca -->
+                <a
+                    href="{% url 'library' %}"
+                    class="flex items-center gap-3 rounded-lg px-4 py-2 text-gray-600 transition hover:bg-blue-100 hover:text-primary
+                    {% if url_name == 'library' or 'objective' in url_name or 'tag_' in url_name or url_name == 'tag_form' %}bg-blue-100 text-primary{% endif %}"
+                >
+                    <i data-lucide="library-big" class="h-5 w-5"></i>
+                    Biblioteca
+                </a>
+
                 <!-- Conta -->
-                <a href="{% url 'profile' %}"
-                class="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-primary transition
-                {% if url_name == 'profile' %}bg-blue-100 text-primary{% endif %}">
-                    <i data-lucide="user" class="w-5 h-5"></i>
+                <a
+                    href="{% url 'profile' %}"
+                    class="flex items-center gap-3 rounded-lg px-4 py-2 text-gray-600 transition hover:bg-blue-100 hover:text-primary
+                    {% if url_name == 'profile' %}bg-blue-100 text-primary{% endif %}"
+                >
+                    <i data-lucide="user" class="h-5 w-5"></i>
                     Conta
                 </a>
             </nav>
-            {% endwith %}
+        {% endwith %}
 
-            <div class="p-4 mt-auto">
-                <form method="post" action="{% url 'logout' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-blue-600 transition">
-                        Logout
-                    </button>
-                </form>
-            </div>
-        </aside>
+        <div class="mt-auto p-4">
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col">
+                <button
+                    type="submit"
+                    class="w-full rounded-lg bg-primary py-2 text-white transition hover:bg-blue-600"
+                >
+                    Sair
+                </button>
+            </form>
+        </div>
+    </aside>
 
-        <!-- Top Header -->
-        <header class="flex items-center justify-center px-6 py-4 bg-white shadow-md">
-            <h2 class="text-xl font-semibold text-gray-800">{% block page_title %}{% endblock %}</h2>
+    <!-- Conteúdo principal -->
+    <div class="flex flex-1 flex-col">
+
+        <!-- Cabeçalho superior -->
+        <header class="flex items-center justify-center bg-white px-6 py-4 shadow-md">
+            <h2 class="text-xl font-semibold text-gray-800">
+                {% block page_title %}{% endblock %}
+            </h2>
         </header>
 
-        <!-- Page Content -->
-        <main class="flex-1 p-6 bg-gray-50">
+        <!-- Conteúdo da página -->
+        <main class="flex-1 bg-gray-50 p-6">
+
+            <!-- Mensagens do Django -->
+            {% if messages %}
+                <div class="mx-auto mb-6 max-w-6xl space-y-3">
+                    {% for message in messages %}
+                        <div
+                            class="flex items-start gap-3 rounded-xl border px-4 py-4 shadow-sm
+                            {% if message.tags == 'success' %}
+                                border-green-200 bg-green-50 text-green-800
+                            {% elif message.tags == 'error' %}
+                                border-red-200 bg-red-50 text-red-800
+                            {% elif message.tags == 'warning' %}
+                                border-amber-200 bg-amber-50 text-amber-800
+                            {% else %}
+                                border-blue-200 bg-blue-50 text-blue-800
+                            {% endif %}"
+                            role="{% if message.tags == 'error' %}alert{% else %}status{% endif %}"
+                        >
+                            {% if message.tags == 'success' %}
+                                <i data-lucide="circle-check" class="mt-0.5 h-5 w-5 flex-shrink-0"></i>
+                            {% elif message.tags == 'error' %}
+                                <i data-lucide="circle-alert" class="mt-0.5 h-5 w-5 flex-shrink-0"></i>
+                            {% elif message.tags == 'warning' %}
+                                <i data-lucide="triangle-alert" class="mt-0.5 h-5 w-5 flex-shrink-0"></i>
+                            {% else %}
+                                <i data-lucide="info" class="mt-0.5 h-5 w-5 flex-shrink-0"></i>
+                            {% endif %}
+
+                            <p class="min-w-0 flex-1 text-sm font-medium leading-6">
+                                {{ message }}
+                            </p>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
             {% block content %}{% endblock %}
         </main>
     </div>
@@ -99,8 +170,9 @@
 
 <script src="https://unpkg.com/lucide@latest" defer></script>
 <script src="{% static 'js/filters.js' %}"></script>
+
 <script>
-    window.addEventListener("DOMContentLoaded", () => {
+    window.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
     });
 </script>
