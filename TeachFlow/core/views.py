@@ -14,6 +14,7 @@ from django.views.decorators.http import require_POST
 from django.http import JsonResponse, Http404, HttpResponseRedirect
 from datetime import date
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, LessonExercise
+from .utils import normalize_objective_title, normalize_tag_name
 from .forms import *
 from django.utils import timezone
 from datetime import date
@@ -1321,7 +1322,9 @@ class QuickCreateLearningObjectiveView(LoginRequiredMixin, TeacherRequiredMixin,
                 'error': 'Dados inválidos.',
             }, status=400)
 
-        title = data.get('title', '').strip()
+        title = normalize_objective_title(
+            data.get('title', '')
+        )
         description = data.get('description', '').strip()
 
         if not title:
@@ -1857,7 +1860,9 @@ class QuickCreateExerciseTagView(LoginRequiredMixin, TeacherRequiredMixin, View)
                 'error': 'Dados inválidos.',
             }, status=400)
 
-        tag_name = data.get('name', '').strip()
+        tag_name = normalize_tag_name(
+            data.get('name', '')
+        )   
 
         if not tag_name:
             return JsonResponse({
@@ -2063,9 +2068,7 @@ class QuickAddTagView(
                 ''
             )
 
-        return ' '.join(
-            str(raw_tag_name).split()
-        )
+        return normalize_tag_name(raw_tag_name)
 
     def validate_tag_name(self, tag_name):
         if not tag_name:

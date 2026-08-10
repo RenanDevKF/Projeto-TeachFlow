@@ -3,6 +3,7 @@ from django import forms
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from .utils import normalize_objective_title, normalize_tag_name
 
 from .models import *
 
@@ -455,7 +456,9 @@ class LearningObjectiveForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
     def clean_title(self):
-        title = self.cleaned_data.get('title', '').strip()
+        title = normalize_objective_title(
+            self.cleaned_data.get('title', '')
+        )
 
         if not title:
             raise forms.ValidationError('Informe um título para o objetivo.')
@@ -491,8 +494,8 @@ class TagForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
     def clean_name(self):
-        name = ' '.join(
-            self.cleaned_data.get('name', '').split()
+        name = normalize_tag_name(
+            self.cleaned_data.get('name', '')
         )
 
         if not name:
