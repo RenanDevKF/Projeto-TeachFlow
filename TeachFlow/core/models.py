@@ -136,6 +136,14 @@ class LearningObjective(models.Model):
         ordering = ['title']
         verbose_name = 'Objetivo de aprendizagem'
         verbose_name_plural = 'Objetivos de aprendizagem'
+        constraints = [
+            models.UniqueConstraint(
+                Lower('title'),
+                'teacher',
+                name='unique_learning_objective_title_per_teacher',
+            ),
+        ]
+            
 
     def __str__(self):
         return self.title
