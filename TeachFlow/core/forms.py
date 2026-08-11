@@ -1,9 +1,8 @@
-import re
 from django import forms
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from .utils import normalize_objective_title, normalize_tag_name
+from .utils import normalize_objective_title, normalize_tag_name, validate_tag_name, find_existing_tag
 
 from .models import *
 
@@ -498,28 +497,23 @@ class TagForm(forms.ModelForm):
             self.cleaned_data.get('name', '')
         )
 
-        if not name:
-            raise forms.ValidationError(
-                'Informe o nome da tag.'
+        validation_error = validate_tag_name(name)
+
+        if validation_error:
+            raise forms.ValidationError(validation_error)
+
+        if self.teacher:
+            existing_tag = find_existing_tag(
+                self.teacher,
+                name,
             )
 
-        if len(name) < 2:
-            raise forms.ValidationError(
-                'O nome deve possuir pelo menos 2 caracteres.'
-            )
-
-        if not re.fullmatch(r'[\w\sÀ-ÿ\-]+', name):
-            raise forms.ValidationError(
-                'Use apenas letras, números, espaços, '
-                'hífens e underscores.'
-            )
-
-        if self.teacher and Tag.objects.filter(
-            teacher=self.teacher,
-            name__iexact=name,
-        ).exclude(pk=self.instance.pk).exists():
-            raise forms.ValidationError(
-                'Já existe uma tag com este nome.'
-            )
+            if (
+                existing_tag
+                and existing_tag.pk != self.instance.pk
+            ):
+                raise forms.ValidationError(
+                    'Já existe uma tag com este nome.'
+                )
 
         return name

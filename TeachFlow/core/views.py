@@ -14,12 +14,11 @@ from django.views.decorators.http import require_POST
 from django.http import JsonResponse, Http404, HttpResponseRedirect
 from datetime import date
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, LessonExercise
-from .utils import normalize_objective_title, normalize_tag_name
+from .utils import normalize_objective_title, normalize_tag_name, find_existing_tag, validate_tag_name
 from .forms import *
 from django.utils import timezone
 from datetime import date
 import json
-import re
 
 class TeacherRequiredMixin(UserPassesTestMixin):
     """Ensure that only teachers can access specific views"""
@@ -1880,28 +1879,18 @@ class QuickCreateExerciseTagView(LoginRequiredMixin, TeacherRequiredMixin, View)
             data.get('name', '')
         )   
 
-        if not tag_name:
+        validation_error = validate_tag_name(tag_name)
+
+        if validation_error:
             return JsonResponse({
                 'success': False,
-                'error': 'Informe o nome da tag.',
+                'error': validation_error,
             }, status=400)
 
-        if len(tag_name) > Tag._meta.get_field('name').max_length:
-            return JsonResponse({
-                'success': False,
-                'error': 'O nome da tag deve possuir no máximo 50 caracteres.',
-            }, status=400)
-
-        if not re.match(r'^[\w\sÀ-ÿ\-]+$', tag_name):
-            return JsonResponse({
-                'success': False,
-                'error': 'Use apenas letras, números, espaços, hífens e underscores.',
-            }, status=400)
-
-        existing_tag = Tag.objects.filter(
-            teacher=request.user.teacher_profile,
-            name__iexact=tag_name,
-        ).first()
+        existing_tag = find_existing_tag(
+            request.user.teacher_profile,
+            tag_name,
+        )
 
         if existing_tag and not existing_tag.is_active:
             return JsonResponse({
@@ -1965,7 +1954,7 @@ class QuickAddTagView(
 
         tag_name = self.get_tag_name(request)
 
-        validation_error = self.validate_tag_name(tag_name)
+        validation_error = validate_tag_name(tag_name)
 
         if validation_error:
             return JsonResponse(
@@ -1993,21 +1982,14 @@ class QuickAddTagView(
                 status=404,
             )
 
-        tag = Tag.objects.filter(
-            teacher=teacher,
-            name__iexact=tag_name,
-            is_active=True,
-        ).first()
+        tag = find_existing_tag(
+            teacher,
+            tag_name,
+        )
 
         created = False
-        
-        archived_tag_exists = Tag.objects.filter(
-            teacher=teacher,
-            name__iexact=tag_name,
-            is_active=False,
-        ).exists()
 
-        if tag is None and archived_tag_exists:
+        if tag and not tag.is_active:
             return JsonResponse(
                 {
                     'success': False,
@@ -2017,7 +1999,7 @@ class QuickAddTagView(
                     ),
                 },
                 status=409,
-            )        
+            )
 
         if tag is None:
             tag = Tag.objects.create(
@@ -2027,8 +2009,6 @@ class QuickAddTagView(
             )
 
             created = True
-
-        target_object.tags.add(tag)
 
         if not target_object.tags.filter(pk=tag.pk).exists():
             transaction.set_rollback(True)
@@ -2086,30 +2066,6 @@ class QuickAddTagView(
 
         return normalize_tag_name(raw_tag_name)
 
-    def validate_tag_name(self, tag_name):
-        if not tag_name:
-            return 'O nome da tag não pode estar vazio.'
-
-        if len(tag_name) < 2:
-            return (
-                'O nome da tag deve ter pelo menos 2 caracteres.'
-            )
-
-        if len(tag_name) > 50:
-            return (
-                'O nome da tag não pode ultrapassar 50 caracteres.'
-            )
-
-        if not re.fullmatch(
-            r'[\w\sÀ-ÿ\-]+',
-            tag_name,
-        ):
-            return (
-                'Use apenas letras, números, espaços, '
-                'hífens e underscores.'
-            )
-
-        return None
 
     def get_target_object(
         self,
