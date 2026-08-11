@@ -1673,10 +1673,11 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
         search_query = self.get_search_query()
 
         if search_query:
-            queryset = queryset.filter(
-                Q(title__icontains=search_query)
-                | Q(description__icontains=search_query)
-            )
+            for term in search_query.split():
+                queryset = queryset.filter(
+                    Q(title__icontains=term)
+                    | Q(description__icontains=term)
+                )
 
         return self.apply_status_filter(queryset).order_by('title')
 
@@ -1691,7 +1692,10 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
         search_query = self.get_search_query()
 
         if search_query:
-            queryset = queryset.filter(name__icontains=search_query)
+            for term in search_query.split():
+                queryset = queryset.filter(
+                    name__icontains=term
+                )
 
 
         return self.apply_status_filter(queryset).order_by('name')
