@@ -6,7 +6,7 @@ from django.contrib.auth import logout
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib import messages
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import Q, Case, IntegerField, Value, When, Count, Prefetch
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
@@ -1364,22 +1364,49 @@ class QuickCreateLearningObjectiveView(LoginRequiredMixin, TeacherRequiredMixin,
                 },
             })
 
-        objective = LearningObjective.objects.create(
-            teacher=request.user.teacher_profile,
-            title=title,
-            description=description,
-        )
+        try:
+            objective = LearningObjective.objects.create(
+                teacher=request.user.teacher_profile,
+                title=title,
+                description=description,
+            )
+
+            created = True
+
+        except IntegrityError:
+            objective = LearningObjective.objects.filter(
+                teacher=request.user.teacher_profile,
+                title__iexact=title,
+            ).first()
+
+            if objective is None:
+                raise
+
+            if not objective.is_active:
+                return JsonResponse({
+                    'success': False,
+                    'error': (
+                        'Já existe um objetivo arquivado com este título. '
+                        'Reative-o pela Biblioteca para utilizá-lo novamente.'
+                    ),
+                }, status=409)
+
+            created = False
 
         return JsonResponse({
             'success': True,
-            'created': True,
-            'message': 'Objetivo de aprendizagem criado e selecionado.',
+            'created': created,
+            'message': (
+                'Objetivo de aprendizagem criado e selecionado.'
+                if created
+                else 'Este objetivo já estava cadastrado e foi selecionado.'
+            ),
             'item': {
                 'id': objective.id,
                 'title': objective.title,
                 'description': objective.description,
             },
-        }, status=201)
+        }, status=201 if created else 200)
     
 # Student Views
 @method_decorator(csrf_protect, name='dispatch')
@@ -1913,22 +1940,49 @@ class QuickCreateExerciseTagView(LoginRequiredMixin, TeacherRequiredMixin, View)
                 },
             })
 
-        tag = Tag.objects.create(
-            teacher=request.user.teacher_profile,
-            name=tag_name,
-            color=Tag.generate_random_color(),
-        )
+        try:
+            tag = Tag.objects.create(
+                teacher=request.user.teacher_profile,
+                name=tag_name,
+                color=Tag.generate_random_color(),
+            )
+
+            created = True
+
+        except IntegrityError:
+            tag = find_existing_tag(
+                request.user.teacher_profile,
+                tag_name,
+            )
+
+            if tag is None:
+                raise
+
+            if not tag.is_active:
+                return JsonResponse({
+                    'success': False,
+                    'error': (
+                        'Já existe uma tag arquivada com este nome. '
+                        'Reative-a pela Biblioteca para utilizá-la novamente.'
+                    ),
+                }, status=409)
+
+            created = False
 
         return JsonResponse({
             'success': True,
-            'created': True,
-            'message': 'Tag criada e selecionada.',
+            'created': created,
+            'message': (
+                'Tag criada e selecionada.'
+                if created
+                else 'Esta tag já estava cadastrada e foi selecionada.'
+            ),
             'item': {
                 'id': tag.id,
                 'name': tag.name,
                 'color': tag.color,
             },
-        }, status=201)
+        }, status=201 if created else 200)
 
 @method_decorator(csrf_protect, name='dispatch')
 class QuickAddTagView(
@@ -2002,13 +2056,38 @@ class QuickAddTagView(
             )
 
         if tag is None:
-            tag = Tag.objects.create(
-                name=tag_name,
-                teacher=teacher,
-                color=Tag.generate_random_color(),
-            )
+            try:
+                with transaction.atomic():
+                    tag = Tag.objects.create(
+                        name=tag_name,
+                        teacher=teacher,
+                        color=Tag.generate_random_color(),
+                    )
 
-            created = True
+                created = True
+
+            except IntegrityError:
+                tag = find_existing_tag(
+                    teacher,
+                    tag_name,
+                )
+
+                if tag is None:
+                    raise
+
+                if not tag.is_active:
+                    return JsonResponse(
+                        {
+                            'success': False,
+                            'error': (
+                                'Já existe uma tag arquivada com este nome. '
+                                'Reative-a pela Biblioteca para utilizá-la novamente.'
+                            ),
+                        },
+                        status=409,
+                    )
+                    
+        target_object.tags.add(tag)
 
         if not target_object.tags.filter(pk=tag.pk).exists():
             transaction.set_rollback(True)
