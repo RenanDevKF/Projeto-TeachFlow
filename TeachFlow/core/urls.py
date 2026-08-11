@@ -1,5 +1,4 @@
 from django.urls import path
-from django.views.generic import RedirectView
 from . import views
 
 urlpatterns = [
@@ -52,15 +51,7 @@ urlpatterns = [
     path('objectives/<int:pk>/delete/', views.LearningObjectiveDeleteView.as_view(), name='objective-delete'),
     path('objectives/quick-create/', views.QuickCreateLearningObjectiveView.as_view(), name='quick_create_objective'),
     
-    path(
-        'tags/',
-        RedirectView.as_view(
-            pattern_name='library',
-            permanent=False,
-            query_string=True,
-        ),
-        name='tag_list',
-    ),
+    path('tags/', views.legacy_tag_list_redirect, name='tag_list'),
     
     # Biblioteca — Tags
     path('tags/new/', views.TagCreateView.as_view(), name='tag_form'),

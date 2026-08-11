@@ -1721,6 +1721,18 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
         context['tags'] = self.get_tags(teacher) if selected_section == 'tags' else Tag.objects.none()
 
         return context
+    
+def legacy_tag_list_redirect(request):
+    query_params = request.GET.copy()
+    query_params['section'] = 'tags'
+
+    url = reverse('library')
+    query_string = query_params.urlencode()
+
+    if query_string:
+        url = f'{url}?{query_string}'
+
+    return redirect(url)
  
 @method_decorator(csrf_protect, name='dispatch')
 class TagCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
