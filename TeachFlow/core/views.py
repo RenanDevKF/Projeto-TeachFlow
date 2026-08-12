@@ -68,7 +68,17 @@ def dashboard_view(request):
 
     class_groups = ClassGroup.objects.filter(
         teacher=teacher,
-        is_active=True
+        is_active=True,
+    ).annotate(
+        students_count=Count(
+            'students',
+            filter=Q(students__is_active=True),
+            distinct=True,
+        ),
+        lessons_count=Count(
+            'lessons',
+            distinct=True,
+        ),
     )
     
     return render(request, 'dashboard/dashboard.html', {
