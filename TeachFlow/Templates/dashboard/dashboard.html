@@ -125,7 +125,7 @@
                 </div>
                 <div class="mt-4 flex gap-3">
                     <a href="{% url 'class_group_detail' turma.id %}" class="text-blue-600 hover:underline text-sm">Ver Detalhes</a>
-                    <a href="{% url 'lesson_list' %}?class_group={{ turma.id }}" class="text-blue-600 hover:underline text-sm">Ver Aulas</a>
+                    <a href="{% url 'group_lessons' turma.id %}" class="text-blue-600 hover:underline text-sm">Ver Aulas</a>
                 </div>
             </div>
             {% empty %}
