@@ -1737,11 +1737,21 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
         context['selected_section'] = selected_section
         context['selected_status'] = self.get_selected_status()
         context['search_query'] = self.get_search_query()
+        
+        objective_counts = objective_base.aggregate(
+            active=Count('id', filter=Q(is_active=True)),
+            archived=Count('id', filter=Q(is_active=False)),
+        )
 
-        context['objective_active_count'] = objective_base.filter(is_active=True).count()
-        context['objective_archived_count'] = objective_base.filter(is_active=False).count()
-        context['tag_active_count'] = tag_base.filter(is_active=True).count()
-        context['tag_archived_count'] = tag_base.filter(is_active=False).count()
+        tag_counts = tag_base.aggregate(
+            active=Count('id', filter=Q(is_active=True)),
+            archived=Count('id', filter=Q(is_active=False)),
+        )
+
+        context['objective_active_count'] = objective_counts['active']
+        context['objective_archived_count'] = objective_counts['archived']
+        context['tag_active_count'] = tag_counts['active']
+        context['tag_archived_count'] = tag_counts['archived']
 
         context['objectives'] = self.get_objectives(teacher) if selected_section == 'objectives' else LearningObjective.objects.none()
         context['tags'] = self.get_tags(teacher) if selected_section == 'tags' else Tag.objects.none()
