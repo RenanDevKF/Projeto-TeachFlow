@@ -86,26 +86,32 @@ def dashboard_view(request):
         date__lt=today,
     ).count()
 
-    class_groups = ClassGroup.objects.filter(
-        teacher=teacher,
-        is_active=True,
-    ).annotate(
-        students_count=Count(
-            'students',
-            filter=Q(students__is_active=True),
-            distinct=True,
-        ),
-        lessons_count=Count(
-            'lessons',
-            distinct=True,
-        ),
+    class_groups = list(
+        ClassGroup.objects.filter(
+            teacher=teacher,
+            is_active=True,
+        ).annotate(
+            students_count=Count(
+                'students',
+                filter=Q(students__is_active=True),
+                distinct=True,
+            ),
+            lessons_count=Count(
+                'lessons',
+                distinct=True,
+            ),
+        )[:7]
     )
+
+    has_more_class_groups = len(class_groups) > 6
+    class_groups = class_groups[:6]
     
     return render(request, 'dashboard/dashboard.html', {
         'today': timezone.now(),
         'today_lessons': today_lessons,
         'pending_lessons_count': pending_lessons_count,
         'class_groups': class_groups,
+        'has_more_class_groups': has_more_class_groups,
     })
 
 # Class Group Views
