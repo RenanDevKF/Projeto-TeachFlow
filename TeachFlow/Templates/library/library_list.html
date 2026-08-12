@@ -270,10 +270,10 @@
             <span class="inline-flex items-center gap-2 text-sm text-gray-500">
                 <i data-lucide="target" class="h-4 w-4"></i>
 
-                {% if objectives|length == 1 %}
+                {% if results_count == 1 %}
                     1 objetivo encontrado
                 {% else %}
-                    {{ objectives|length }} objetivos encontrados
+                    {{ results_count }} objetivos encontrados
                 {% endif %}
             </span>
         </div>
@@ -470,10 +470,10 @@
             <span class="inline-flex items-center gap-2 text-sm text-gray-500">
                 <i data-lucide="tags" class="h-4 w-4"></i>
 
-                {% if tags|length == 1 %}
+                {% if results_count == 1 %}
                     1 tag encontrada
                 {% else %}
-                    {{ tags|length }} tags encontradas
+                    {{ results_count }} tags encontradas
                 {% endif %}
             </span>
         </div>
@@ -492,10 +492,6 @@
                                         style="background-color: {{ tag.color }}20; color: {{ tag.color }};"
                                     >
                                         {{ tag.name }}
-                                    </span>
-
-                                    <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
-                                        {{ tag.get_type_display }}
                                     </span>
 
                                     {% if tag.is_active %}
@@ -651,6 +647,57 @@
         {% endif %}
     {% endif %}
 </div>
+
+{% if is_paginated %}
+    <nav
+        class="mt-8 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between"
+        aria-label="Paginação da biblioteca"
+    >
+        <p class="text-sm text-gray-500">
+            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+        </p>
+
+        <div class="flex flex-wrap items-center gap-2">
+            {% if page_obj.has_previous %}
+                <a
+                    href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}"
+                    class="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                >
+                    <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                    Anterior
+                </a>
+            {% endif %}
+
+            {% for page_number in page_obj.paginator.page_range %}
+                {% if page_number == page_obj.number %}
+                    <span
+                        class="inline-flex h-10 min-w-10 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-white"
+                        aria-current="page"
+                    >
+                        {{ page_number }}
+                    </span>
+                {% elif page_number >= page_obj.number|add:"-2" and page_number <= page_obj.number|add:"2" %}
+                    <a
+                        href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_number }}"
+                        class="inline-flex h-10 min-w-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                        {{ page_number }}
+                    </a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <a
+                    href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}"
+                    class="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                >
+                    Próxima
+                    <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                </a>
+            {% endif %}
+        </div>
+    </nav>
+{% endif %}
 
 <div
     id="library-delete-modal"

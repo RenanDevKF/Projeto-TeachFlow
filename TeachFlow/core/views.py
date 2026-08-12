@@ -3,6 +3,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
+from django.core.paginator import Paginator
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib import messages
@@ -1665,6 +1666,7 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
 
     VALID_SECTIONS = {'objectives', 'tags'}
     VALID_STATUSES = {'active', 'archived', 'all'}
+    PAGINATE_BY = 15
 
     def get_selected_section(self):
         section = self.request.GET.get('section', 'objectives')
@@ -1734,10 +1736,6 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
         objective_base = LearningObjective.objects.filter(teacher=teacher)
         tag_base = Tag.objects.filter(teacher=teacher)
 
-        context['selected_section'] = selected_section
-        context['selected_status'] = self.get_selected_status()
-        context['search_query'] = self.get_search_query()
-        
         objective_counts = objective_base.aggregate(
             active=Count('id', filter=Q(is_active=True)),
             archived=Count('id', filter=Q(is_active=False)),
@@ -1748,13 +1746,42 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
             archived=Count('id', filter=Q(is_active=False)),
         )
 
+        if selected_section == 'objectives':
+            queryset = self.get_objectives(teacher)
+        else:
+            queryset = self.get_tags(teacher)
+
+        paginator = Paginator(queryset, self.PAGINATE_BY)
+        page_obj = paginator.get_page(self.request.GET.get('page'))
+
+        query_parameters = self.request.GET.copy()
+        query_parameters.pop('page', None)
+
+        context['selected_section'] = selected_section
+        context['selected_status'] = self.get_selected_status()
+        context['search_query'] = self.get_search_query()
+
         context['objective_active_count'] = objective_counts['active']
         context['objective_archived_count'] = objective_counts['archived']
         context['tag_active_count'] = tag_counts['active']
         context['tag_archived_count'] = tag_counts['archived']
 
-        context['objectives'] = self.get_objectives(teacher) if selected_section == 'objectives' else LearningObjective.objects.none()
-        context['tags'] = self.get_tags(teacher) if selected_section == 'tags' else Tag.objects.none()
+        context['objectives'] = (
+            page_obj.object_list
+            if selected_section == 'objectives'
+            else LearningObjective.objects.none()
+        )
+        context['tags'] = (
+            page_obj.object_list
+            if selected_section == 'tags'
+            else Tag.objects.none()
+        )
+
+        context['page_obj'] = page_obj
+        context['paginator'] = paginator
+        context['is_paginated'] = paginator.num_pages > 1
+        context['results_count'] = paginator.count
+        context['query_string'] = query_parameters.urlencode()
 
         return context
     
