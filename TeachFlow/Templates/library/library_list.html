@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Biblioteca{% endblock %}
 
@@ -377,20 +378,17 @@
                                 {% endif %}
 
                                 {% if objective.exercise_count == 0 %}
-                                    <form
-                                        method="post"
-                                        action="{% url 'objective-delete' objective.pk %}"
+                                    <button
+                                        type="button"
+                                        data-library-delete-trigger
+                                        data-delete-url="{% url 'objective-delete' objective.pk %}"
+                                        data-delete-name="{{ objective.title }}"
+                                        data-delete-label="objetivo"
+                                        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                                     >
-                                        {% csrf_token %}
-
-                                        <button
-                                            type="submit"
-                                            class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                                        >
-                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
-                                            Excluir
-                                        </button>
-                                    </form>
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                        Excluir
+                                    </button>
                                 {% endif %}
                             </div>
                         </article>
@@ -577,20 +575,17 @@
                                 {% endif %}
 
                                 {% if tag.lesson_count == 0 and tag.exercise_count == 0 %}
-                                    <form
-                                        method="post"
-                                        action="{% url 'tag_delete' tag.pk %}"
+                                    <button
+                                        type="button"
+                                        data-library-delete-trigger
+                                        data-delete-url="{% url 'tag_delete' tag.pk %}"
+                                        data-delete-name="{{ tag.name }}"
+                                        data-delete-label="tag"
+                                        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                                     >
-                                        {% csrf_token %}
-
-                                        <button
-                                            type="submit"
-                                            class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                                        >
-                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
-                                            Excluir
-                                        </button>
-                                    </form>
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                        Excluir
+                                    </button>
                                 {% endif %}
                             </div>
                         </article>
@@ -609,7 +604,7 @@
                     </h2>
 
                     <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
-                        Ajuste a busca, o tipo ou o status para consultar outras tags.
+                        Ajuste a busca ou o status para consultar outras tags.
                     </p>
 
                     <a
@@ -656,4 +651,71 @@
         {% endif %}
     {% endif %}
 </div>
+
+<div
+    id="library-delete-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/50 px-4 py-6"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="library-delete-modal-title"
+>
+    <div class="w-full max-w-md rounded-xl border border-gray-200 bg-white shadow-xl">
+        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <div>
+                <h2 id="library-delete-modal-title" class="text-lg font-semibold text-gray-900">
+                    Confirmar exclusão
+                </h2>
+                <p class="mt-1 text-sm text-gray-500">
+                    Esta ação não poderá ser desfeita.
+                </p>
+            </div>
+
+            <button
+                type="button"
+                id="library-delete-modal-close"
+                class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                aria-label="Fechar modal"
+            >
+                <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+        </div>
+
+        <form id="library-delete-form" method="post" class="p-6">
+            {% csrf_token %}
+
+            <div class="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-4">
+                <i data-lucide="triangle-alert" class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600"></i>
+
+                <p class="text-sm leading-6 text-red-800">
+                    Tem certeza que deseja excluir permanentemente
+                    <strong id="library-delete-resource-name" class="font-semibold"></strong>?
+                </p>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-2">
+                <button
+                    type="button"
+                    id="library-delete-modal-cancel"
+                    class="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="submit"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-medium text-white transition-colors hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                >
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    Excluir
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script src="{% static 'js/library_delete_modal.js' %}"></script>
 {% endblock %}
