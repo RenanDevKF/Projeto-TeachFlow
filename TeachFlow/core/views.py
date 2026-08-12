@@ -53,13 +53,28 @@ def dashboard_view(request):
         return redirect('login')
     
     teacher = request.user.teacher_profile
-    today_lessons = Lesson.objects.filter(date=timezone.localdate(), class_group__teacher=teacher)
-    class_groups = ClassGroup.objects.filter(teacher=teacher)
+    today = timezone.localdate()
+
+    today_lessons = Lesson.objects.filter(
+        date=today,
+        class_group__teacher=teacher,
+    )
+
+    pending_lessons_count = Lesson.objects.filter(
+        class_group__teacher=teacher,
+        status=Lesson.Status.PLANNED,
+        date__lt=today,
+    ).count()
+
+    class_groups = ClassGroup.objects.filter(
+        teacher=teacher
+    )
     
     return render(request, 'dashboard/dashboard.html', {
         'today': timezone.now(),
         'today_lessons': today_lessons,
-        'class_groups': class_groups
+        'pending_lessons_count': pending_lessons_count,
+        'class_groups': class_groups,
     })
 
 # Class Group Views

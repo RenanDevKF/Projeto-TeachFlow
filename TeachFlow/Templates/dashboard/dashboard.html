@@ -23,12 +23,37 @@
             <i data-lucide="calendar-check" class="w-6 h-6 text-primary"></i>
             <h2 class="text-lg font-semibold text-gray-800">Planejamento do Dia</h2>
         </div>
+
         <a href="{% url 'lesson_form' %}" class="flex items-center gap-2 bg-primary text-white px-4 py-1 rounded-lg hover:bg-blue-600 transition">
             <i data-lucide="plus" class="w-5 h-5"></i>
             <span>Nova Aula</span>
         </a>
     </div>
-    
+
+    {% if pending_lessons_count %}
+        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="triangle-alert" class="h-5 w-5 flex-shrink-0 text-amber-600"></i>
+
+                    <p class="text-sm font-medium text-amber-800">
+                        {% if pending_lessons_count == 1 %}
+                            1 registro pendente
+                        {% else %}
+                            {{ pending_lessons_count }} registros pendentes
+                        {% endif %}
+                    </p>
+                </div>
+
+                <a
+                    href="{% url 'lesson_list' %}?section=pending"
+                    class="text-sm font-medium text-amber-700 hover:underline"
+                >
+                    Ver pendências
+                </a>
+            </div>
+        </div>
+    {% endif %}
 
     {% if today_lessons %}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
