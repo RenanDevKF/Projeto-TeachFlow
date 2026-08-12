@@ -67,7 +67,8 @@ def dashboard_view(request):
     ).count()
 
     class_groups = ClassGroup.objects.filter(
-        teacher=teacher
+        teacher=teacher,
+        is_active=True
     )
     
     return render(request, 'dashboard/dashboard.html', {
