@@ -58,7 +58,7 @@ def dashboard_view(request):
     today_lessons = Lesson.objects.filter(
         date=today,
         class_group__teacher=teacher,
-    )
+    ).select_related('class_group')
 
     pending_lessons_count = Lesson.objects.filter(
         class_group__teacher=teacher,
