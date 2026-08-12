@@ -55,10 +55,30 @@ def dashboard_view(request):
     teacher = request.user.teacher_profile
     today = timezone.localdate()
 
-    today_lessons = Lesson.objects.filter(
-        date=today,
-        class_group__teacher=teacher,
-    ).select_related('class_group')
+    today_lessons = (
+        Lesson.objects
+        .filter(
+            date=today,
+            class_group__teacher=teacher,
+        )
+        .select_related('class_group')
+        .annotate(
+            period_order=Case(
+                When(class_group__period='Manhã', then=Value(1)),
+                When(class_group__period='Tarde', then=Value(2)),
+                When(class_group__period='Noite', then=Value(3)),
+                default=Value(4),
+                output_field=IntegerField(),
+            )
+        )
+        .order_by(
+            'period_order',
+            'class_group__schedule',
+            'class_group__name',
+            'title',
+            'id',
+        )
+    )
 
     pending_lessons_count = Lesson.objects.filter(
         class_group__teacher=teacher,
