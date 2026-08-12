@@ -14,7 +14,16 @@
     <!-- Saudação e Data -->
     <div class="text-left">
         <p class="text-sm text-gray-500">{{ today|date:"l, d \d\e F \d\e Y" }}</p>
-        <h1 class="text-2xl font-bold mt-2">Bem-vindo(a), {{ user.first_name }}!</h1>
+    <h1 class="text-2xl font-bold mt-2">
+        Bem-vindo(a),
+        {% if user.teacher_profile.display_name %}
+            {{ user.teacher_profile.display_name }}!
+        {% elif user.first_name %}
+            {{ user.first_name }}!
+        {% else %}
+            {{ user.username }}!
+        {% endif %}
+    </h1>
     </div>
 
     <!-- Planejamento do Dia -->
