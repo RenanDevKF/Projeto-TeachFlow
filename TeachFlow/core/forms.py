@@ -1,8 +1,8 @@
-import re
 from django import forms
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from .utils import normalize_objective_title, normalize_tag_name, validate_tag_name, find_existing_tag
 
 from .models import *
 
@@ -218,10 +218,15 @@ class LessonForm(forms.ModelForm):
                 teacher=self.teacher,
             ).distinct().order_by('name', 'year')
 
+            tag_filter = Q(is_active=True)
+
+            if self.instance.pk:
+                tag_filter |= Q(lessons=self.instance)
+
             self.fields['tags'].queryset = (
                 Tag.objects.filter(
+                    tag_filter,
                     teacher=self.teacher,
-                    type__in=['lesson', 'general'],
                 )
                 .distinct()
                 .order_by('name')
@@ -358,10 +363,14 @@ class ExerciseForm(forms.ModelForm):
                 teacher=teacher,
             ).distinct().order_by('title')
 
+            tag_filter = Q(is_active=True)
+
+            if self.instance.pk:
+                tag_filter |= Q(exercises=self.instance)
+
             self.fields['tags'].queryset = Tag.objects.filter(
                 tag_filter,
                 teacher=teacher,
-                type__in=['exercise', 'general'],
             ).distinct().order_by('name')
 
         if self.instance.pk:
@@ -446,7 +455,9 @@ class LearningObjectiveForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
     def clean_title(self):
-        title = self.cleaned_data.get('title', '').strip()
+        title = normalize_objective_title(
+            self.cleaned_data.get('title', '')
+        )
 
         if not title:
             raise forms.ValidationError('Informe um título para o objetivo.')
@@ -465,15 +476,16 @@ class LearningObjectiveForm(forms.ModelForm):
 class TagForm(forms.ModelForm):
     class Meta:
         model = Tag
-        fields = ['name', 'type', 'color']
+        fields = ['name', 'color']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-input',
                 'placeholder': 'Ex.: Revisão',
                 'autocomplete': 'off',
             }),
-            'type': forms.Select(attrs={'class': 'form-select'}),
-            'color': forms.Select(attrs={'class': 'form-select'}),
+            'color': forms.Select(attrs={
+                'class': 'form-select',
+            }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -481,28 +493,27 @@ class TagForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
     def clean_name(self):
-        name = ' '.join(self.cleaned_data.get('name', '').split())
+        name = normalize_tag_name(
+            self.cleaned_data.get('name', '')
+        )
 
-        if not name:
-            raise forms.ValidationError('Informe o nome da tag.')
+        validation_error = validate_tag_name(name)
 
-        if len(name) < 2:
-            raise forms.ValidationError('O nome deve possuir pelo menos 2 caracteres.')
+        if validation_error:
+            raise forms.ValidationError(validation_error)
 
-        if not re.fullmatch(r'[\w\sÀ-ÿ\-]+', name):
-            raise forms.ValidationError(
-                'Use apenas letras, números, espaços, hífens e underscores.'
+        if self.teacher:
+            existing_tag = find_existing_tag(
+                self.teacher,
+                name,
             )
 
-        tag_type = self.data.get('type') or self.instance.type or 'general'
-
-        if self.teacher and Tag.objects.filter(
-            teacher=self.teacher,
-            name__iexact=name,
-            type=tag_type,
-        ).exclude(pk=self.instance.pk).exists():
-            raise forms.ValidationError(
-                'Já existe uma tag com este nome e tipo.'
-            )
+            if (
+                existing_tag
+                and existing_tag.pk != self.instance.pk
+            ):
+                raise forms.ValidationError(
+                    'Já existe uma tag com este nome.'
+                )
 
         return name

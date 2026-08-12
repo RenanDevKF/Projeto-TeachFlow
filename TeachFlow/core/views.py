@@ -3,22 +3,23 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
+from django.core.paginator import Paginator
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib import messages
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import Q, Case, IntegerField, Value, When, Count, Prefetch
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, Http404, HttpResponseRedirect
 from datetime import date
-from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, FutureIdea, LessonExercise
+from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, LessonExercise
+from .utils import normalize_objective_title, normalize_tag_name, find_existing_tag, validate_tag_name
 from .forms import *
 from django.utils import timezone
 from datetime import date
 import json
-import re
 
 class TeacherRequiredMixin(UserPassesTestMixin):
     """Ensure that only teachers can access specific views"""
@@ -297,7 +298,6 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         exists = Tag.objects.filter(
             pk=tag_id,
             teacher=self.request.user.teacher_profile,
-            type__in=['lesson', 'general'],
             is_active=True,
         ).exists()
 
@@ -369,7 +369,7 @@ class LessonListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
         context['query_string'] = query_parameters.urlencode()
 
         context['class_groups'] = ClassGroup.objects.filter(teacher=teacher).order_by('-is_active', 'name', 'year')
-        context['tags'] = Tag.objects.filter(teacher=teacher, type__in=['lesson', 'general'], is_active=True,).distinct().order_by('name')
+        context['tags'] = Tag.objects.filter(teacher=teacher, is_active=True,).distinct().order_by('name')
 
         context['upcoming_count'] = filtered_lessons.filter(status=Lesson.Status.PLANNED, date__gte=today).count()
         context['pending_count'] = filtered_lessons.filter(status=Lesson.Status.PLANNED, date__lt=today).count()
@@ -839,7 +839,6 @@ class ExerciseListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
 
         context['tags'] = Tag.objects.filter(
             teacher=teacher,
-            type__in=['exercise', 'general'],
         ).order_by('name')
 
         context['objectives'] = LearningObjective.objects.filter(
@@ -1323,7 +1322,9 @@ class QuickCreateLearningObjectiveView(LoginRequiredMixin, TeacherRequiredMixin,
                 'error': 'Dados inválidos.',
             }, status=400)
 
-        title = data.get('title', '').strip()
+        title = normalize_objective_title(
+            data.get('title', '')
+        )
         description = data.get('description', '').strip()
 
         if not title:
@@ -1364,55 +1365,50 @@ class QuickCreateLearningObjectiveView(LoginRequiredMixin, TeacherRequiredMixin,
                 },
             })
 
-        objective = LearningObjective.objects.create(
-            teacher=request.user.teacher_profile,
-            title=title,
-            description=description,
-        )
+        try:
+            objective = LearningObjective.objects.create(
+                teacher=request.user.teacher_profile,
+                title=title,
+                description=description,
+            )
+
+            created = True
+
+        except IntegrityError:
+            objective = LearningObjective.objects.filter(
+                teacher=request.user.teacher_profile,
+                title__iexact=title,
+            ).first()
+
+            if objective is None:
+                raise
+
+            if not objective.is_active:
+                return JsonResponse({
+                    'success': False,
+                    'error': (
+                        'Já existe um objetivo arquivado com este título. '
+                        'Reative-o pela Biblioteca para utilizá-lo novamente.'
+                    ),
+                }, status=409)
+
+            created = False
 
         return JsonResponse({
             'success': True,
-            'created': True,
-            'message': 'Objetivo de aprendizagem criado e selecionado.',
+            'created': created,
+            'message': (
+                'Objetivo de aprendizagem criado e selecionado.'
+                if created
+                else 'Este objetivo já estava cadastrado e foi selecionado.'
+            ),
             'item': {
                 'id': objective.id,
                 'title': objective.title,
                 'description': objective.description,
             },
-        }, status=201)
+        }, status=201 if created else 200)
     
-# Future Ideas Views
-@method_decorator(csrf_protect, name='dispatch')
-class FutureIdeaListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
-    model = FutureIdea
-    template_name = 'core/future_idea_list.html'
-    context_object_name = 'ideas'
-    
-    def get_queryset(self):
-        return FutureIdea.objects.filter(teacher=self.request.user.teacher_profile)
-
-
-@method_decorator(csrf_protect, name='dispatch')
-class FutureIdeaCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
-    model = FutureIdea
-    template_name = 'core/future_idea_form.html'
-    fields = ['title', 'description', 'class_group', 'tags']
-    success_url = reverse_lazy('idea-list')
-    
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        # Limit class group choices to only those owned by this teacher
-        form.fields['class_group'].queryset = ClassGroup.objects.filter(
-            teacher=self.request.user.teacher_profile
-        )
-        return form
-    
-    def form_valid(self, form):
-        form.instance.teacher = self.request.user.teacher_profile
-        messages.success(self.request, "Future idea created successfully!")
-        return super().form_valid(form)
-    
-
 # Student Views
 @method_decorator(csrf_protect, name='dispatch')
 class StudentListView(LoginRequiredMixin, TeacherRequiredMixin, ListView):
@@ -1670,7 +1666,7 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
 
     VALID_SECTIONS = {'objectives', 'tags'}
     VALID_STATUSES = {'active', 'archived', 'all'}
-    VALID_TAG_TYPES = {'lesson', 'exercise', 'general'}
+    PAGINATE_BY = 15
 
     def get_selected_section(self):
         section = self.request.GET.get('section', 'objectives')
@@ -1683,9 +1679,6 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
     def get_search_query(self):
         return ' '.join(self.request.GET.get('q', '').split())[:100]
 
-    def get_selected_tag_type(self):
-        tag_type = self.request.GET.get('type', '')
-        return tag_type if tag_type in self.VALID_TAG_TYPES else ''
 
     def apply_status_filter(self, queryset):
         status = self.get_selected_status()
@@ -1708,10 +1701,11 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
         search_query = self.get_search_query()
 
         if search_query:
-            queryset = queryset.filter(
-                Q(title__icontains=search_query)
-                | Q(description__icontains=search_query)
-            )
+            for term in search_query.split():
+                queryset = queryset.filter(
+                    Q(title__icontains=term)
+                    | Q(description__icontains=term)
+                )
 
         return self.apply_status_filter(queryset).order_by('title')
 
@@ -1724,13 +1718,13 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
         )
 
         search_query = self.get_search_query()
-        selected_type = self.get_selected_tag_type()
 
         if search_query:
-            queryset = queryset.filter(name__icontains=search_query)
+            for term in search_query.split():
+                queryset = queryset.filter(
+                    name__icontains=term
+                )
 
-        if selected_type:
-            queryset = queryset.filter(type=selected_type)
 
         return self.apply_status_filter(queryset).order_by('name')
 
@@ -1742,21 +1736,66 @@ class LibraryView(LoginRequiredMixin, TeacherRequiredMixin, TemplateView):
         objective_base = LearningObjective.objects.filter(teacher=teacher)
         tag_base = Tag.objects.filter(teacher=teacher)
 
+        objective_counts = objective_base.aggregate(
+            active=Count('id', filter=Q(is_active=True)),
+            archived=Count('id', filter=Q(is_active=False)),
+        )
+
+        tag_counts = tag_base.aggregate(
+            active=Count('id', filter=Q(is_active=True)),
+            archived=Count('id', filter=Q(is_active=False)),
+        )
+
+        if selected_section == 'objectives':
+            queryset = self.get_objectives(teacher)
+        else:
+            queryset = self.get_tags(teacher)
+
+        paginator = Paginator(queryset, self.PAGINATE_BY)
+        page_obj = paginator.get_page(self.request.GET.get('page'))
+
+        query_parameters = self.request.GET.copy()
+        query_parameters.pop('page', None)
+
         context['selected_section'] = selected_section
         context['selected_status'] = self.get_selected_status()
-        context['selected_tag_type'] = self.get_selected_tag_type()
         context['search_query'] = self.get_search_query()
-        context['tag_type_choices'] = Tag.TYPE_CHOICES
 
-        context['objective_active_count'] = objective_base.filter(is_active=True).count()
-        context['objective_archived_count'] = objective_base.filter(is_active=False).count()
-        context['tag_active_count'] = tag_base.filter(is_active=True).count()
-        context['tag_archived_count'] = tag_base.filter(is_active=False).count()
+        context['objective_active_count'] = objective_counts['active']
+        context['objective_archived_count'] = objective_counts['archived']
+        context['tag_active_count'] = tag_counts['active']
+        context['tag_archived_count'] = tag_counts['archived']
 
-        context['objectives'] = self.get_objectives(teacher) if selected_section == 'objectives' else LearningObjective.objects.none()
-        context['tags'] = self.get_tags(teacher) if selected_section == 'tags' else Tag.objects.none()
+        context['objectives'] = (
+            page_obj.object_list
+            if selected_section == 'objectives'
+            else LearningObjective.objects.none()
+        )
+        context['tags'] = (
+            page_obj.object_list
+            if selected_section == 'tags'
+            else Tag.objects.none()
+        )
+
+        context['page_obj'] = page_obj
+        context['paginator'] = paginator
+        context['is_paginated'] = paginator.num_pages > 1
+        context['results_count'] = paginator.count
+        context['query_string'] = query_parameters.urlencode()
 
         return context
+    
+def legacy_tag_list_redirect(request):
+    query_params = request.GET.copy()
+    query_params['section'] = 'tags'
+
+    url = reverse('library')
+    query_string = query_params.urlencode()
+
+    if query_string:
+        url = f'{url}?{query_string}'
+
+    return redirect(url)
  
 @method_decorator(csrf_protect, name='dispatch')
 class TagCreateView(LoginRequiredMixin, TeacherRequiredMixin, CreateView):
@@ -1900,31 +1939,22 @@ class QuickCreateExerciseTagView(LoginRequiredMixin, TeacherRequiredMixin, View)
                 'error': 'Dados inválidos.',
             }, status=400)
 
-        tag_name = data.get('name', '').strip()
+        tag_name = normalize_tag_name(
+            data.get('name', '')
+        )   
 
-        if not tag_name:
+        validation_error = validate_tag_name(tag_name)
+
+        if validation_error:
             return JsonResponse({
                 'success': False,
-                'error': 'Informe o nome da tag.',
+                'error': validation_error,
             }, status=400)
 
-        if len(tag_name) > Tag._meta.get_field('name').max_length:
-            return JsonResponse({
-                'success': False,
-                'error': 'O nome da tag deve possuir no máximo 50 caracteres.',
-            }, status=400)
-
-        if not re.match(r'^[\w\sÀ-ÿ\-]+$', tag_name):
-            return JsonResponse({
-                'success': False,
-                'error': 'Use apenas letras, números, espaços, hífens e underscores.',
-            }, status=400)
-
-        existing_tag = Tag.objects.filter(
-            teacher=request.user.teacher_profile,
-            name__iexact=tag_name,
-            type__in=['exercise', 'general'],
-        ).order_by('type', 'id').first()
+        existing_tag = find_existing_tag(
+            request.user.teacher_profile,
+            tag_name,
+        )
 
         if existing_tag and not existing_tag.is_active:
             return JsonResponse({
@@ -1947,23 +1977,49 @@ class QuickCreateExerciseTagView(LoginRequiredMixin, TeacherRequiredMixin, View)
                 },
             })
 
-        tag = Tag.objects.create(
-            teacher=request.user.teacher_profile,
-            name=tag_name,
-            type='exercise',
-            color=Tag.generate_random_color(),
-        )
+        try:
+            tag = Tag.objects.create(
+                teacher=request.user.teacher_profile,
+                name=tag_name,
+                color=Tag.generate_random_color(),
+            )
+
+            created = True
+
+        except IntegrityError:
+            tag = find_existing_tag(
+                request.user.teacher_profile,
+                tag_name,
+            )
+
+            if tag is None:
+                raise
+
+            if not tag.is_active:
+                return JsonResponse({
+                    'success': False,
+                    'error': (
+                        'Já existe uma tag arquivada com este nome. '
+                        'Reative-a pela Biblioteca para utilizá-la novamente.'
+                    ),
+                }, status=409)
+
+            created = False
 
         return JsonResponse({
             'success': True,
-            'created': True,
-            'message': 'Tag criada e selecionada.',
+            'created': created,
+            'message': (
+                'Tag criada e selecionada.'
+                if created
+                else 'Esta tag já estava cadastrada e foi selecionada.'
+            ),
             'item': {
                 'id': tag.id,
                 'name': tag.name,
                 'color': tag.color,
             },
-        }, status=201)
+        }, status=201 if created else 200)
 
 @method_decorator(csrf_protect, name='dispatch')
 class QuickAddTagView(
@@ -1989,7 +2045,7 @@ class QuickAddTagView(
 
         tag_name = self.get_tag_name(request)
 
-        validation_error = self.validate_tag_name(tag_name)
+        validation_error = validate_tag_name(tag_name)
 
         if validation_error:
             return JsonResponse(
@@ -2017,29 +2073,14 @@ class QuickAddTagView(
                 status=404,
             )
 
-        tag = Tag.objects.filter(
-            teacher=teacher,
-            name__iexact=tag_name,
-            type__in=[
-                model_type,
-                'general',
-            ],
-            is_active=True,
-        ).order_by(
-            'type',
-            'id',
-        ).first()
+        tag = find_existing_tag(
+            teacher,
+            tag_name,
+        )
 
         created = False
-        
-        archived_tag_exists = Tag.objects.filter(
-            teacher=teacher,
-            name__iexact=tag_name,
-            type__in=[model_type, 'general'],
-            is_active=False,
-        ).exists()
 
-        if tag is None and archived_tag_exists:
+        if tag and not tag.is_active:
             return JsonResponse(
                 {
                     'success': False,
@@ -2049,18 +2090,40 @@ class QuickAddTagView(
                     ),
                 },
                 status=409,
-            )        
-
-        if tag is None:
-            tag = Tag.objects.create(
-                name=tag_name,
-                teacher=teacher,
-                type=model_type,
-                color=Tag.generate_random_color(),
             )
 
-            created = True
+        if tag is None:
+            try:
+                with transaction.atomic():
+                    tag = Tag.objects.create(
+                        name=tag_name,
+                        teacher=teacher,
+                        color=Tag.generate_random_color(),
+                    )
 
+                created = True
+
+            except IntegrityError:
+                tag = find_existing_tag(
+                    teacher,
+                    tag_name,
+                )
+
+                if tag is None:
+                    raise
+
+                if not tag.is_active:
+                    return JsonResponse(
+                        {
+                            'success': False,
+                            'error': (
+                                'Já existe uma tag arquivada com este nome. '
+                                'Reative-a pela Biblioteca para utilizá-la novamente.'
+                            ),
+                        },
+                        status=409,
+                    )
+                    
         target_object.tags.add(tag)
 
         if not target_object.tags.filter(pk=tag.pk).exists():
@@ -2091,7 +2154,6 @@ class QuickAddTagView(
                     'id': tag.pk,
                     'name': tag.name,
                     'color': tag.color,
-                    'type': tag.type,
                 },
             },
             status=201 if created else 200,
@@ -2118,34 +2180,8 @@ class QuickAddTagView(
                 ''
             )
 
-        return ' '.join(
-            str(raw_tag_name).split()
-        )
+        return normalize_tag_name(raw_tag_name)
 
-    def validate_tag_name(self, tag_name):
-        if not tag_name:
-            return 'O nome da tag não pode estar vazio.'
-
-        if len(tag_name) < 2:
-            return (
-                'O nome da tag deve ter pelo menos 2 caracteres.'
-            )
-
-        if len(tag_name) > 50:
-            return (
-                'O nome da tag não pode ultrapassar 50 caracteres.'
-            )
-
-        if not re.fullmatch(
-            r'[\w\sÀ-ÿ\-]+',
-            tag_name,
-        ):
-            return (
-                'Use apenas letras, números, espaços, '
-                'hífens e underscores.'
-            )
-
-        return None
 
     def get_target_object(
         self,

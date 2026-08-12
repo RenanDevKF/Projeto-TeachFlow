@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let isSubmitting = false;
+    let triggerElement = null;
 
     function clearFeedback() {
         if (!feedback) {
@@ -52,6 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openModal() {
+        triggerElement = document.activeElement;
+        
         clearFeedback();
 
         modal.classList.remove('hidden');
@@ -79,6 +82,12 @@ document.addEventListener('DOMContentLoaded', () => {
         form.reset();
         clearFeedback();
         updateSubmitButton();
+
+        if (triggerElement instanceof HTMLElement) {
+            triggerElement.focus();
+        }
+
+        triggerElement = null;        
     }
 
     openButton.addEventListener('click', openModal);

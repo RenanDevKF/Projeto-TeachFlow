@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from .models import (
     ClassGroup, Student, Lesson, Exercise, 
-    Tag, LearningObjective, FutureIdea, AdminActionLog
+    Tag, LearningObjective, AdminActionLog
 )
 
 # Security-enhanced admin configuration
@@ -228,27 +228,6 @@ class LearningObjectiveAdmin(SecureModelAdmin):
         }),
     )
 
-
-@admin.register(FutureIdea)
-class FutureIdeaAdmin(SecureModelAdmin):
-    list_display = ('title', 'teacher', 'class_group', 'created_at')
-    list_filter = ('teacher', 'class_group', 'created_at')
-    search_fields = ('title', 'description')
-    readonly_fields = ('created_at',)
-    filter_horizontal = ('tags',)
-    
-    fieldsets = (
-        ('Idea Information', {
-            'fields': ('title', 'description', 'teacher', 'class_group')
-        }),
-        ('Categorization', {
-            'fields': ('tags',),
-        }),
-        ('System Information', {
-            'fields': ('created_at',),
-            'classes': ('collapse',)
-        }),
-    )
 
 class AdminActionLogAdmin(SecureModelAdmin):
     list_display = ('user', 'action', 'model_name', 'object_id', 'timestamp')

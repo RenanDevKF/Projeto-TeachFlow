@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}
     {% if form.instance.pk %}
@@ -37,9 +38,9 @@
 
             <p class="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
                 {% if form.instance.pk %}
-                    Atualize o nome, o tipo ou a cor desta tag reutilizável.
+                    Atualize o nome ou a cor desta tag reutilizável.
                 {% else %}
-                    Crie um marcador visual para organizar aulas e exercícios.
+                    Crie um marcador visual reutilizável para organizar seus registros.
                 {% endif %}
             </p>
         </div>
@@ -73,7 +74,7 @@
                             {{ exercise_count }}
                             {% if exercise_count == 1 %}exercício{% else %}exercícios{% endif %}
                         {% endif %}.
-                        As alterações serão refletidas em todos esses registros.
+                        Alterações no nome ou na cor serão refletidas em todos esses registros.
                     </p>
                 </div>
             </div>
@@ -144,59 +145,6 @@
                     {% endif %}
                 </div>
 
-                <!-- Tipo -->
-                <div>
-                    <label for="id_type" class="mb-2 block text-sm font-medium text-gray-700">
-                        Tipo
-                        <span class="text-red-500">*</span>
-                    </label>
-
-                    <select
-                        id="id_type"
-                        name="{{ form.type.name }}"
-                        required
-                        class="h-11 w-full rounded-lg border px-4 text-sm text-gray-700 shadow-sm transition-colors focus:outline-none focus:ring-2
-                        {% if form.type.errors %}
-                            border-red-300 focus:border-red-500 focus:ring-red-200
-                        {% else %}
-                            border-gray-300 focus:border-blue-500 focus:ring-blue-200
-                        {% endif %}"
-                    >
-                        {% for value, label in form.fields.type.choices %}
-                            <option value="{{ value }}" {% if form.type.value == value %}selected{% endif %}>
-                                {{ label }}
-                            </option>
-                        {% endfor %}
-                    </select>
-
-                    <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                            <p class="text-sm font-semibold text-gray-800">Aula</p>
-                            <p class="mt-1 text-xs leading-5 text-gray-500">
-                                Disponível para organizar aulas.
-                            </p>
-                        </div>
-
-                        <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                            <p class="text-sm font-semibold text-gray-800">Exercício</p>
-                            <p class="mt-1 text-xs leading-5 text-gray-500">
-                                Disponível para organizar exercícios.
-                            </p>
-                        </div>
-
-                        <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                            <p class="text-sm font-semibold text-gray-800">Geral</p>
-                            <p class="mt-1 text-xs leading-5 text-gray-500">
-                                Pode ser utilizada nos dois recursos.
-                            </p>
-                        </div>
-                    </div>
-
-                    {% if form.type.errors %}
-                        <p class="mt-1.5 text-sm text-red-600">{{ form.type.errors.0 }}</p>
-                    {% endif %}
-                </div>
-
                 <!-- Cor -->
                 <div>
                     <label for="id_color" class="mb-2 block text-sm font-medium text-gray-700">
@@ -263,25 +211,5 @@
 
 {% block scripts %}
     {{ block.super }}
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const nameInput = document.getElementById('id_name');
-            const colorSelect = document.getElementById('id_color');
-            const preview = document.getElementById('tag-color-preview');
-
-            function updatePreview() {
-                if (!preview || !colorSelect) return;
-
-                const color = colorSelect.value || '#3B82F6';
-                preview.textContent = nameInput?.value.trim() || 'Prévia da tag';
-                preview.style.backgroundColor = `${color}20`;
-                preview.style.color = color;
-            }
-
-            nameInput?.addEventListener('input', updatePreview);
-            colorSelect?.addEventListener('change', updatePreview);
-            updatePreview();
-        });
-    </script>
+    <script src="{% static 'js/tag_form.js' %}"></script>
 {% endblock %}
