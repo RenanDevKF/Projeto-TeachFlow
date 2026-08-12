@@ -34,9 +34,29 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for lesson in today_lessons %}
         <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
-            <h3 class="text-lg font-bold text-primary mb-2">{{ lesson.title }}</h3>
-            <p class="text-sm text-gray-600 mb-2">{{ lesson.class_group.name }}</p>
-            <p class="text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }} | {{ lesson.class_group.period }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <h3 class="text-lg font-bold text-primary">{{ lesson.title }}</h3>
+
+                {% if lesson.status == 'completed' %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                        Realizada
+                    </span>
+                {% elif lesson.status == 'cancelled' %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
+                        <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                        Cancelada
+                    </span>
+                {% else %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                        <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                        Planejada
+                    </span>
+                {% endif %}
+            </div>
+
+            <p class="mt-2 text-sm text-gray-600">{{ lesson.class_group.name }}</p>
+            <p class="mt-1 text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }} | {{ lesson.class_group.period }}</p>
             <a href="{% url 'lesson_detail' lesson.id %}" class="block mt-4 text-primary hover:underline text-sm">Ver detalhes</a>
         </div>
         {% endfor %}
@@ -47,7 +67,7 @@
         <svg class="w-20 h-20 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2v-5H3v5a2 2 0 0 0 2 2z"></path>
         </svg>
-        <p class="mt-4 text-gray-600">Nenhuma aula planejada para hoje. Que tal planejar uma nova?</p>
+        <p class="mt-4 text-gray-600">Nenhuma aula registrada para hoje. Que tal planejar uma nova?</p>
     </div>
     {% endif %}
 

@@ -13,12 +13,10 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, Http404, HttpResponseRedirect
-from datetime import date
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, LessonExercise
 from .utils import normalize_objective_title, normalize_tag_name, find_existing_tag, validate_tag_name
 from .forms import *
 from django.utils import timezone
-from datetime import date
 import json
 
 class TeacherRequiredMixin(UserPassesTestMixin):
@@ -55,7 +53,7 @@ def dashboard_view(request):
         return redirect('login')
     
     teacher = request.user.teacher_profile
-    today_lessons = Lesson.objects.filter(date=date.today(), class_group__teacher=teacher)
+    today_lessons = Lesson.objects.filter(date=timezone.localdate(), class_group__teacher=teacher)
     class_groups = ClassGroup.objects.filter(teacher=teacher)
     
     return render(request, 'dashboard/dashboard.html', {
