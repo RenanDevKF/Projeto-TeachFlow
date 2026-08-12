@@ -81,7 +81,15 @@
             </div>
 
             <p class="mt-2 text-sm text-gray-600">{{ lesson.class_group.name }}</p>
-            <p class="mt-1 text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }} | {{ lesson.class_group.period }}</p>
+            <p class="mt-1 text-sm text-gray-500">
+                {{ lesson.date|date:"d/m/Y" }}
+                {% if lesson.class_group.period %}
+                    · {{ lesson.class_group.period }}
+                {% endif %}
+                {% if lesson.class_group.schedule %}
+                    · {{ lesson.class_group.schedule }}
+                {% endif %}
+            </p>
             <a href="{% url 'lesson_detail' lesson.id %}" class="block mt-4 text-primary hover:underline text-sm">Ver detalhes</a>
         </div>
         {% endfor %}
