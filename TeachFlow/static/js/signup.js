@@ -114,8 +114,9 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             if (data.success) {
-                alert('Conta criada com sucesso! Agora você pode fazer login.');
-                window.location.href = data.redirect_url || '/accounts/login/';
+                window.location.href =
+                    data.redirect_url ||
+                    '/accounts/register/check-email/';
             } else {
                 throw new Error('Erro ao criar a conta.');
             }

@@ -17,6 +17,7 @@ from django.shortcuts import redirect, render
 from django.http import JsonResponse
 from .models import CustomUser, Subscription
 from .forms import CustomUserCreationForm
+from .emails import send_account_activation_email
 from accounts.models import Teacher
 from .tokens import get_user_from_activation_token
 import uuid  # Adicionado para gerar IDs únicos
@@ -35,34 +36,54 @@ class SignupView(CreateView):
     model = CustomUser
     template_name = 'accounts/signup.html'
     form_class = CustomUserCreationForm
-    success_url = reverse_lazy('login')
+    success_url = reverse_lazy('signup_check_email')
 
     def form_valid(self, form):
-        user = form.save(commit=False)
-        user.is_teacher = True
-        user.is_active = True
-        selected_plan = self.request.POST.get('plan', SubscriptionPlan.FREE)
-        user.subscription_plan = selected_plan
-        user.save()
-        
-        if not hasattr(user, 'teacher_profile'):
-            Teacher.objects.create(user=user)
+        with transaction.atomic():
+            user = form.save(commit=False)
+            user.is_teacher = True
+            user.is_active = False
 
-        try:
-            # 🔥 Processa a assinatura conforme o plano selecionado
-            self._process_subscription(user, selected_plan)
-        except ValidationError:
-            # Fallback: Se o plano for inválido, inscreve no gratuito
-            self._process_subscription(user, SubscriptionPlan.FREE)
+            selected_plan = self.request.POST.get(
+                'plan',
+                SubscriptionPlan.FREE,
+            )
+
+            user.subscription_plan = selected_plan
+            user.save()
+
+            if not hasattr(user, 'teacher_profile'):
+                Teacher.objects.create(user=user)
+
+            try:
+                self._process_subscription(
+                    user,
+                    selected_plan,
+                )
+            except ValidationError:
+                self._process_subscription(
+                    user,
+                    SubscriptionPlan.FREE,
+                )
+
+        send_account_activation_email(
+            self.request,
+            user,
+        )
 
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': True,
-                'message': 'Cadastro realizado com sucesso!',
-                'redirect_url': reverse('login')
-            })
+            return JsonResponse(
+                {
+                    'success': True,
+                    'message': (
+                        'Cadastro realizado com sucesso. '
+                        'Confira seu e-mail para ativar sua conta.'
+                    ),
+                    'redirect_url': reverse('signup_check_email'),
+                }
+            )
 
-        return redirect('login')
+        return redirect('signup_check_email')
     
     
 
