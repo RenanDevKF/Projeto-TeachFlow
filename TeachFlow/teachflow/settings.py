@@ -169,3 +169,10 @@ X_FRAME_OPTIONS = 'DENY'
 RATELIMIT_ENABLE = True
 RATELIMIT_VIEW = 'accounts.views.lockout_view'  # View customizada para bloqueio
 RATELIMIT_LOGIN = '5/m'  # 5 tentativas por minuto
+
+# E-mail em desenvolvimento
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'TeachFlow <noreply@teachflow.local>'
+
+# Tempo máximo para confirmação de e-mail: 24 horas
+ACCOUNT_ACTIVATION_TIMEOUT = 60 * 60 * 24

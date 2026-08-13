@@ -2,7 +2,9 @@
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.forms import PasswordChangeForm
-from django.views.generic import CreateView, UpdateView, View
+from django.views.generic import CreateView, UpdateView, View, TemplateView
+from django.conf import settings
+from django.core import signing
 from django.urls import reverse_lazy, reverse
 from django.views.decorators.cache import never_cache
 from django.utils.decorators import method_decorator
@@ -16,6 +18,7 @@ from django.http import JsonResponse
 from .models import CustomUser, Subscription
 from .forms import CustomUserCreationForm
 from accounts.models import Teacher
+from .tokens import get_user_from_activation_token
 import uuid  # Adicionado para gerar IDs únicos
 
 # Defina os planos no nível do módulo ou em core/models.py
@@ -101,6 +104,69 @@ class SignupView(CreateView):
         context = super().get_context_data(**kwargs)
         context['plans'] = SubscriptionPlan.CHOICES
         return context
+
+@method_decorator(never_cache, name='dispatch')
+class SignupCheckEmailView(TemplateView):
+    template_name = 'accounts/signup_check_email.html'
+
+
+@method_decorator(never_cache, name='dispatch')
+class ActivateAccountView(View):
+    template_name = 'accounts/account_activation_result.html'
+
+    def get(self, request, token):
+        try:
+            user = get_user_from_activation_token(token)
+
+        except signing.SignatureExpired:
+            return render(
+                request,
+                self.template_name,
+                {
+                    'activation_status': 'expired',
+                },
+                status=400,
+            )
+
+        except signing.BadSignature:
+            return render(
+                request,
+                self.template_name,
+                {
+                    'activation_status': 'invalid',
+                },
+                status=400,
+            )
+
+        if user is None:
+            return render(
+                request,
+                self.template_name,
+                {
+                    'activation_status': 'invalid',
+                },
+                status=400,
+            )
+
+        if user.is_active:
+            return render(
+                request,
+                self.template_name,
+                {
+                    'activation_status': 'already_active',
+                },
+            )
+
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+
+        return render(
+            request,
+            self.template_name,
+            {
+                'activation_status': 'success',
+            },
+        )
     
 @method_decorator(never_cache, name='dispatch')
 class CustomLoginView(LoginView):

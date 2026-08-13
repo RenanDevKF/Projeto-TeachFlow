@@ -1,0 +1,13 @@
+Olá, {{ user.first_name }}!
+
+Obrigado por criar sua conta no TeachFlow.
+
+Para confirmar seu e-mail e liberar o acesso à sua conta, acesse o link abaixo:
+
+{{ activation_url }}
+
+Este link é temporário e expira em 24 horas.
+
+Se você não criou esta conta, pode ignorar esta mensagem.
+
+TeachFlow

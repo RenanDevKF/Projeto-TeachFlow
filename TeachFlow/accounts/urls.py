@@ -5,14 +5,18 @@ from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth.decorators import login_required
 from .views import validate_username_email
 from .views import (
-    CustomLoginView, 
+    ActivateAccountView,
+    CustomLoginView,
     CustomLogoutView,
+    ProfileView,
+    SignupCheckEmailView,
     SignupView,
-    ProfileView
 )
 
 urlpatterns = [
     path('register/', never_cache(csrf_protect(SignupView.as_view())), name='register'),
+    path('register/check-email/', never_cache(SignupCheckEmailView.as_view()), name='signup_check_email'),
+    path('activate/<str:token>/', never_cache(ActivateAccountView.as_view()), name='activate_account'),
     path('login/', never_cache(csrf_protect(CustomLoginView.as_view())), name='login'),
     path('logout/', never_cache(CustomLogoutView.as_view()), name='logout'),
     path('profile/', login_required(never_cache(ProfileView.as_view())), name='profile'),
