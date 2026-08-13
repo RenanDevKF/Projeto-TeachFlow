@@ -100,6 +100,18 @@ def dashboard_view(request):
                 'lessons',
                 distinct=True,
             ),
+            period_order=Case(
+                When(period='Manhã', then=Value(1)),
+                When(period='Tarde', then=Value(2)),
+                When(period='Noite', then=Value(3)),
+                default=Value(4),
+                output_field=IntegerField(),
+            ),
+        ).order_by(
+            'period_order',
+            'schedule',
+            'name',
+            'id',
         )[:7]
     )
 
@@ -107,7 +119,7 @@ def dashboard_view(request):
     class_groups = class_groups[:6]
     
     return render(request, 'dashboard/dashboard.html', {
-        'today': timezone.now(),
+        'today': today,
         'today_lessons': today_lessons,
         'pending_lessons_count': pending_lessons_count,
         'class_groups': class_groups,
