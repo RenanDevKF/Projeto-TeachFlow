@@ -48,12 +48,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     objects = CustomUserManager()
 
-    subscription_plan = models.CharField(
-        max_length=20,
-        choices=SubscriptionPlan.choices,
-        default=SubscriptionPlan.FREE
-    )
-    
     def __str__(self):
         return self.email
 

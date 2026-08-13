@@ -33,7 +33,6 @@ class SignupView(CreateView):
             user = form.save(commit=False)
             user.is_teacher = True
             user.is_active = False
-            user.subscription_plan = SubscriptionPlan.FREE
             user.save()
 
             if not hasattr(user, 'teacher_profile'):
