@@ -130,6 +130,33 @@ class SignupView(CreateView):
 class SignupCheckEmailView(TemplateView):
     template_name = 'accounts/signup_check_email.html'
 
+@method_decorator(csrf_protect, name='dispatch')
+@method_decorator(never_cache, name='dispatch')
+class ResendActivationEmailView(View):
+    def post(self, request):
+        email = ' '.join(request.POST.get('email', '').split())
+
+        if email:
+            user = CustomUser.objects.filter(
+                email__iexact=email,
+                is_active=False,
+            ).first()
+
+            if user:
+                send_account_activation_email(
+                    request,
+                    user,
+                )
+
+        messages.success(
+            request,
+            (
+                'Se existir uma conta aguardando confirmação para este e-mail, '
+                'um novo link foi enviado.'
+            ),
+        )
+
+        return redirect('signup_check_email')
 
 @method_decorator(never_cache, name='dispatch')
 class ActivateAccountView(View):

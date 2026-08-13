@@ -9,6 +9,7 @@ from .views import (
     CustomLoginView,
     CustomLogoutView,
     ProfileView,
+    ResendActivationEmailView,
     SignupCheckEmailView,
     SignupView,
 )
@@ -16,6 +17,7 @@ from .views import (
 urlpatterns = [
     path('register/', never_cache(csrf_protect(SignupView.as_view())), name='register'),
     path('register/check-email/', never_cache(SignupCheckEmailView.as_view()), name='signup_check_email'),
+    path('register/resend-activation/', never_cache(csrf_protect(ResendActivationEmailView.as_view())), name='resend_activation_email'),
     path('activate/<str:token>/', never_cache(ActivateAccountView.as_view()), name='activate_account'),
     path('login/', never_cache(csrf_protect(CustomLoginView.as_view())), name='login'),
     path('logout/', never_cache(CustomLogoutView.as_view()), name='logout'),
