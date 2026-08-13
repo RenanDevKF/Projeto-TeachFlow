@@ -293,35 +293,6 @@ class ProfileView(LoginRequiredMixin, View):
                 for error in form.errors.values():
                     messages.error(request, error[0])
                 
-        elif form_type == 'subscription_change':
-            # Atualizar plano de assinatura
-            plan = request.POST.get('plan')
-            if plan in [choice[0] for choice in SubscriptionPlan.CHOICES]:
-                user = request.user
-                
-                # Atualizar plano no perfil do usuário
-                user.subscription_plan = plan
-                user.save()
-                
-                # Atualizar ou criar registro de assinatura
-                subscription, created = Subscription.objects.get_or_create(
-                    user=user,
-                    defaults={
-                        'plan': plan,
-                        'external_id': f'pg_{uuid.uuid4().hex[:12]}',
-                        'is_active': True
-                    }
-                )
-                
-                if not created:
-                    subscription.plan = plan
-                    subscription.is_active = True
-                    subscription.save()
-                
-                messages.success(request, f'Plano atualizado para {dict(SubscriptionPlan.CHOICES)[plan]}!')
-            else:
-                messages.error(request, 'Plano inválido!')
-                
         return redirect('profile')
     
     
