@@ -13,12 +13,10 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, Http404, HttpResponseRedirect
-from datetime import date
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, LessonExercise
 from .utils import normalize_objective_title, normalize_tag_name, find_existing_tag, validate_tag_name
 from .forms import *
 from django.utils import timezone
-from datetime import date
 import json
 
 class TeacherRequiredMixin(UserPassesTestMixin):
@@ -55,13 +53,77 @@ def dashboard_view(request):
         return redirect('login')
     
     teacher = request.user.teacher_profile
-    today_lessons = Lesson.objects.filter(date=date.today(), class_group__teacher=teacher)
-    class_groups = ClassGroup.objects.filter(teacher=teacher)
+    today = timezone.localdate()
+
+    today_lessons = (
+        Lesson.objects
+        .filter(
+            date=today,
+            class_group__teacher=teacher,
+        )
+        .select_related('class_group')
+        .annotate(
+            period_order=Case(
+                When(class_group__period='Manhã', then=Value(1)),
+                When(class_group__period='Tarde', then=Value(2)),
+                When(class_group__period='Noite', then=Value(3)),
+                default=Value(4),
+                output_field=IntegerField(),
+            )
+        )
+        .order_by(
+            'period_order',
+            'class_group__schedule',
+            'class_group__name',
+            'title',
+            'id',
+        )
+    )
+
+    pending_lessons_count = Lesson.objects.filter(
+        class_group__teacher=teacher,
+        status=Lesson.Status.PLANNED,
+        date__lt=today,
+    ).count()
+
+    class_groups = list(
+        ClassGroup.objects.filter(
+            teacher=teacher,
+            is_active=True,
+        ).annotate(
+            students_count=Count(
+                'students',
+                filter=Q(students__is_active=True),
+                distinct=True,
+            ),
+            lessons_count=Count(
+                'lessons',
+                distinct=True,
+            ),
+            period_order=Case(
+                When(period='Manhã', then=Value(1)),
+                When(period='Tarde', then=Value(2)),
+                When(period='Noite', then=Value(3)),
+                default=Value(4),
+                output_field=IntegerField(),
+            ),
+        ).order_by(
+            'period_order',
+            'schedule',
+            'name',
+            'id',
+        )[:7]
+    )
+
+    has_more_class_groups = len(class_groups) > 6
+    class_groups = class_groups[:6]
     
     return render(request, 'dashboard/dashboard.html', {
-        'today': timezone.now(),
+        'today': today,
         'today_lessons': today_lessons,
-        'class_groups': class_groups
+        'pending_lessons_count': pending_lessons_count,
+        'class_groups': class_groups,
+        'has_more_class_groups': has_more_class_groups,
     })
 
 # Class Group Views

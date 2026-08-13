@@ -14,7 +14,16 @@
     <!-- Saudação e Data -->
     <div class="text-left">
         <p class="text-sm text-gray-500">{{ today|date:"l, d \d\e F \d\e Y" }}</p>
-        <h1 class="text-2xl font-bold mt-2">Bem-vindo(a), {{ user.first_name }}!</h1>
+    <h1 class="text-2xl font-bold mt-2">
+        Bem-vindo(a),
+        {% if user.teacher_profile.display_name %}
+            {{ user.teacher_profile.display_name }}!
+        {% elif user.first_name %}
+            {{ user.first_name }}!
+        {% else %}
+            {{ user.username }}!
+        {% endif %}
+    </h1>
     </div>
 
     <!-- Planejamento do Dia -->
@@ -23,20 +32,73 @@
             <i data-lucide="calendar-check" class="w-6 h-6 text-primary"></i>
             <h2 class="text-lg font-semibold text-gray-800">Planejamento do Dia</h2>
         </div>
+
         <a href="{% url 'lesson_form' %}" class="flex items-center gap-2 bg-primary text-white px-4 py-1 rounded-lg hover:bg-blue-600 transition">
             <i data-lucide="plus" class="w-5 h-5"></i>
             <span>Nova Aula</span>
         </a>
     </div>
-    
+
+    {% if pending_lessons_count %}
+        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="triangle-alert" class="h-5 w-5 flex-shrink-0 text-amber-600"></i>
+
+                    <p class="text-sm font-medium text-amber-800">
+                        {% if pending_lessons_count == 1 %}
+                            1 registro pendente
+                        {% else %}
+                            {{ pending_lessons_count }} registros pendentes
+                        {% endif %}
+                    </p>
+                </div>
+
+                <a
+                    href="{% url 'lesson_list' %}?section=pending"
+                    class="text-sm font-medium text-amber-700 hover:underline"
+                >
+                    Ver pendências
+                </a>
+            </div>
+        </div>
+    {% endif %}
 
     {% if today_lessons %}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for lesson in today_lessons %}
         <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
-            <h3 class="text-lg font-bold text-primary mb-2">{{ lesson.title }}</h3>
-            <p class="text-sm text-gray-600 mb-2">{{ lesson.class_group.name }}</p>
-            <p class="text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }} | {{ lesson.class_group.period }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <h3 class="text-lg font-bold text-primary">{{ lesson.title }}</h3>
+
+                {% if lesson.status == 'completed' %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                        Realizada
+                    </span>
+                {% elif lesson.status == 'cancelled' %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
+                        <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                        Cancelada
+                    </span>
+                {% else %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                        <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                        Planejada
+                    </span>
+                {% endif %}
+            </div>
+
+            <p class="mt-2 text-sm text-gray-600">{{ lesson.class_group.name }}</p>
+            <p class="mt-1 text-sm text-gray-500">
+                {{ lesson.date|date:"d/m/Y" }}
+                {% if lesson.class_group.period %}
+                    · {{ lesson.class_group.period }}
+                {% endif %}
+                {% if lesson.class_group.schedule %}
+                    · {{ lesson.class_group.schedule }}
+                {% endif %}
+            </p>
             <a href="{% url 'lesson_detail' lesson.id %}" class="block mt-4 text-primary hover:underline text-sm">Ver detalhes</a>
         </div>
         {% endfor %}
@@ -47,7 +109,7 @@
         <svg class="w-20 h-20 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2v-5H3v5a2 2 0 0 0 2 2z"></path>
         </svg>
-        <p class="mt-4 text-gray-600">Nenhuma aula planejada para hoje. Que tal planejar uma nova?</p>
+        <p class="mt-4 text-gray-600">Nenhuma aula registrada para hoje. Que tal planejar uma nova?</p>
     </div>
     {% endif %}
 
@@ -67,29 +129,42 @@
             {% for turma in class_groups %}
             <div class="bg-white rounded-xl shadow p-6 hover:shadow-lg transition">
                 <h3 class="text-lg font-semibold text-gray-800">{{ turma.name }}</h3>
-                <p class="text-sm text-gray-600">{{ turma.school }} | {{ turma.year }} | {{ turma.period }}</p>
+                <p class="text-sm text-gray-600">
+                    {{ turma.school }} | {{ turma.year }} | {{ turma.period }}
+                    {% if turma.schedule %}| {{ turma.schedule }}{% endif %}
+                </p>
                 <div class="mt-4 flex gap-4 text-sm text-gray-500">
                     <div class="flex items-center gap-1">
                         <i data-lucide="users-round" class="w-4 h-4"></i>
-                        <span>Alunos: {{ turma.students.count }}</span>
+                        <span>Alunos: {{ turma.students_count }}</span>
                     </div>
                     <div class="flex items-center gap-1">
                         <i data-lucide="book-open" class="w-4 h-4"></i>
-                        <span>Aulas: {{ turma.lessons.count }}</span>
+                        <span>Aulas: {{ turma.lessons_count }}</span>
                     </div>
                 </div>
                 <div class="mt-4 flex gap-3">
-                    <a href="{% url 'class_group_detail' turma.id %}" class="text-blue-600 hover:underline text-sm">Ver Detalhes</a>
-                    <a href="{% url 'lesson_list' %}?class_group={{ turma.id }}" class="text-blue-600 hover:underline text-sm">Ver Aulas</a>
+                    <a href="{% url 'class_group_detail' turma.id %}" class="text-blue-600 hover:underline text-sm">Ver Turma</a>
+                    <a href="{% url 'group_lessons' turma.id %}" class="text-blue-600 hover:underline text-sm">Ver Aulas</a>
                 </div>
             </div>
             {% empty %}
             <div class="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
-                <p class="text-lg mb-4">Nenhuma turma cadastrada ainda.</p>
+                <p class="text-lg mb-4">Nenhuma turma ativa no momento.</p>
             </div>
             {% endfor %}
         </div>
-    </div>
 
+        {% if has_more_class_groups %}
+            <div class="mt-6 flex justify-end">
+                <a
+                    href="{% url 'class_group_list' %}"
+                    class="text-sm font-medium text-primary hover:underline"
+                >
+                    Ver todas as turmas
+                </a>
+            </div>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}
