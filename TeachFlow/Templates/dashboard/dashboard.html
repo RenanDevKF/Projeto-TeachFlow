@@ -129,7 +129,10 @@
             {% for turma in class_groups %}
             <div class="bg-white rounded-xl shadow p-6 hover:shadow-lg transition">
                 <h3 class="text-lg font-semibold text-gray-800">{{ turma.name }}</h3>
-                <p class="text-sm text-gray-600">{{ turma.school }} | {{ turma.year }} | {{ turma.period }}</p>
+                <p class="text-sm text-gray-600">
+                    {{ turma.school }} | {{ turma.year }} | {{ turma.period }}
+                    {% if turma.schedule %}| {{ turma.schedule }}{% endif %}
+                </p>
                 <div class="mt-4 flex gap-4 text-sm text-gray-500">
                     <div class="flex items-center gap-1">
                         <i data-lucide="users-round" class="w-4 h-4"></i>
@@ -141,7 +144,7 @@
                     </div>
                 </div>
                 <div class="mt-4 flex gap-3">
-                    <a href="{% url 'class_group_detail' turma.id %}" class="text-blue-600 hover:underline text-sm">Ver Detalhes</a>
+                    <a href="{% url 'class_group_detail' turma.id %}" class="text-blue-600 hover:underline text-sm">Ver Turma</a>
                     <a href="{% url 'group_lessons' turma.id %}" class="text-blue-600 hover:underline text-sm">Ver Aulas</a>
                 </div>
             </div>
