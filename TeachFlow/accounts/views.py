@@ -9,27 +9,17 @@ from django.urls import reverse_lazy, reverse
 from django.views.decorators.cache import never_cache
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
-from django.core.exceptions import ValidationError
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.db import transaction
 from django.shortcuts import redirect, render
 from django.http import JsonResponse
-from .models import CustomUser, Subscription
+from .models import CustomUser, Subscription, SubscriptionPlan
 from .forms import CustomUserCreationForm
 from .emails import send_account_activation_email
 from accounts.models import Teacher
 from .tokens import get_user_from_activation_token
-import uuid  # Adicionado para gerar IDs únicos
 
-# Defina os planos no nível do módulo ou em core/models.py
-class SubscriptionPlan:
-    FREE = 'free'
-    PRO = 'pro'
-    CHOICES = [
-        (FREE, 'Free'),
-        (PRO, 'Pro'),
-    ]
 @method_decorator(csrf_protect, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
 class SignupView(CreateView):
@@ -43,28 +33,17 @@ class SignupView(CreateView):
             user = form.save(commit=False)
             user.is_teacher = True
             user.is_active = False
-
-            selected_plan = self.request.POST.get(
-                'plan',
-                SubscriptionPlan.FREE,
-            )
-
-            user.subscription_plan = selected_plan
+            user.subscription_plan = SubscriptionPlan.FREE
             user.save()
 
             if not hasattr(user, 'teacher_profile'):
                 Teacher.objects.create(user=user)
 
-            try:
-                self._process_subscription(
-                    user,
-                    selected_plan,
-                )
-            except ValidationError:
-                self._process_subscription(
-                    user,
-                    SubscriptionPlan.FREE,
-                )
+            Subscription.objects.create(
+                user=user,
+                plan=SubscriptionPlan.FREE,
+                is_active=True,
+            )
 
         send_account_activation_email(
             self.request,
@@ -108,23 +87,6 @@ class SignupView(CreateView):
                 'detail': str(exception)
             }, status=500)
         raise exception
-
-    def _process_subscription(self, user, plan):
-        """Integração simulada com gateway de pagamento"""
-        if plan not in [choice[0] for choice in SubscriptionPlan.CHOICES]:
-            raise ValidationError("Invalid subscription plan")
-
-        Subscription.objects.create(
-            user=user,
-            plan=plan,
-            external_id=f'pg_{uuid.uuid4().hex[:12]}',
-            is_active=(plan == SubscriptionPlan.FREE)
-        )
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['plans'] = SubscriptionPlan.CHOICES
-        return context
 
 @method_decorator(never_cache, name='dispatch')
 class SignupCheckEmailView(TemplateView):
