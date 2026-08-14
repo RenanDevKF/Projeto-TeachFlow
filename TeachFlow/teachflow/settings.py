@@ -176,3 +176,4 @@ DEFAULT_FROM_EMAIL = 'TeachFlow <noreply@teachflow.local>'
 
 # Tempo máximo para confirmação de e-mail: 24 horas
 ACCOUNT_ACTIVATION_TIMEOUT = 60 * 60 * 24
+EMAIL_CHANGE_TIMEOUT = 60 * 60

@@ -15,10 +15,10 @@ from django.db import transaction
 from django.shortcuts import redirect, render
 from django.http import JsonResponse
 from .models import CustomUser, Subscription, SubscriptionPlan
-from .forms import CustomUserCreationForm, UserProfileForm, TeacherProfileForm
-from .emails import send_account_activation_email
+from .forms import CustomUserCreationForm, UserProfileForm, TeacherProfileForm, ChangeEmailForm
+from .emails import send_account_activation_email, send_email_change_confirmation
 from accounts.models import Teacher
-from .tokens import get_user_from_activation_token
+from .tokens import get_user_from_activation_token, get_email_change_data
 
 @method_decorator(csrf_protect, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
@@ -303,6 +303,105 @@ class ProfileView(LoginRequiredMixin, View):
 
         return redirect('profile')
     
+@method_decorator(csrf_protect, name='dispatch')
+@method_decorator(never_cache, name='dispatch')
+class ChangeEmailView(LoginRequiredMixin, View):
+    template_name = 'accounts/change_email.html'
+
+    def get(self, request):
+        form = ChangeEmailForm(request.user)
+
+        return render(
+            request,
+            self.template_name,
+            {'form': form},
+        )
+
+    def post(self, request):
+        form = ChangeEmailForm(
+            request.user,
+            request.POST,
+        )
+
+        if form.is_valid():
+            send_email_change_confirmation(
+                request,
+                request.user,
+                form.cleaned_data['new_email'],
+            )
+
+            messages.success(
+                request,
+                'Enviamos um link de confirmação para o novo e-mail.',
+            )
+
+            return redirect('profile')
+
+        return render(
+            request,
+            self.template_name,
+            {'form': form},
+            status=400,
+        )
+        
+@method_decorator(never_cache, name='dispatch')
+class ConfirmEmailChangeView(LoginRequiredMixin, View):
+    def get(self, request, token):
+        try:
+            data = get_email_change_data(token)
+        except signing.SignatureExpired:
+            messages.error(
+                request,
+                'O link de alteração de e-mail expirou. Solicite uma nova alteração.',
+            )
+            return redirect('profile')
+        except signing.BadSignature:
+            messages.error(
+                request,
+                'O link de alteração de e-mail é inválido.',
+            )
+            return redirect('profile')
+
+        if data.get('user_id') != request.user.pk:
+            messages.error(
+                request,
+                'Este link de alteração de e-mail não pertence à sua conta.',
+            )
+            return redirect('profile')
+
+        current_email = data.get('current_email')
+        new_email = data.get('new_email')
+
+        if not current_email or not new_email:
+            messages.error(
+                request,
+                'O link de alteração de e-mail é inválido.',
+            )
+            return redirect('profile')
+
+        if request.user.email.lower() != current_email.lower():
+            messages.error(
+                request,
+                'Este link de alteração de e-mail não é mais válido.',
+            )
+            return redirect('profile')
+
+        if CustomUser.objects.filter(email__iexact=new_email).exclude(pk=request.user.pk).exists():
+            messages.error(
+                request,
+                'Este e-mail não está mais disponível.',
+            )
+            return redirect('profile')
+
+        request.user.email = new_email
+        request.user.save(update_fields=['email'])
+
+        messages.success(
+            request,
+            'E-mail alterado com sucesso!',
+        )
+
+        return redirect('profile')
     
  #função isolada para validação de email e username   
 def validate_username_email(request):

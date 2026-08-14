@@ -89,3 +89,33 @@ class TeacherProfileForm(forms.ModelForm):
 
     def clean_subject_area(self):
         return self.cleaned_data.get('subject_area', '').strip()
+    
+class ChangeEmailForm(forms.Form):
+    new_email = forms.EmailField(label='Novo e-mail')
+    current_password = forms.CharField(
+        label='Senha atual',
+        widget=forms.PasswordInput,
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_new_email(self):
+        new_email = self.cleaned_data.get('new_email', '').strip().lower()
+
+        if new_email == self.user.email.lower():
+            raise ValidationError("O novo e-mail deve ser diferente do e-mail atual.")
+
+        if CustomUser.objects.filter(email__iexact=new_email).exclude(pk=self.user.pk).exists():
+            raise ValidationError("Este e-mail já está em uso.")
+
+        return new_email
+
+    def clean_current_password(self):
+        current_password = self.cleaned_data.get('current_password')
+
+        if not self.user.check_password(current_password):
+            raise ValidationError("Senha atual incorreta.")
+
+        return current_password
