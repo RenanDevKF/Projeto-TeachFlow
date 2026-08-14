@@ -4,6 +4,7 @@ from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
+from django.db.models.functions import Lower
 from django.dispatch import receiver
 from .utils import normalize_email, normalize_username
 
@@ -58,6 +59,18 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['username','first_name', 'last_name']
 
     objects = CustomUserManager()
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                Lower('email'),
+                name='unique_customuser_email_ci',
+            ),
+            models.UniqueConstraint(
+                Lower('username'),
+                name='unique_customuser_username_ci',
+            ),
+        ]    
 
     def save(self, *args, **kwargs):
         self.email = normalize_email(self.email)
