@@ -3,6 +3,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import CustomUser, Teacher
 from django.core.exceptions import ValidationError
+from .utils import normalize_email, normalize_username
 
 class CustomUserCreationForm(UserCreationForm):
     username = forms.CharField(
@@ -35,15 +36,23 @@ class CustomUserCreationForm(UserCreationForm):
         fields = ('username', 'email', 'first_name', 'last_name', 'password1', 'password2')
         
     def clean_username(self):
-        username = self.cleaned_data.get('username')
-        if CustomUser.objects.filter(username=username).exists():
+        username = normalize_username(
+            self.cleaned_data.get('username')
+        )
+
+        if CustomUser.objects.filter(username__iexact=username).exists():
             raise ValidationError("Este nome de usuário já está em uso.")
+
         return username
 
     def clean_email(self):
-        email = self.cleaned_data.get('email')
-        if CustomUser.objects.filter(email=email).exists():
-            raise ValidationError("Este email já está em uso")
+        email = normalize_email(
+            self.cleaned_data.get('email')
+        )
+
+        if CustomUser.objects.filter(email__iexact=email).exists():
+            raise ValidationError("Este e-mail já está em uso.")
+
         return email
 
 class UserProfileForm(forms.ModelForm):
@@ -68,7 +77,9 @@ class UserProfileForm(forms.ModelForm):
         return last_name
 
     def clean_username(self):
-        username = self.cleaned_data.get('username', '').strip()
+        username = normalize_username(
+            self.cleaned_data.get('username')
+        )
 
         if not username:
             raise ValidationError("Informe um nome de usuário.")
@@ -102,9 +113,9 @@ class ChangeEmailForm(forms.Form):
         super().__init__(*args, **kwargs)
 
     def clean_new_email(self):
-        new_email = self.cleaned_data.get('new_email', '').strip().lower()
+        new_email = normalize_email(self.cleaned_data.get('new_email'))
 
-        if new_email == self.user.email.lower():
+        if new_email == normalize_email(self.user.email):
             raise ValidationError("O novo e-mail deve ser diferente do e-mail atual.")
 
         if CustomUser.objects.filter(email__iexact=new_email).exclude(pk=self.user.pk).exists():

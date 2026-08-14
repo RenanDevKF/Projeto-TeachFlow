@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from .utils import normalize_email, normalize_username
 
 
 class SubscriptionPlan(models.TextChoices):
@@ -16,8 +17,18 @@ class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, is_teacher=False, **extra_fields):
         if not email:
             raise ValueError('O email é obrigatório')
-        email = self.normalize_email(email)
-        user = self.model(email=email, is_teacher=is_teacher, **extra_fields)
+        email = normalize_email(email)
+
+        if 'username' in extra_fields:
+            extra_fields['username'] = normalize_username(
+                extra_fields['username']
+            )
+
+        user = self.model(
+            email=email,
+            is_teacher=is_teacher,
+            **extra_fields,
+        )
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -47,6 +58,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['username','first_name', 'last_name']
 
     objects = CustomUserManager()
+
+    def save(self, *args, **kwargs):
+        self.email = normalize_email(self.email)
+        self.username = normalize_username(self.username)
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.email

@@ -19,6 +19,7 @@ from .forms import CustomUserCreationForm, UserProfileForm, TeacherProfileForm, 
 from .emails import send_account_activation_email, send_email_change_confirmation, send_email_change_notification
 from accounts.models import Teacher
 from .tokens import get_user_from_activation_token, get_email_change_data
+from .utils import normalize_email, normalize_username
 
 @method_decorator(csrf_protect, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
@@ -371,6 +372,7 @@ class ConfirmEmailChangeView(LoginRequiredMixin, View):
 
         current_email = data.get('current_email')
         new_email = data.get('new_email')
+        new_email = normalize_email(new_email)
 
         if not current_email or not new_email:
             messages.error(
@@ -379,7 +381,7 @@ class ConfirmEmailChangeView(LoginRequiredMixin, View):
             )
             return redirect('profile')
 
-        if request.user.email.lower() != current_email.lower():
+        if normalize_email(request.user.email) != normalize_email(current_email):
             messages.error(
                 request,
                 'Este link de alteração de e-mail não é mais válido.',
@@ -413,16 +415,25 @@ class ConfirmEmailChangeView(LoginRequiredMixin, View):
     
  #função isolada para validação de email e username   
 def validate_username_email(request):
-    username = request.GET.get('username', None)
-    email = request.GET.get('email', None)
-    data = {'is_valid': True, 'errors': {}}
+    username = normalize_username(
+        request.GET.get('username')
+    )
 
-    if username and CustomUser.objects.filter(username=username).exists():
-        data['is_valid'] = False
-        data['errors']['username'] = "Este nome de usuário já está em uso."
+    email = normalize_email(
+        request.GET.get('email')
+    )
 
-    if email and CustomUser.objects.filter(email=email).exists():
+    data = {
+        'is_valid': True,
+        'errors': {},
+    }
+
+    if username and CustomUser.objects.filter(username__iexact=username).exists():
         data['is_valid'] = False
-        data['errors']['email'] = "Este email já está em uso."
+        data['errors']['username'] = 'Este nome de usuário já está em uso.'
+
+    if email and CustomUser.objects.filter(email__iexact=email).exists():
+        data['is_valid'] = False
+        data['errors']['email'] = 'Este e-mail já está em uso.'
 
     return JsonResponse(data)
