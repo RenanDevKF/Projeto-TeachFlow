@@ -58,3 +58,21 @@ def send_email_change_confirmation(request, user, new_email):
         recipient_list=[new_email],
         fail_silently=False,
     )
+    
+def send_email_change_notification(user, old_email, new_email):
+    message = render_to_string(
+        'accounts/emails/email_change_notification.txt',
+        {
+            'user': user,
+            'old_email': old_email,
+            'new_email': new_email,
+        },
+    )
+
+    send_mail(
+        subject='O e-mail da sua conta TeachFlow foi alterado',
+        message=message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[old_email],
+        fail_silently=True,
+    )

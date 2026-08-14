@@ -16,7 +16,7 @@ from django.shortcuts import redirect, render
 from django.http import JsonResponse
 from .models import CustomUser, Subscription, SubscriptionPlan
 from .forms import CustomUserCreationForm, UserProfileForm, TeacherProfileForm, ChangeEmailForm
-from .emails import send_account_activation_email, send_email_change_confirmation
+from .emails import send_account_activation_email, send_email_change_confirmation, send_email_change_notification
 from accounts.models import Teacher
 from .tokens import get_user_from_activation_token, get_email_change_data
 
@@ -393,8 +393,16 @@ class ConfirmEmailChangeView(LoginRequiredMixin, View):
             )
             return redirect('profile')
 
+        old_email = request.user.email
+
         request.user.email = new_email
         request.user.save(update_fields=['email'])
+
+        send_email_change_notification(
+            request.user,
+            old_email,
+            new_email,
+        )
 
         messages.success(
             request,
