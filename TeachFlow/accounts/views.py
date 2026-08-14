@@ -15,7 +15,7 @@ from django.db import transaction
 from django.shortcuts import redirect, render
 from django.http import JsonResponse
 from .models import CustomUser, Subscription, SubscriptionPlan
-from .forms import CustomUserCreationForm
+from .forms import CustomUserCreationForm, UserProfileForm, TeacherProfileForm
 from .emails import send_account_activation_email
 from accounts.models import Teacher
 from .tokens import get_user_from_activation_token
@@ -218,42 +218,89 @@ class CustomLogoutView(LogoutView):
 @method_decorator(never_cache, name='dispatch')
 class ProfileView(LoginRequiredMixin, View):
     template_name = 'accounts/profile.html'
-    
+
     def get(self, request):
-        return render(request, self.template_name)
-    
+        profile_form = UserProfileForm(
+            instance=request.user,
+        )
+
+        teacher_form = TeacherProfileForm(
+            instance=request.user.teacher_profile,
+        )
+
+        return render(
+            request,
+            self.template_name,
+            {
+                'profile_form': profile_form,
+                'teacher_form': teacher_form,
+            },
+        )
+
     def post(self, request):
         form_type = request.POST.get('form_type')
-        
+
         if form_type == 'profile_info':
-            # Atualizar informações do perfil
-            user = request.user
-            user.first_name = request.POST.get('first_name')
-            user.last_name = request.POST.get('last_name')
-            user.email = request.POST.get('email')
-            user.save()
-            
-            # Atualizar perfil do professor
-            teacher_profile = user.teacher_profile
-            teacher_profile.display_name = request.POST.get('display_name')
-            teacher_profile.phone = request.POST.get('phone')
-            teacher_profile.subject_area = request.POST.get('subject_area')
-            teacher_profile.bio = request.POST.get('bio')
-            teacher_profile.save()
-            
-            messages.success(request, 'Informações atualizadas com sucesso!')
-            
-        elif form_type == 'password_change':
-            # Atualizar senha
-            form = PasswordChangeForm(request.user, request.POST)
+            profile_form = UserProfileForm(
+                request.POST,
+                instance=request.user,
+            )
+
+            teacher_form = TeacherProfileForm(
+                request.POST,
+                instance=request.user.teacher_profile,
+            )
+
+            if profile_form.is_valid() and teacher_form.is_valid():
+                with transaction.atomic():
+                    profile_form.save()
+                    teacher_form.save()
+
+                messages.success(
+                    request,
+                    'Informações atualizadas com sucesso!',
+                )
+
+                return redirect('profile')
+
+            return render(
+                request,
+                self.template_name,
+                {
+                    'profile_form': profile_form,
+                    'teacher_form': teacher_form,
+                    'active_tab': 'personal-info',
+                },
+                status=400,
+            )
+
+        if form_type == 'password_change':
+            form = PasswordChangeForm(
+                request.user,
+                request.POST,
+            )
+
             if form.is_valid():
                 user = form.save()
-                update_session_auth_hash(request, user)  # Importante para manter a sessão ativa
-                messages.success(request, 'Senha alterada com sucesso!')
+
+                update_session_auth_hash(
+                    request,
+                    user,
+                )
+
+                messages.success(
+                    request,
+                    'Senha alterada com sucesso!',
+                )
             else:
-                for error in form.errors.values():
-                    messages.error(request, error[0])
-                
+                for errors in form.errors.values():
+                    messages.error(
+                        request,
+                        errors[0],
+                    )
+
+            return redirect('profile')
+
         return redirect('profile')
     
     
