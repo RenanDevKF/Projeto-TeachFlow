@@ -52,13 +52,6 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const passwordError = validatePassword(password1);
-
-        if (passwordError) {
-            alert(passwordError);
-            return;
-        }
-
         isSubmitting = true;
 
         try {
@@ -95,36 +88,6 @@ document.addEventListener('DOMContentLoaded', function () {
             isSubmitting = false;
         }
     });
-
-    function validatePassword(password) {
-        const minLength = 8;
-        const hasNumber = /\d/.test(password);
-        const hasUppercase = /[A-Z]/.test(password);
-        const hasLowercase = /[a-z]/.test(password);
-        const hasSpecialChar = /[@$!%*?&]/.test(password);
-
-        if (password.length < minLength) {
-            return 'A senha deve ter pelo menos 8 caracteres.';
-        }
-
-        if (!hasNumber) {
-            return 'A senha deve conter pelo menos um número.';
-        }
-
-        if (!hasUppercase) {
-            return 'A senha deve conter pelo menos uma letra maiúscula.';
-        }
-
-        if (!hasLowercase) {
-            return 'A senha deve conter pelo menos uma letra minúscula.';
-        }
-
-        if (!hasSpecialChar) {
-            return 'A senha deve conter pelo menos um caractere especial (@, $, !, %, *, ?, &).';
-        }
-
-        return null;
-    }
 
     function getCSRFToken() {
         const csrfInput = document.querySelector(

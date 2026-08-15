@@ -164,6 +164,11 @@
                         required
                         class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none"
                     >
+                    {% if form.password1.help_text %}
+                        <div class="mt-2 text-xs leading-5 text-gray-500">
+                            {{ form.password1.help_text|safe }}
+                        </div>
+                    {% endif %}
                 </div>
 
                 <div>
