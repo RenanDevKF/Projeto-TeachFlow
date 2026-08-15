@@ -36,8 +36,7 @@ class SignupView(CreateView):
             user.is_active = False
             user.save()
 
-            if not hasattr(user, 'teacher_profile'):
-                Teacher.objects.create(user=user)
+            Teacher.objects.create(user=user)
 
             Subscription.objects.create(
                 user=user,
