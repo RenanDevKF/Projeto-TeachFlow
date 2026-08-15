@@ -1,0 +1,15 @@
+Olá, {{ user.first_name }}!
+
+O endereço de e-mail da sua conta TeachFlow foi alterado.
+
+E-mail anterior:
+{{ old_email }}
+
+Novo e-mail:
+{{ new_email }}
+
+Se você realizou esta alteração, nenhuma ação adicional é necessária.
+
+Se você não reconhece esta alteração, entre em contato com o suporte do TeachFlow assim que possível.
+
+Equipe TeachFlow

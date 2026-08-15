@@ -1,7 +1,5 @@
 from django.urls import path
 from . import views
-from .views import DuplicateLessonView
-from .views import QuickAddTagView, TagListView
 
 urlpatterns = [
     # Class Group URLs
@@ -9,8 +7,10 @@ urlpatterns = [
     path('class-groups/new/', views.ClassGroupCreateView.as_view(), name='class_group_form'),
     path('class-groups/<int:pk>/', views.ClassGroupDetailView.as_view(), name='class_group_detail'),
     path('class-groups/<int:pk>/edit/', views.ClassGroupUpdateView.as_view(), name='class_group_form'),
+    path('class-groups/<int:pk>/archive/', views.ClassGroupArchiveView.as_view(), name='class_group_archive'),
+    path('class-groups/<int:pk>/restore/', views.ClassGroupRestoreView.as_view(), name='class_group_restore'),
     path('class-groups/<int:pk>/delete/', views.ClassGroupDeleteView.as_view(), name='class_group_delete'),
-    
+        
     # Student URLs - NOVAS ROTAS
     path('students/', views.StudentListView.as_view(), name='student_list'),
     path('class-groups/<int:class_group_id>/students/', views.StudentListView.as_view(), name='class_group_students'),
@@ -27,27 +27,42 @@ urlpatterns = [
     path('lessons/<int:pk>/', views.LessonDetailView.as_view(), name='lesson_detail'),
     path('lessons/<int:pk>/edit/', views.LessonUpdateView.as_view(), name='lesson_form'),
     path('lessons/<int:pk>/delete/', views.LessonDeleteView.as_view(), name='lesson_delete'),
+    path('lessons/<int:lesson_id>/exercises/<int:exercise_id>/toggle-applied/', 
+         views.toggle_exercise_applied, 
+         name='toggle_exercise_applied'),
     
     # Exercise URLs
     path('exercises/', views.ExerciseListView.as_view(), name='exercise_list'),
     path('exercises/new/', views.ExerciseCreateView.as_view(), name='exercise_form'),
     path('exercises/<int:pk>/', views.ExerciseDetailView.as_view(), name='exercise_detail'),
+    path('exercises/<int:pk>/use-template/', views.UseExerciseTemplateView.as_view(), name='exercise_use_template'),
     path('exercises/<int:pk>/edit/', views.ExerciseUpdateView.as_view(), name='exercise_form'),
+    path('exercises/<int:pk>/archive/', views.ExerciseArchiveView.as_view(), name='exercise_archive',),
+    path('exercises/<int:pk>/restore/', views.ExerciseRestoreView.as_view(), name='exercise_restore',),
     path('exercises/<int:pk>/delete/', views.ExerciseDeleteView.as_view(), name='exercise_delete'),
     
-    # Learning Objective URLs
-    path('objectives/', views.LearningObjectiveListView.as_view(), name='objective-list'),
-    path('objectives/new/', views.LearningObjectiveCreateView.as_view(), name='objective-create'),
+    path('library/', views.LibraryView.as_view(), name='library'),
     
-    # Future Ideas URLs
-    path('ideas/', views.FutureIdeaListView.as_view(), name='idea-list'),
-    path('ideas/new/', views.FutureIdeaCreateView.as_view(), name='idea-create'),
+    # Biblioteca — Objetivos
+    path('objectives/new/', views.LearningObjectiveCreateView.as_view(), name='objective-create'),
+    path('objectives/<int:pk>/edit/', views.LearningObjectiveUpdateView.as_view(), name='objective-update'),
+    path('objectives/<int:pk>/archive/', views.LearningObjectiveArchiveView.as_view(), name='objective-archive'),
+    path('objectives/<int:pk>/restore/', views.LearningObjectiveRestoreView.as_view(), name='objective-restore'),
+    path('objectives/<int:pk>/delete/', views.LearningObjectiveDeleteView.as_view(), name='objective-delete'),
+    path('objectives/quick-create/', views.QuickCreateLearningObjectiveView.as_view(), name='quick_create_objective'),
+    
+    path('tags/', views.legacy_tag_list_redirect, name='tag_list'),
+    
+    # Biblioteca — Tags
+    path('tags/new/', views.TagCreateView.as_view(), name='tag_form'),
+    path('tags/<int:pk>/edit/', views.TagUpdateView.as_view(), name='tag_update'),
+    path('tags/<int:pk>/archive/', views.TagArchiveView.as_view(), name='tag_archive'),
+    path('tags/<int:pk>/restore/', views.TagRestoreView.as_view(), name='tag_restore'),
+    path('tags/<int:pk>/delete/', views.TagDeleteView.as_view(), name='tag_delete'),
+    path('tags/add/<str:model_type>/<int:model_id>/', views.QuickAddTagView.as_view(), name='quick_add_tag'),
+    path('tags/quick-create/exercise/', views.QuickCreateExerciseTagView.as_view(), name='quick_create_exercise_tag'),    
     
     path('dashboard/', views.dashboard_view, name='dashboard'),
     
-    path('tags/', views.TagListView.as_view(), name='tag_list'),
-    path('tags/new/', views.TagCreateView.as_view(), name='tag_form'),
-    path('tags/<int:pk>/edit/', views.TagUpdateView.as_view(), name='tag_update'),
-    path('tags/add/<str:model_type>/<int:model_id>/', QuickAddTagView.as_view(), name='quick_add_tag'),
     
 ]

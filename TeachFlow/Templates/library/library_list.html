@@ -1,0 +1,756 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Biblioteca{% endblock %}
+
+{% block page_title %}
+<span class="inline-flex items-center gap-2">
+    <i data-lucide="library-big" class="h-6 w-6 text-primary"></i>
+    <span>Biblioteca</span>
+</span>
+{% endblock %}
+
+{% block content %}
+{% url 'library' as library_url %}
+
+<div class="mx-auto max-w-6xl">
+
+    <!-- Cabeçalho -->
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">
+                Biblioteca
+            </h1>
+
+            <p class="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
+                Gerencie recursos complementares e reutilizáveis usados na
+                organização de exercícios e aulas.
+            </p>
+        </div>
+
+        {% if selected_section == 'objectives' %}
+            <a
+                href="{% url 'objective-create' %}"
+                class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            >
+                <i data-lucide="plus" class="h-5 w-5"></i>
+                Novo objetivo
+            </a>
+        {% else %}
+            <a
+                href="{% url 'tag_form' %}"
+                class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            >
+                <i data-lucide="plus" class="h-5 w-5"></i>
+                Nova tag
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- Navegação entre recursos -->
+    <div class="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div class="grid grid-cols-2">
+            <a
+                href="{{ library_url }}?section=objectives"
+                class="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors
+                {% if selected_section == 'objectives' %}
+                    bg-primary text-white
+                {% else %}
+                    text-gray-600 hover:bg-gray-50
+                {% endif %}"
+            >
+                <i data-lucide="target" class="h-4 w-4"></i>
+
+                <span>Objetivos de aprendizagem</span>
+
+                <span
+                    class="inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs
+                    {% if selected_section == 'objectives' %}
+                        bg-white/20 text-white
+                    {% else %}
+                        bg-gray-100 text-gray-600
+                    {% endif %}"
+                >
+                    {{ objective_active_count|add:objective_archived_count }}
+                </span>
+            </a>
+
+            <a
+                href="{{ library_url }}?section=tags"
+                class="flex items-center justify-center gap-2 border-l border-gray-200 px-4 py-3 text-sm font-medium transition-colors
+                {% if selected_section == 'tags' %}
+                    bg-primary text-white
+                {% else %}
+                    text-gray-600 hover:bg-gray-50
+                {% endif %}"
+            >
+                <i data-lucide="tags" class="h-4 w-4"></i>
+
+                <span>Tags</span>
+
+                <span
+                    class="inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs
+                    {% if selected_section == 'tags' %}
+                        bg-white/20 text-white
+                    {% else %}
+                        bg-gray-100 text-gray-600
+                    {% endif %}"
+                >
+                    {{ tag_active_count|add:tag_archived_count }}
+                </span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Resumo -->
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50">
+                    <i data-lucide="circle-check" class="h-5 w-5 text-green-600"></i>
+                </div>
+
+                <div>
+                    <p class="text-sm text-gray-500">
+                        Recursos ativos
+                    </p>
+
+                    <p class="text-2xl font-semibold text-gray-900">
+                        {% if selected_section == 'objectives' %}
+                            {{ objective_active_count }}
+                        {% else %}
+                            {{ tag_active_count }}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
+                    <i data-lucide="archive" class="h-5 w-5 text-gray-500"></i>
+                </div>
+
+                <div>
+                    <p class="text-sm text-gray-500">
+                        Recursos arquivados
+                    </p>
+
+                    <p class="text-2xl font-semibold text-gray-900">
+                        {% if selected_section == 'objectives' %}
+                            {{ objective_archived_count }}
+                        {% else %}
+                            {{ tag_archived_count }}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <form
+        id="library-filter-form"
+        method="get"
+        class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+    >
+        <input
+            type="hidden"
+            name="section"
+            value="{{ selected_section }}"
+        >
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+
+            <!-- Busca -->
+            <div>
+                <label
+                    for="library-search"
+                    class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                >
+                    Buscar
+                </label>
+
+                <div class="relative">
+                    <i
+                        data-lucide="search"
+                        class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                    ></i>
+
+                    <input
+                        id="library-search"
+                        type="search"
+                        name="q"
+                        value="{{ search_query }}"
+                        placeholder="{% if selected_section == 'objectives' %}Buscar objetivo...{% else %}Buscar tag...{% endif %}"
+                        autocomplete="off"
+                        class="h-10 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm text-gray-700 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    >
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div>
+                <label
+                    for="library-status-filter"
+                    class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                >
+                    Status
+                </label>
+
+                <select
+                    id="library-status-filter"
+                    name="status"
+                    class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                    <option
+                        value="active"
+                        {% if selected_status == 'active' %}selected{% endif %}
+                    >
+                        Ativos
+                    </option>
+
+                    <option
+                        value="archived"
+                        {% if selected_status == 'archived' %}selected{% endif %}
+                    >
+                        Arquivados
+                    </option>
+
+                    <option
+                        value="all"
+                        {% if selected_status == 'all' %}selected{% endif %}
+                    >
+                        Todos
+                    </option>
+                </select>
+            </div>
+
+            <!-- Ações -->
+            <div class="flex items-end gap-2">
+                <a
+                    href="{{ library_url }}?section={{ selected_section }}"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
+                >
+                    <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+                    Limpar
+                </a>
+            </div>
+        </div>
+    </form>
+
+    {% if selected_section == 'objectives' %}
+
+        <!-- Objetivos -->
+        <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="font-semibold text-gray-900">
+                    Objetivos de aprendizagem
+                </h2>
+
+                <p class="mt-1 text-sm text-gray-500">
+                    Resultados pedagógicos reutilizados nos exercícios da sua biblioteca.
+                </p>
+            </div>
+
+            <span class="inline-flex items-center gap-2 text-sm text-gray-500">
+                <i data-lucide="target" class="h-4 w-4"></i>
+
+                {% if results_count == 1 %}
+                    1 objetivo encontrado
+                {% else %}
+                    {{ results_count }} objetivos encontrados
+                {% endif %}
+            </span>
+        </div>
+
+        {% if objectives %}
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                <div class="divide-y divide-gray-100">
+                    {% for objective in objectives %}
+                        <article
+                            class="flex flex-col gap-5 p-5 transition-colors hover:bg-gray-50 sm:flex-row sm:items-start sm:justify-between"
+                        >
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h3 class="font-semibold text-gray-900">
+                                        {{ objective.title }}
+                                    </h3>
+
+                                    {% if objective.is_active %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                                            Ativo
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                                            Arquivado
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                {% if objective.description %}
+                                    <p class="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
+                                        {{ objective.description }}
+                                    </p>
+                                {% else %}
+                                    <p class="mt-2 text-sm italic text-gray-400">
+                                        Nenhuma descrição complementar informada.
+                                    </p>
+                                {% endif %}
+
+                                <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500">
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <i data-lucide="notebook-text" class="h-3.5 w-3.5"></i>
+
+                                        {{ objective.exercise_count }}
+
+                                        {% if objective.exercise_count == 1 %}
+                                            exercício vinculado
+                                        {% else %}
+                                            exercícios vinculados
+                                        {% endif %}
+                                    </span>
+
+                                    {% if not objective.is_active %}
+                                        <span class="inline-flex items-center gap-1.5">
+                                            <i data-lucide="history" class="h-3.5 w-3.5"></i>
+                                            Preservado nos registros anteriores
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2 sm:flex-shrink-0 sm:justify-end">
+                                <a
+                                    href="{% url 'objective-update' objective.pk %}"
+                                    class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                                >
+                                    <i data-lucide="pencil" class="h-4 w-4"></i>
+                                    Editar
+                                </a>
+
+                                {% if objective.is_active %}
+                                    <form
+                                        method="post"
+                                        action="{% url 'objective-archive' objective.pk %}"
+                                    >
+                                        {% csrf_token %}
+
+                                        <button
+                                            type="submit"
+                                            class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                                        >
+                                            <i data-lucide="archive" class="h-4 w-4"></i>
+                                            Arquivar
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <form
+                                        method="post"
+                                        action="{% url 'objective-restore' objective.pk %}"
+                                    >
+                                        {% csrf_token %}
+
+                                        <button
+                                            type="submit"
+                                            class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 text-sm font-medium text-green-700 transition-colors hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                                        >
+                                            <i data-lucide="archive-restore" class="h-4 w-4"></i>
+                                            Reativar
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                {% if objective.exercise_count == 0 %}
+                                    <button
+                                        type="button"
+                                        data-library-delete-trigger
+                                        data-delete-url="{% url 'objective-delete' objective.pk %}"
+                                        data-delete-name="{{ objective.title }}"
+                                        data-delete-label="objetivo"
+                                        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                    >
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                        Excluir
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-14 text-center">
+                {% if search_query %}
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+                        <i data-lucide="search-x" class="h-7 w-7 text-primary"></i>
+                    </div>
+
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhum objetivo encontrado
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                        Ajuste a busca ou limpe os filtros para consultar outros objetivos.
+                    </p>
+
+                    <a
+                        href="{{ library_url }}?section=objectives"
+                        class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                        <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+                        Limpar filtros
+                    </a>
+                {% elif selected_status == 'archived' %}
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
+                        <i data-lucide="archive" class="h-7 w-7 text-gray-500"></i>
+                    </div>
+
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhum objetivo arquivado
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                        Objetivos arquivados permanecerão disponíveis aqui para consulta e reativação.
+                    </p>
+                {% else %}
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+                        <i data-lucide="target" class="h-7 w-7 text-primary"></i>
+                    </div>
+
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhum objetivo cadastrado
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                        Crie objetivos reutilizáveis para identificar os resultados pedagógicos trabalhados pelos exercícios.
+                    </p>
+
+                    <a
+                        href="{% url 'objective-create' %}"
+                        class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                    >
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        Criar primeiro objetivo
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+
+    {% else %}
+
+        <!-- Tags -->
+        <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="font-semibold text-gray-900">
+                    Tags
+                </h2>
+
+                <p class="mt-1 text-sm text-gray-500">
+                    Classificadores visuais usados para organizar aulas e exercícios.
+                </p>
+            </div>
+
+            <span class="inline-flex items-center gap-2 text-sm text-gray-500">
+                <i data-lucide="tags" class="h-4 w-4"></i>
+
+                {% if results_count == 1 %}
+                    1 tag encontrada
+                {% else %}
+                    {{ results_count }} tags encontradas
+                {% endif %}
+            </span>
+        </div>
+
+        {% if tags %}
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                <div class="divide-y divide-gray-100">
+                    {% for tag in tags %}
+                        <article
+                            class="flex flex-col gap-5 p-5 transition-colors hover:bg-gray-50 sm:flex-row sm:items-start sm:justify-between"
+                        >
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span
+                                        class="rounded-full px-2.5 py-1 text-sm font-medium"
+                                        style="background-color: {{ tag.color }}20; color: {{ tag.color }};"
+                                    >
+                                        {{ tag.name }}
+                                    </span>
+
+                                    {% if tag.is_active %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                                            Ativa
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                                            Arquivada
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500">
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <i data-lucide="book-open" class="h-3.5 w-3.5"></i>
+                                        {{ tag.lesson_count }}
+                                        {% if tag.lesson_count == 1 %}aula{% else %}aulas{% endif %}
+                                    </span>
+
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <i data-lucide="notebook-text" class="h-3.5 w-3.5"></i>
+                                        {{ tag.exercise_count }}
+                                        {% if tag.exercise_count == 1 %}exercício{% else %}exercícios{% endif %}
+                                    </span>
+
+                                </div>
+
+                                {% if not tag.is_active %}
+                                    <p class="mt-3 text-xs leading-5 text-gray-500">
+                                        Esta tag continua preservada nos registros anteriores, mas não aparece para novas associações.
+                                    </p>
+                                {% endif %}
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2 sm:flex-shrink-0 sm:justify-end">
+                                <a
+                                    href="{% url 'tag_update' tag.pk %}"
+                                    class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                                >
+                                    <i data-lucide="pencil" class="h-4 w-4"></i>
+                                    Editar
+                                </a>
+
+                                {% if tag.is_active %}
+                                    <form
+                                        method="post"
+                                        action="{% url 'tag_archive' tag.pk %}"
+                                    >
+                                        {% csrf_token %}
+
+                                        <button
+                                            type="submit"
+                                            class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                                        >
+                                            <i data-lucide="archive" class="h-4 w-4"></i>
+                                            Arquivar
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <form
+                                        method="post"
+                                        action="{% url 'tag_restore' tag.pk %}"
+                                    >
+                                        {% csrf_token %}
+
+                                        <button
+                                            type="submit"
+                                            class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 text-sm font-medium text-green-700 transition-colors hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                                        >
+                                            <i data-lucide="archive-restore" class="h-4 w-4"></i>
+                                            Reativar
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                {% if tag.lesson_count == 0 and tag.exercise_count == 0 %}
+                                    <button
+                                        type="button"
+                                        data-library-delete-trigger
+                                        data-delete-url="{% url 'tag_delete' tag.pk %}"
+                                        data-delete-name="{{ tag.name }}"
+                                        data-delete-label="tag"
+                                        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                    >
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                        Excluir
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-14 text-center">
+                {% if search_query %}
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+                        <i data-lucide="search-x" class="h-7 w-7 text-primary"></i>
+                    </div>
+
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhuma tag encontrada
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                        Ajuste a busca ou o status para consultar outras tags.
+                    </p>
+
+                    <a
+                        href="{{ library_url }}?section=tags"
+                        class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                        <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+                        Limpar filtros
+                    </a>
+                {% elif selected_status == 'archived' %}
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
+                        <i data-lucide="archive" class="h-7 w-7 text-gray-500"></i>
+                    </div>
+
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhuma tag arquivada
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                        Tags arquivadas permanecerão disponíveis aqui para consulta e reativação.
+                    </p>
+                {% else %}
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+                        <i data-lucide="tags" class="h-7 w-7 text-primary"></i>
+                    </div>
+
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhuma tag cadastrada
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                        Crie tags para classificar e encontrar recursos com mais facilidade.
+                    </p>
+
+                    <a
+                        href="{% url 'tag_form' %}"
+                        class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                    >
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        Criar primeira tag
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+
+{% if is_paginated %}
+    <nav
+        class="mt-8 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between"
+        aria-label="Paginação da biblioteca"
+    >
+        <p class="text-sm text-gray-500">
+            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+        </p>
+
+        <div class="flex flex-wrap items-center gap-2">
+            {% if page_obj.has_previous %}
+                <a
+                    href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}"
+                    class="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                >
+                    <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                    Anterior
+                </a>
+            {% endif %}
+
+            {% for page_number in page_obj.paginator.page_range %}
+                {% if page_number == page_obj.number %}
+                    <span
+                        class="inline-flex h-10 min-w-10 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-white"
+                        aria-current="page"
+                    >
+                        {{ page_number }}
+                    </span>
+                {% elif page_number >= page_obj.number|add:"-2" and page_number <= page_obj.number|add:"2" %}
+                    <a
+                        href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_number }}"
+                        class="inline-flex h-10 min-w-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                        {{ page_number }}
+                    </a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <a
+                    href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}"
+                    class="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                >
+                    Próxima
+                    <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                </a>
+            {% endif %}
+        </div>
+    </nav>
+{% endif %}
+
+<div
+    id="library-delete-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/50 px-4 py-6"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="library-delete-modal-title"
+>
+    <div class="w-full max-w-md rounded-xl border border-gray-200 bg-white shadow-xl">
+        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <div>
+                <h2 id="library-delete-modal-title" class="text-lg font-semibold text-gray-900">
+                    Confirmar exclusão
+                </h2>
+                <p class="mt-1 text-sm text-gray-500">
+                    Esta ação não poderá ser desfeita.
+                </p>
+            </div>
+
+            <button
+                type="button"
+                id="library-delete-modal-close"
+                class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                aria-label="Fechar modal"
+            >
+                <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+        </div>
+
+        <form id="library-delete-form" method="post" class="p-6">
+            {% csrf_token %}
+
+            <div class="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-4">
+                <i data-lucide="triangle-alert" class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600"></i>
+
+                <p class="text-sm leading-6 text-red-800">
+                    Tem certeza que deseja excluir permanentemente
+                    <strong id="library-delete-resource-name" class="font-semibold"></strong>?
+                </p>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-2">
+                <button
+                    type="button"
+                    id="library-delete-modal-cancel"
+                    class="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="submit"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-medium text-white transition-colors hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                >
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    Excluir
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script src="{% static 'js/library_list.js' %}"></script>
+    <script src="{% static 'js/library_delete_modal.js' %}"></script>
+{% endblock %}

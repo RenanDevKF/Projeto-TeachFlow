@@ -7,61 +7,240 @@
 <div class="max-w-4xl mx-auto bg-white rounded-xl shadow p-8 mt-6">
 
     <!-- Cabeçalho da turma -->
-    <div class="flex justify-between items-start mb-6">
-        <div>
-            <h2 class="text-2xl font-bold text-gray-800">{{ class_group.name }}</h2>
-            <p class="text-sm text-gray-500 mt-1">{{ class_group.school }} · {{ class_group.period }} · {{ class_group.year }}</p>
-        </div>
-        <div class="space-x-2">
-            <a href="{% url 'class_group_form' class_group.id %}" class="text-sm text-blue-600 hover:underline">Editar</a>
-            <a href="{% url 'class_group_delete' class_group.id %}" class="text-sm text-red-600 hover:underline">Excluir</a>
-        </div>
-    </div>
+    <div class="mb-6 border-b border-gray-100 pb-6">
+        <div class="flex flex-wrap items-start justify-between gap-5">
+            <!-- Identificação da turma -->
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-3">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        {{ class_group.name }}
+                    </h2>
 
-    <!-- Descrição -->
-    {% if class_group.description %}
-    <div class="mb-6">
-        <h3 class="font-semibold text-gray-700">Descrição</h3>
-        <p class="text-gray-600 mt-1">{{ class_group.description }}</p>
+                    {% if class_group.is_active %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                        Ativa
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
+                        <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                        Arquivada
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Informações da turma -->
+                <div class="mt-4 flex flex-wrap items-center gap-y-4 text-sm text-gray-600">
+                    {% if class_group.school %}
+                    <div class="flex items-center gap-2">
+                        <i
+                            data-lucide="school"
+                            class="h-4 w-4 flex-shrink-0 text-gray-400"
+                        ></i>
+                        <span>{{ class_group.school }}</span>
+                    </div>
+                    {% endif %}
+
+                    <div class="ml-6 flex items-center gap-2">
+                        <i
+                            data-lucide="calendar-days"
+                            class="h-4 w-4 flex-shrink-0 text-gray-400"
+                        ></i>
+                        <span>{{ class_group.year }}</span>
+                    </div>
+
+                    {% if class_group.period %}
+                    <div class="ml-6 flex items-center gap-2">
+                        <i
+                            data-lucide="sun"
+                            class="h-4 w-4 flex-shrink-0 text-gray-400"
+                        ></i>
+                        <span>{{ class_group.period }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if class_group.schedule %}
+                    <div class="ml-6 flex items-center gap-2">
+                        <i
+                            data-lucide="clock-3"
+                            class="h-4 w-4 flex-shrink-0 text-gray-400"
+                        ></i>
+                        <span>{{ class_group.schedule }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Ações da turma -->
+            <div class="ml-auto flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
+                <a
+                    href="{% url 'class_group_form' class_group.id %}"
+                    class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                >
+                    <i data-lucide="pencil" class="h-4 w-4"></i>
+                    Editar
+                </a>
+
+                {% if class_group.is_active %}
+                <form
+                    method="post"
+                    action="{% url 'class_group_archive' class_group.id %}"
+                    onsubmit="return confirm('Deseja arquivar esta turma? Os alunos, as aulas e todo o histórico serão preservados.');"
+                >
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    >
+                        <i data-lucide="archive" class="h-4 w-4"></i>
+                        Arquivar
+                    </button>
+                </form>
+                {% else %}
+                <form
+                    method="post"
+                    action="{% url 'class_group_restore' class_group.id %}"
+                >
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 shadow-sm transition-colors hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    >
+                        <i data-lucide="archive-restore" class="h-4 w-4"></i>
+                        Reativar
+                    </button>
+                </form>
+                {% endif %}
+
+                <a
+                    href="{% url 'class_group_delete' class_group.id %}"
+                    class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                >
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    Excluir
+                </a>
+            </div>
+        </div>
+
+        {% if not class_group.is_active %}
+        <div class="mt-6 flex gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <i
+                data-lucide="archive"
+                class="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-500"
+            ></i>
+
+            <div>
+                <p class="text-sm font-semibold text-gray-700">
+                    Esta turma está arquivada
+                </p>
+
+                <p class="mt-1 text-sm leading-relaxed text-gray-600">
+                    Os alunos, as aulas e todo o histórico continuam preservados.
+                    Reative a turma caso queira voltar a utilizá-la normalmente.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Descrição -->
+        {% if class_group.description %}
+        <div class="mt-8">
+            <h3 class="mb-2 text-lg font-semibold text-gray-700">
+                Descrição
+            </h3>
+
+            <p class="text-sm leading-relaxed text-gray-600">
+                {{ class_group.description }}
+            </p>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 
     <!-- Resumo -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div class="bg-gray-100 p-4 rounded-lg text-center">
-            <p class="text-2xl font-bold text-gray-800">{{ class_group.students.count }}</p>
-            <p class="text-gray-600 text-sm">Alunos cadastrados</p>
-        </div>
-        <div class="bg-gray-100 p-4 rounded-lg text-center">
-            <p class="text-2xl font-bold text-gray-800">{{ class_group.lessons.count }}</p>
-            <p class="text-gray-600 text-sm">Aulas registradas</p>
-        </div>
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <!-- Card de alunos -->
+        <a
+            href="{% url 'class_group_students' class_group_id=class_group.id %}"
+            class="group rounded-lg bg-gray-100 p-4 text-center transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            aria-label="Ver todos os alunos da turma"
+        >
+            <div class="flex items-center justify-center gap-2">
+                <i
+                    data-lucide="users-round"
+                    class="h-5 w-5 text-gray-400 transition-colors group-hover:text-primary"
+                ></i>
+
+                <p class="text-2xl font-bold text-gray-800">
+                    {{ class_group.students.count }}
+                </p>
+            </div>
+
+            <p class="mt-1 text-sm text-gray-600 transition-colors group-hover:text-primary">
+                Alunos cadastrados
+            </p>
+        </a>
+
+        <!-- Card de aulas -->
+        <a
+            href="{% url 'lesson_list' %}?class={{ class_group.id }}"
+            class="group rounded-lg bg-gray-100 p-4 text-center transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            aria-label="Ver todas as aulas da turma"
+        >
+            <div class="flex items-center justify-center gap-2">
+                <i
+                    data-lucide="book-open"
+                    class="h-5 w-5 text-gray-400 transition-colors group-hover:text-primary"
+                ></i>
+
+                <p class="text-2xl font-bold text-gray-800">
+                    {{ class_group.lessons.count }}
+                </p>
+            </div>
+
+            <p class="mt-1 text-sm text-gray-600 transition-colors group-hover:text-primary">
+                Aulas registradas
+            </p>
+        </a>
     </div>
 
-    <!-- Ações -->
+    <!-- Ações dos alunos -->
     <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-semibold text-gray-700">Alunos</h3>
-        <a href="{% url 'student_form' class_group.id %}" class="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-700 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Editar lista de alunos
-          </a>          
+
+        <div class="flex items-center gap-3">
+            {% if class_group.students.all %}
+            <a
+                href="{% url 'class_group_students' class_group_id=class_group.id %}"
+                class="text-sm text-blue-600 hover:underline"
+            >
+                Ver todos
+            </a>
+            {% endif %}
+
+            <a
+                href="{% url 'student_form' class_group.id %}"
+                class="text-sm text-blue-600 hover:underline"
+            >
+                Editar alunos
+            </a>
+        </div>
     </div>
 
-    <!-- Lista de alunos -->
+    <!-- Prévia da lista de alunos -->
     {% if class_group.students.all %}
     <ul class="divide-y divide-gray-200 mb-8">
-        {% for student in class_group.students.all %}
-        <li class="py-2 flex justify-between items-center">
-            <a href="{% url 'student_detail' class_group.id student.id %}" class="text-blue-600 hover:underline">
-                <span class="text-gray-800">{{ student.first_name }} {{ student.last_name }}</span>
-            </a>
-            <a href="{% url 'student_detail' class_group.id student.id %}" class="text-gray-500 hover:text-blue-600 ml-2" title="Ver detalhes">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path d="M12 4.5c-7.5 0-10.5 7.5-10.5 7.5s3 7.5 10.5 7.5 10.5-7.5 10.5-7.5-3-7.5-10.5-7.5z"/>
-                    <circle cx="12" cy="12" r="3" />
-                </svg>
+        {% for student in class_group.students.all|slice:":5" %}
+        <li>
+            <a
+                href="{% url 'student_detail' class_group.id student.id %}"
+                class="group flex items-center rounded-md px-3 py-3 transition-colors duration-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset"
+                aria-label="Ver detalhes do aluno {{ student.first_name }} {{ student.last_name }}"
+            >
+                <span class="font-medium text-gray-900 group-hover:text-primary transition-colors group-hover:text-primary">
+                    {{ student.first_name }} {{ student.last_name }}
+                </span>
             </a>
         </li>
         {% endfor %}
@@ -70,41 +249,74 @@
     <p class="text-gray-500 mb-8">Nenhum aluno cadastrado ainda.</p>
     {% endif %}
 
+    <div class="border-t border-gray-100 my-8"></div>
+
     <!-- Aulas -->
-    <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-semibold text-gray-700">Aulas</h3>
-        <div class="space-x-2">
-            <a href="{% url 'lesson_list' %}?class_group={{ class_group.id }}" class="text-sm text-primary hover:underline">Ver todas</a>
-            <a href="{% url 'lesson_form' %}?class_group={{ class_group.id }}" class="text-sm text-blue-600 hover:underline">Nova aula</a>
+     <div class="mt-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-700">Aulas</h3>
+            <div class="space-x-2">
+                <a href="{% url 'lesson_list' %}?class={{ class_group.id }}" class="text-sm text-blue-600 hover:underline">Ver todas</a>
+                <a href="{% url 'lesson_form' %}?class_group={{ class_group.id }}" class="text-sm text-blue-600 hover:underline">Nova aula</a>
+            </div>
         </div>
     </div>
 
     {% if class_group.lessons.all %}
-    <ul class="divide-y divide-gray-200 mb-8">
+    <ul class="mb-8 divide-y divide-gray-200">
         {% for lesson in class_group.lessons.all|slice:":5" %}
-        <li class="py-3">
-            <div class="flex justify-between items-start">
-                <div>
-                    <a href="{% url 'lesson_detail' lesson.id %}" class="text-blue-600 hover:underline font-medium">{{ lesson.title }}</a>
-                    <p class="text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }}</p>
+        <li>
+            <a
+                href="{% url 'lesson_detail' lesson.id %}"
+                class="group grid grid-cols-1 gap-3 rounded-md px-3 py-3 transition-colors duration-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center sm:gap-6"
+                aria-label="Ver detalhes da aula {{ lesson.title }}"
+            >
+                <!-- Título e data -->
+                <div class="min-w-0">
+                    <p class="font-medium text-gray-900 group-hover:text-primary transition-colors group-hover:text-primary">
+                        {{ lesson.title }}
+                    </p>
+
+                    <p class="mt-0.5 text-sm text-gray-500">
+                        {{ lesson.date|date:"d/m/Y" }}
+                    </p>
                 </div>
-                <div class="flex items-center space-x-2">
-                    {% if lesson.tags.all %}
-                    <div class="flex flex-wrap gap-1">
-                        {% for tag in lesson.tags.all %}
-                        <span class="px-2 py-0.5 text-xs rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">
-                            {{ tag.name }}
-                        </span>
-                        {% endfor %}
-                    </div>
+
+                <!-- Tags -->
+                {% if lesson.tags.all %}
+                <div class="flex min-w-0 flex-wrap items-center gap-1 sm:justify-end">
+                    {% for tag in lesson.tags.all|slice:":6" %}
+                    <span
+                        class="whitespace-nowrap rounded-full px-2 py-0.5 text-xs"
+                        style="background-color: {{ tag.color }}20; color: {{ tag.color }};"
+                    >
+                        {{ tag.name }}
+                    </span>
+                    {% endfor %}
+
+                    {% if lesson.tags.count > 6 %}
+                    <span
+                        class="whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500"
+                        title="Tags ocultas: {% for tag in lesson.tags.all %}{% if forloop.counter > 6 %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}"
+                    >
+                        +{{ lesson.tags.count|add:"-6" }}
+                        {% if lesson.tags.count|add:"-6" == 1 %}
+                            tag
+                        {% else %}
+                            tags
+                        {% endif %}
+                    </span>
                     {% endif %}
                 </div>
-            </div>
+                {% endif %}
+            </a>
         </li>
         {% endfor %}
     </ul>
     {% else %}
-    <p class="text-gray-500 mb-8">Nenhuma aula registrada ainda.</p>
+    <p class="mb-8 text-gray-500">
+        Nenhuma aula registrada ainda.
+    </p>
     {% endif %}
 
 </div>

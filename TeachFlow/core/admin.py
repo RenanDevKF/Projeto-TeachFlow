@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from .models import (
     ClassGroup, Student, Lesson, Exercise, 
-    Tag, LearningObjective, FutureIdea, AdminActionLog
+    Tag, LearningObjective, AdminActionLog
 )
 
 # Security-enhanced admin configuration
@@ -104,7 +104,7 @@ class LessonAdmin(SecureModelAdmin):
     list_filter = ('date', 'class_group', 'class_group__teacher')
     search_fields = ('title', 'content', 'class_group__name')
     readonly_fields = ('created_at', 'updated_at')
-    filter_horizontal = ('objectives', 'tags')
+    filter_horizontal = ('tags',)
     date_hierarchy = 'date'
     
     def teacher_name(self, obj):
@@ -213,47 +213,21 @@ class TagAdmin(SecureModelAdmin):
 
 @admin.register(LearningObjective)
 class LearningObjectiveAdmin(SecureModelAdmin):
-    list_display = ('title', 'teacher', 'usage_count')
-    list_filter = ('teacher', 'tags')
+    list_display = ('title', 'teacher', 'is_active', 'usage_count')
+    list_filter = ('teacher', 'is_active')
     search_fields = ('title', 'description')
-    filter_horizontal = ('tags',)
-    
+
     def usage_count(self, obj):
-        lessons = obj.lessons.count()
         exercises = obj.exercises.count()
-        return f"{lessons} lessons, {exercises} exercises"
-    usage_count.short_description = "Usage"
-    
+        return f'{exercises} {"exercício" if exercises == 1 else "exercícios"}'
+    usage_count.short_description = 'Utilização'
+
     fieldsets = (
-        ('Objective Information', {
-            'fields': ('title', 'description', 'teacher')
-        }),
-        ('Categorization', {
-            'fields': ('tags',),
+        ('Informações do objetivo', {
+            'fields': ('title', 'description', 'teacher', 'is_active'),
         }),
     )
 
-
-@admin.register(FutureIdea)
-class FutureIdeaAdmin(SecureModelAdmin):
-    list_display = ('title', 'teacher', 'class_group', 'created_at')
-    list_filter = ('teacher', 'class_group', 'created_at')
-    search_fields = ('title', 'description')
-    readonly_fields = ('created_at',)
-    filter_horizontal = ('tags',)
-    
-    fieldsets = (
-        ('Idea Information', {
-            'fields': ('title', 'description', 'teacher', 'class_group')
-        }),
-        ('Categorization', {
-            'fields': ('tags',),
-        }),
-        ('System Information', {
-            'fields': ('created_at',),
-            'classes': ('collapse',)
-        }),
-    )
 
 class AdminActionLogAdmin(SecureModelAdmin):
     list_display = ('user', 'action', 'model_name', 'object_id', 'timestamp')

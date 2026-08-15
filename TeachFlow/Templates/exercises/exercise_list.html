@@ -1,76 +1,779 @@
 {% extends 'base.html' %}
-{% block title %}Exercícios - TeachFlow{% endblock %}
+{% load static %}
+
+{% block title %}Exercícios{% endblock %}
 
 {% block page_title %}
 <span class="inline-flex items-center gap-2">
-    <i data-lucide="notebook-text" class="w-6 h-6 text-primary"></i>
+    <i data-lucide="notebook-text" class="h-6 w-6 text-primary"></i>
     <span>Exercícios</span>
 </span>
 {% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6 gap-4">
-    <!-- Dropdown de Filtro -->
-    <div class="relative flex-1 min-w-0">
-        {% include "_filters.html" %}
-    </div>
-    
-    <!-- Botão Novo Exercício -->
-    <div class="ml-4 flex-shrink-0">
-        <a href="{% url 'exercise_form' %}" class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition whitespace-nowrap">
-            <i data-lucide="plus" class="w-5 h-5"></i>
-            <span>Novo Exercício</span>
+<div class="mx-auto">
+
+    <!-- Cabeçalho -->
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">
+                Biblioteca de exercícios
+            </h1>
+
+            <p class="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
+                Organize exercícios e modelos reutilizáveis para preparar suas
+                aulas e preservar seus recursos pedagógicos.
+            </p>
+        </div>
+
+        <a
+            href="{% url 'exercise_form' %}"
+            class="inline-flex h-10 flex-shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+        >
+            <i data-lucide="plus" class="h-5 w-5"></i>
+            Novo exercício
         </a>
     </div>
-</div>
 
-<div class="space-y-6">
-    {% if exercises %}
-    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {% for exercise in exercises %}
-        <div class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md border border-gray-200">
-            <div class="flex justify-between items-center mb-2">
-                <h2 class="font-semibold text-lg text-gray-800">{{ exercise.title }}</h2>
-                {% if exercise.is_template %}
-                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Modelo</span>
-                {% endif %}
+    <!-- Filtros -->
+    <form
+        id="exercise-filter-form"
+        method="get"
+        class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+    >
+        <input
+            id="exercise-status-input"
+            type="hidden"
+            name="status"
+            value="{{ selected_status }}"
+        >
+
+        <input
+            id="exercise-type-input"
+            type="hidden"
+            name="type"
+            value="{{ selected_type }}"
+        >
+
+        <div class="space-y-4">
+
+            <!-- Busca e filtros principais -->
+            <div class="flex flex-col gap-4 2xl:flex-row 2xl:items-center">
+
+                <!-- Status -->
+                <div>
+                    <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500 2xl:sr-only">
+                        Status
+                    </p>
+
+                    <div class="inline-flex h-10 w-full overflow-hidden rounded-lg border border-gray-200 bg-white sm:w-auto">
+                        <button
+                            type="button"
+                            data-exercise-status="active"
+                            aria-pressed="{% if selected_status == 'active' %}true{% else %}false{% endif %}"
+                            class="inline-flex flex-1 items-center justify-center px-4 text-sm font-medium transition-colors sm:flex-none
+                            {% if selected_status == 'active' %}
+                                bg-primary text-white
+                            {% else %}
+                                text-gray-600 hover:bg-gray-50
+                            {% endif %}"
+                        >
+                            Ativos
+                        </button>
+
+                        <button
+                            type="button"
+                            data-exercise-status="archived"
+                            aria-pressed="{% if selected_status == 'archived' %}true{% else %}false{% endif %}"
+                            class="inline-flex flex-1 items-center justify-center border-l border-gray-200 px-4 text-sm font-medium transition-colors sm:flex-none
+                            {% if selected_status == 'archived' %}
+                                bg-primary text-white
+                            {% else %}
+                                text-gray-600 hover:bg-gray-50
+                            {% endif %}"
+                        >
+                            Arquivados
+                        </button>
+
+                        <button
+                            type="button"
+                            data-exercise-status="all"
+                            aria-pressed="{% if selected_status == 'all' %}true{% else %}false{% endif %}"
+                            class="inline-flex flex-1 items-center justify-center border-l border-gray-200 px-4 text-sm font-medium transition-colors sm:flex-none
+                            {% if selected_status == 'all' %}
+                                bg-primary text-white
+                            {% else %}
+                                text-gray-600 hover:bg-gray-50
+                            {% endif %}"
+                        >
+                            Todos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tipo -->
+                <div>
+                    <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500 2xl:sr-only">
+                        Tipo
+                    </p>
+
+                    <div class="inline-flex h-10 w-full overflow-hidden rounded-lg border border-gray-200 bg-white sm:w-auto">
+                        <button
+                            type="button"
+                            data-exercise-type="all"
+                            aria-pressed="{% if selected_type == 'all' %}true{% else %}false{% endif %}"
+                            class="inline-flex flex-1 items-center justify-center px-4 text-sm font-medium transition-colors sm:flex-none
+                            {% if selected_type == 'all' %}
+                                bg-gray-700 text-white
+                            {% else %}
+                                text-gray-600 hover:bg-gray-50
+                            {% endif %}"
+                        >
+                            Todos
+                        </button>
+
+                        <button
+                            type="button"
+                            data-exercise-type="exercise"
+                            aria-pressed="{% if selected_type == 'exercise' %}true{% else %}false{% endif %}"
+                            class="inline-flex flex-1 items-center justify-center border-l border-gray-200 px-4 text-sm font-medium transition-colors sm:flex-none
+                            {% if selected_type == 'exercise' %}
+                                bg-gray-700 text-white
+                            {% else %}
+                                text-gray-600 hover:bg-gray-50
+                            {% endif %}"
+                        >
+                            Exercícios
+                        </button>
+
+                        <button
+                            type="button"
+                            data-exercise-type="template"
+                            aria-pressed="{% if selected_type == 'template' %}true{% else %}false{% endif %}"
+                            class="inline-flex flex-1 items-center justify-center border-l border-gray-200 px-4 text-sm font-medium transition-colors sm:flex-none
+                            {% if selected_type == 'template' %}
+                                bg-gray-700 text-white
+                            {% else %}
+                                text-gray-600 hover:bg-gray-50
+                            {% endif %}"
+                        >
+                            Modelos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Busca -->
+                <div class="min-w-0 flex-1">
+                    <label
+                        for="exercise-search-input"
+                        class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 2xl:sr-only"
+                    >
+                        Buscar
+                    </label>
+
+                    <div class="relative">
+                        <i
+                            data-lucide="search"
+                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                        ></i>
+
+                        <input
+                            id="exercise-search-input"
+                            type="text"
+                            name="search"
+                            value="{{ search }}"
+                            placeholder="Buscar por título, descrição ou materiais..."
+                            autocomplete="off"
+                            class="h-10 w-full rounded-lg border border-gray-300 pl-10 pr-4 text-sm text-gray-700 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        >
+                    </div>
+                </div>
             </div>
-            <p class="text-gray-600 line-clamp-2">{{ exercise.description|truncatewords:20 }}</p>
-            
-            {% if exercise.duration %}
-            <div class="mt-2 text-sm text-gray-500 flex items-center gap-1">
-                <i data-lucide="clock" class="w-4 h-4"></i>
-                <span>{{ exercise.duration }} minutos</span>
+
+            <!-- Filtros complementares -->
+            <div class="grid grid-cols-1 gap-4 border-t border-gray-100 pt-4 md:grid-cols-3">
+
+                <!-- Duração -->
+                <div>
+                    <label
+                        for="exercise-duration-filter"
+                        class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                    >
+                        Duração
+                    </label>
+
+                    <select
+                        id="exercise-duration-filter"
+                        name="duration"
+                        class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    >
+                        <option value="">Qualquer duração</option>
+
+                        <option
+                            value="up-to-15"
+                            {% if selected_duration == 'up-to-15' %}selected{% endif %}
+                        >
+                            Até 15 minutos
+                        </option>
+
+                        <option
+                            value="16-to-30"
+                            {% if selected_duration == '16-to-30' %}selected{% endif %}
+                        >
+                            16 a 30 minutos
+                        </option>
+
+                        <option
+                            value="31-to-60"
+                            {% if selected_duration == '31-to-60' %}selected{% endif %}
+                        >
+                            31 a 60 minutos
+                        </option>
+
+                        <option
+                            value="61-to-120"
+                            {% if selected_duration == '61-to-120' %}selected{% endif %}
+                        >
+                            61 a 120 minutos
+                        </option>
+
+                        <option
+                            value="over-120"
+                            {% if selected_duration == 'over-120' %}selected{% endif %}
+                        >
+                            Mais de 120 minutos
+                        </option>
+
+                        <option
+                            value="without-duration"
+                            {% if selected_duration == 'without-duration' %}selected{% endif %}
+                        >
+                            Sem duração informada
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Tags -->
+                <div class="relative">
+                    <label
+                        for="exercise-tag-filter-trigger"
+                        class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                    >
+                        Tags
+                    </label>
+
+                    <button
+                        id="exercise-tag-filter-trigger"
+                        type="button"
+                        class="flex h-10 w-full items-center justify-between gap-3 rounded-lg border border-gray-300 bg-white px-3 text-left text-sm text-gray-700 shadow-sm transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        aria-expanded="false"
+                        aria-controls="exercise-tag-filter-dropdown"
+                        aria-haspopup="true"
+                    >
+                        <span class="min-w-0 flex-1 truncate">
+                            {% if selected_tags %}
+                                {{ selected_tags|length }}
+
+                                {% if selected_tags|length == 1 %}
+                                    tag selecionada
+                                {% else %}
+                                    tags selecionadas
+                                {% endif %}
+                            {% else %}
+                                <span class="text-gray-500">
+                                    Todas as tags
+                                </span>
+                            {% endif %}
+                        </span>
+
+                        <i
+                            data-lucide="chevron-down"
+                            class="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform"
+                            data-filter-arrow
+                        ></i>
+                    </button>
+
+                    <div
+                        id="exercise-tag-filter-dropdown"
+                        class="absolute left-0 top-full z-40 mt-1 hidden w-full min-w-64 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+                    >
+                        <div class="border-b border-gray-100 p-3">
+                            <div class="relative">
+                                <i
+                                    data-lucide="search"
+                                    class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                ></i>
+
+                                <input
+                                    id="exercise-tag-filter-search"
+                                    type="text"
+                                    placeholder="Buscar tag..."
+                                    autocomplete="off"
+                                    class="h-9 w-full rounded-lg border border-gray-300 pl-9 pr-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="max-h-60 overflow-y-auto py-1">
+                            {% for tag in tags %}
+                                <label
+                                    class="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-gray-50"
+                                    data-multiple-filter-item
+                                >
+                                    <input
+                                        type="checkbox"
+                                        name="tag"
+                                        value="{{ tag.id }}"
+                                        class="h-4 w-4 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
+                                        data-exercise-multiple-filter
+                                        {% if tag.id|stringformat:"s" in selected_tags %}checked{% endif %}
+                                    >
+
+                                    <span
+                                        class="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                                        style="background-color: {{ tag.color }};"
+                                    ></span>
+
+                                    <span class="min-w-0 truncate text-sm text-gray-700">
+                                        {{ tag.name }}
+                                    </span>
+                                </label>
+                            {% empty %}
+                                <div class="px-4 py-6 text-center">
+                                    <i
+                                        data-lucide="tags"
+                                        class="mx-auto h-6 w-6 text-gray-300"
+                                    ></i>
+
+                                    <p class="mt-2 text-sm text-gray-500">
+                                        Nenhuma tag disponível.
+                                    </p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Objetivos -->
+                <div class="relative">
+                    <label
+                        for="exercise-objective-filter-trigger"
+                        class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                    >
+                        Objetivos de aprendizagem
+                    </label>
+
+                    <button
+                        id="exercise-objective-filter-trigger"
+                        type="button"
+                        class="flex h-10 w-full items-center justify-between gap-3 rounded-lg border border-gray-300 bg-white px-3 text-left text-sm text-gray-700 shadow-sm transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        aria-expanded="false"
+                        aria-controls="exercise-objective-filter-dropdown"
+                        aria-haspopup="true"
+                    >
+                        <span class="min-w-0 flex-1 truncate">
+                            {% if selected_objectives %}
+                                {{ selected_objectives|length }}
+
+                                {% if selected_objectives|length == 1 %}
+                                    objetivo selecionado
+                                {% else %}
+                                    objetivos selecionados
+                                {% endif %}
+                            {% else %}
+                                <span class="text-gray-500">
+                                    Todos os objetivos
+                                </span>
+                            {% endif %}
+                        </span>
+
+                        <i
+                            data-lucide="chevron-down"
+                            class="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform"
+                            data-filter-arrow
+                        ></i>
+                    </button>
+
+                    <div
+                        id="exercise-objective-filter-dropdown"
+                        class="absolute right-0 top-full z-40 mt-1 hidden w-full min-w-72 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+                    >
+                        <div class="border-b border-gray-100 p-3">
+                            <div class="relative">
+                                <i
+                                    data-lucide="search"
+                                    class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                ></i>
+
+                                <input
+                                    id="exercise-objective-filter-search"
+                                    type="text"
+                                    placeholder="Buscar objetivo..."
+                                    autocomplete="off"
+                                    class="h-9 w-full rounded-lg border border-gray-300 pl-9 pr-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="max-h-60 overflow-y-auto py-1">
+                            {% for objective in objectives %}
+                                <label
+                                    class="flex cursor-pointer items-start gap-3 px-3 py-2.5 transition-colors hover:bg-gray-50"
+                                    data-multiple-filter-item
+                                >
+                                    <input
+                                        type="checkbox"
+                                        name="objective"
+                                        value="{{ objective.id }}"
+                                        class="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
+                                        data-exercise-multiple-filter
+                                        {% if objective.id|stringformat:"s" in selected_objectives %}checked{% endif %}
+                                    >
+
+                                    <span class="text-sm leading-5 text-gray-700">
+                                        {% if objective.description %}
+                                            {{ objective.description }}
+                                        {% else %}
+                                            {{ objective.title }}
+                                        {% endif %}
+                                    </span>
+                                </label>
+                            {% empty %}
+                                <div class="px-4 py-6 text-center">
+                                    <i
+                                        data-lucide="target"
+                                        class="mx-auto h-6 w-6 text-gray-300"
+                                    ></i>
+
+                                    <p class="mt-2 text-sm text-gray-500">
+                                        Nenhum objetivo disponível.
+                                    </p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <!-- Filtros selecionados e limpar -->
+            <div class="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                    {% for tag in tags %}
+                        {% if tag.id|stringformat:"s" in selected_tags %}
+                            <span
+                                class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
+                                style="background-color: {{ tag.color }}20; color: {{ tag.color }};"
+                            >
+                                {{ tag.name }}
+                            </span>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% for objective in objectives %}
+                        {% if objective.id|stringformat:"s" in selected_objectives %}
+                            <span class="inline-flex max-w-xs items-center truncate rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                                {% if objective.description %}
+                                    {{ objective.description }}
+                                {% else %}
+                                    {{ objective.title }}
+                                {% endif %}
+                            </span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <a
+                    href="{% url 'exercise_list' %}"
+                    class="inline-flex h-9 flex-shrink-0 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                >
+                    <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+                    Limpar filtros
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <!-- Resultados -->
+    <div id="exercise-results" aria-live="polite">
+
+        <!-- Contador -->
+        <div class="mb-4 flex items-center gap-2 text-sm text-gray-500">
+            <i data-lucide="notebooks" class="h-4 w-4 flex-shrink-0"></i>
+
+            {% if results_count == 1 %}
+                <span>1 resultado encontrado</span>
+            {% else %}
+                <span>{{ results_count }} resultados encontrados</span>
             {% endif %}
-            
-            <div class="mt-2 flex gap-1 flex-wrap">
-                {% for tag in exercise.tags.all %}
-                <span class="text-xs px-2 py-1 rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">{{ tag.name }}</span>
+        </div>
+
+        {% if exercises %}
+
+            <!-- Cards -->
+            <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {% for exercise in exercises %}
+                    <article
+                        class="group relative flex min-h-80 flex-col overflow-hidden rounded-xl border bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md
+                        {% if exercise.is_active %}
+                            border-gray-200
+                        {% else %}
+                            border-gray-200 bg-gray-50/70
+                        {% endif %}"
+                    >
+                        <!-- Link principal do card -->
+                        <a
+                            href="{% url 'exercise_detail' exercise.id %}"
+                            class="absolute inset-0 z-10"
+                            aria-label="Ver detalhes de {{ exercise.title }}"
+                        ></a>
+
+                        <!-- Cabeçalho -->
+                        <div class="relative z-20 flex items-start justify-between gap-3 pointer-events-none">
+                            <div class="min-w-0">
+                                <h2
+                                    class="line-clamp-2 text-lg font-semibold leading-6 transition-colors
+                                    {% if exercise.is_active %}
+                                        text-gray-900 group-hover:text-primary
+                                    {% else %}
+                                        text-gray-600
+                                    {% endif %}"
+                                    title="{{ exercise.title }}"
+                                >
+                                    {{ exercise.title }}
+                                </h2>
+
+                                <div class="mt-2 flex flex-wrap items-center gap-2">
+                                    {% if exercise.is_template %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                                            <i data-lucide="copy" class="h-3.5 w-3.5"></i>
+                                            Modelo
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
+                                            <i data-lucide="notebook-text" class="h-3.5 w-3.5"></i>
+                                            Exercício
+                                        </span>
+                                    {% endif %}
+
+                                    {% if exercise.is_active %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                                            Ativo
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500 ring-1 ring-inset ring-gray-500/20">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                                            Arquivado
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if exercise.duration %}
+                                <span class="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-600">
+                                    <i data-lucide="clock-3" class="h-3.5 w-3.5"></i>
+                                    {{ exercise.duration }} min
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Descrição -->
+                        <p class="relative z-20 mt-4 line-clamp-3 text-sm leading-6 text-gray-600 pointer-events-none">
+                            {{ exercise.description }}
+                        </p>
+
+                        <!-- Informações pedagógicas -->
+                        <div class="relative z-20 mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500 pointer-events-none">
+                            <span class="inline-flex items-center gap-1.5">
+                                <i data-lucide="target" class="h-3.5 w-3.5"></i>
+
+                                {{ exercise.objectives.count }}
+                                {% if exercise.objectives.count == 1 %}
+                                    objetivo
+                                {% else %}
+                                    objetivos
+                                {% endif %}
+                            </span>
+
+                            <span class="inline-flex items-center gap-1.5">
+                                <i data-lucide="tags" class="h-3.5 w-3.5"></i>
+
+                                {{ exercise.tags.count }}
+                                {% if exercise.tags.count == 1 %}
+                                    tag
+                                {% else %}
+                                    tags
+                                {% endif %}
+                            </span>
+
+                            {% if exercise.source_template %}
+                                <span class="inline-flex min-w-0 items-center gap-1.5">
+                                    <i data-lucide="git-branch" class="h-3.5 w-3.5 flex-shrink-0"></i>
+                                    <span class="truncate">
+                                        Criado de um modelo
+                                    </span>
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Tags -->
+                        {% if exercise.tags.all %}
+                            <div class="relative z-20 mt-4 flex flex-wrap gap-1.5 pointer-events-none">
+                                {% for tag in exercise.tags.all|slice:":4" %}
+                                    <span
+                                        class="rounded-full px-2 py-1 text-xs font-medium"
+                                        style="background-color: {{ tag.color }}20; color: {{ tag.color }};"
+                                    >
+                                        {{ tag.name }}
+                                    </span>
+                                {% endfor %}
+
+                                {% if exercise.tags.count > 4 %}
+                                    <span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-500">
+                                        Mais tags
+                                    </span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Aviso de arquivamento -->
+                        {% if not exercise.is_active %}
+                            <div class="relative z-20 mt-4 flex items-start gap-2 rounded-lg border border-gray-200 bg-white/70 px-3 py-3 pointer-events-none">
+                                <i
+                                    data-lucide="archive"
+                                    class="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400"
+                                ></i>
+
+                                <p class="text-xs leading-5 text-gray-500">
+                                    Recurso preservado, mas indisponível para novos usos.
+                                </p>
+                            </div>
+                        {% endif %}
+
+                        <!-- Ações -->
+                        <div class="relative z-20 mt-auto flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 pt-4">
+                            <a
+                                href="{% url 'exercise_detail' exercise.id %}"
+                                class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            >
+                                <i data-lucide="eye" class="h-4 w-4"></i>
+                                Detalhes
+                            </a>
+
+                            {% if exercise.is_template and exercise.is_active %}
+                                <form
+                                    method="post"
+                                    action="{% url 'exercise_use_template' exercise.id %}"
+                                >
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                                    >
+                                        <i data-lucide="copy-plus" class="h-4 w-4"></i>
+                                        Usar modelo
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </article>
                 {% endfor %}
             </div>
-            
-            <div class="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
-                <span class="text-xs text-gray-500">Criado por: {{ exercise.created_by.user.first_name }}</span>
-                <a href="{% url 'exercise_detail' exercise.id %}" class="text-sm text-primary hover:underline">Ver detalhes</a>
+
+            <!-- Paginação -->
+            {% if is_paginated %}
+                <nav
+                    class="mt-8 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between"
+                    aria-label="Paginação dos exercícios"
+                >
+                    <p class="text-sm text-gray-500">
+                        Página {{ page_obj.number }} de
+                        {{ page_obj.paginator.num_pages }}
+                    </p>
+
+                    <div class="flex items-center gap-2">
+                        {% if page_obj.has_previous %}
+                            <a
+                                href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.previous_page_number }}"
+                                class="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            >
+                                <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                                Anterior
+                            </a>
+                        {% endif %}
+
+                        {% if page_obj.has_next %}
+                            <a
+                                href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.next_page_number }}"
+                                class="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            >
+                                Próxima
+                                <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+                </nav>
+            {% endif %}
+
+        {% else %}
+
+            <!-- Estado vazio -->
+            <div class="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-14 text-center">
+                {% if has_any_exercises %}
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+                        <i data-lucide="search-x" class="h-7 w-7 text-primary"></i>
+                    </div>
+
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhum recurso corresponde aos filtros
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                        Ajuste a busca, o status, o tipo ou os filtros pedagógicos
+                        para visualizar outros exercícios e modelos.
+                    </p>
+
+                    <a
+                        href="{% url 'exercise_list' %}"
+                        class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    >
+                        <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+                        Limpar filtros
+                    </a>
+                {% else %}
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+                        <i data-lucide="notebook-tabs" class="h-7 w-7 text-primary"></i>
+                    </div>
+
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Sua biblioteca ainda está vazia
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                        Crie seu primeiro exercício ou modelo reutilizável para
+                        começar a organizar seus recursos pedagógicos.
+                    </p>
+
+                    <a
+                        href="{% url 'exercise_form' %}"
+                        class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    >
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        Criar exercício
+                    </a>
+                {% endif %}
             </div>
-        </div>
-        {% endfor %}
+        {% endif %}
     </div>
-    {% else %}
-    <div class="text-center py-10">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
-            <i data-lucide="notebook-text" class="w-8 h-8 text-primary"></i>
-        </div>
-        <h3 class="text-lg font-medium text-gray-900">Nenhum exercício encontrado</h3>
-        <p class="mt-1 text-gray-500">Comece criando seu primeiro exercício para suas aulas.</p>
-        <div class="mt-4">
-            <a href="{% url 'exercise_form' %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-blue-600">
-                <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
-                Criar Exercício
-            </a>
-        </div>
-    </div>
-    {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+
+    <script
+        src="{% static 'js/exercise_list.js' %}"
+        defer
+    ></script>
 {% endblock %}

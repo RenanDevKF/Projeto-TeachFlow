@@ -65,4 +65,4 @@ tmp/
 temp/
 *.tmp
 
-*/migrations/
+**/migrations/__pycache__/

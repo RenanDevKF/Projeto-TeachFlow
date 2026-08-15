@@ -1,8 +1,25 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{% if object %}Editar Aula{% else %}Nova Aula{% endif %}{% endblock %}
-{% block page_title %}{% if object %}Editar Aula{% else %}Nova Aula{% endif %}{% endblock %}
+{% block title %}
+  {% if is_duplicate %}
+    Duplicar Aula
+  {% elif object %}
+    Editar Aula
+  {% else %}
+    Nova Aula
+  {% endif %}
+{% endblock %}
+
+{% block page_title %}
+  {% if is_duplicate %}
+    Duplicar Aula
+  {% elif object %}
+    Editar Aula
+  {% else %}
+    Nova Aula
+  {% endif %}
+{% endblock %}
 
 {% block content %}
 <!-- Cabeçalho da página -->
@@ -13,14 +30,61 @@
       <path d="M4 4h16v16H4z"></path>
       <path d="M8 2v4M16 2v4M4 10h16"></path>
     </svg>
-    {% if object %}Editar Aula{% else %}Nova Aula{% endif %}
+    {% if is_duplicate %}
+      Duplicar Aula
+    {% elif object %}
+      Editar Aula
+    {% else %}
+      Nova Aula
+    {% endif %}
   </h1>
 </div>
 
 <!-- Formulário de aula -->
 <div class="max-w-3xl mx-auto px-6 py-2 bg-white rounded-xl shadow border border-gray-200">
+  {% if form.instance.pk and not form.instance.class_group.is_active %}
+      <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
+          <div class="flex items-start gap-3">
+              <i data-lucide="archive" class="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600"></i>
+
+              <div>
+                  <p class="text-sm font-semibold text-amber-900">
+                      Esta aula pertence a uma turma arquivada
+                  </p>
+
+                  <p class="mt-1 text-sm leading-6 text-amber-800">
+                      A turma atual permanece disponível para preservar o histórico.
+                      Você pode manter esse vínculo ou transferir a aula para uma turma ativa.
+                  </p>
+              </div>
+          </div>
+      </div>
+  {% endif %}  
   <form method="POST" class="space-y-6">
     {% csrf_token %}
+    {% if is_duplicate %}
+      <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-4">
+        <div class="flex items-start gap-3">
+          <i
+            data-lucide="copy-plus"
+            class="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600"
+          ></i>
+
+          <div>
+            <p class="text-sm font-semibold text-blue-900">
+              Criando uma aula baseada em “{{ duplicate_source.title }}”
+            </p>
+
+            <p class="mt-1 text-sm leading-6 text-blue-800">
+              O conteúdo, os exercícios, as tags e os objetivos foram aproveitados.
+              Escolha a turma e a data em que esta nova aula será ou foi aplicada.
+              Nenhuma aula será criada até você salvar o formulário.
+            </p>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
     {% if form.non_field_errors %}
       <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
         {{ form.non_field_errors }}
@@ -30,11 +94,19 @@
     <!-- Campos lado a lado: Turma e Data -->
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Turma</label>
-        <select name="{{ form.class_group.name }}" 
-                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 shadow-sm text-sm bg-white">
+        <label for="id_class_group" class="block text-sm font-medium text-gray-700 mb-2">
+          Turma
+        </label>
+        <select
+          id="id_class_group"
+          name="{{ form.class_group.name }}"
+          class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 shadow-sm text-sm bg-white"
+        >
           {% for choice in form.class_group.field.choices %}
-            <option value="{{ choice.0 }}" {% if form.class_group.value == choice.0 %}selected{% endif %}>
+            <option
+              value="{{ choice.0 }}"
+              {% if form.class_group.value|stringformat:"s" == choice.0|stringformat:"s" %}selected{% endif %}
+            >
               {{ choice.1 }}
             </option>
           {% endfor %}
@@ -45,11 +117,18 @@
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Data</label>
+        <label for="id_date" class="block text-sm font-medium text-gray-700 mb-2">
+            Data de aplicação
+        </label>
         <div class="relative">
-          <input type="date" name="{{ form.date.name }}" value="{{ form.date.value|date:'Y-m-d'|default:'' }}"
-                 class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm appearance-none"
-                 placeholder="dd/mm/aaaa">
+          <input
+            id="id_date"
+            type="date"
+            name="{{ form.date.name }}"
+            value="{% if form.is_bound %}{{ form.date.value|default_if_none:'' }}{% else %}{{ form.date.value|date:'Y-m-d'|default:'' }}{% endif %}"
+            class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm appearance-none"
+            placeholder="dd/mm/aaaa"
+          >
           <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
             <svg class="w-5 h-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" 
                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -60,6 +139,11 @@
             </svg>
           </div>
         </div>
+        <p class="mt-1.5 text-xs leading-5 text-gray-500">
+          Informe o dia em que a aula será ou foi aplicada. Datas futuras
+          organizam as próximas aulas; datas passadas compõem o histórico pedagógico.
+        </p>
+        
         {% if form.date.errors %}
           <p class="text-red-500 text-sm mt-1">{{ form.date.errors.0 }}</p>
         {% endif %}
@@ -87,7 +171,7 @@
     </div>
 
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">Observações de Desempenho</label>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Observações pedagógicas</label>
       <textarea name="{{ form.performance_notes.name }}" rows="4"
                 class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none shadow-sm text-sm"
                 placeholder="Notas sobre o desempenho dos alunos...">{{ form.performance_notes.value|default:'' }}</textarea>
@@ -234,24 +318,127 @@
         {% endif %}
       </div>
 
-    <div class="flex justify-between pt-6">
-      <a href="{% if object %}{% url 'lesson_detail' object.pk %}{% else %}{% url 'lesson_list' %}{% endif %}" 
-          class="px-4 py-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition-all">
-          Cancelar
+    <div class="flex flex-col gap-4 pt-6 sm:flex-row sm:items-center sm:justify-between">
+      <a
+        href="
+          {% if is_duplicate %}
+            {% url 'lesson_detail' duplicate_source.pk %}
+          {% elif object %}
+            {% url 'lesson_detail' object.pk %}
+          {% else %}
+            {% url 'lesson_list' %}
+          {% endif %}
+        "
+        class="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+      >
+        Cancelar
       </a>
-      <div class="flex gap-3">
-        {% if object %}
-        <a href="{% url 'duplicate_lesson' object.pk %}" 
-            class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm transition-all">
-            Duplicar Aula
-        </a>
+
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+        {% if object and not is_duplicate %}
+          <a
+            href="{% url 'duplicate_lesson' object.pk %}"
+            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 text-sm font-medium text-green-700 transition-colors hover:bg-green-100"
+          >
+            <i data-lucide="copy-plus" class="h-4 w-4"></i>
+            Duplicar aula
+          </a>
+
+          {% if object.status == 'planned' %}
+            <button
+              type="submit"
+              name="submission_status"
+              value="cancelled"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+            >
+              <i data-lucide="calendar-x" class="h-4 w-4"></i>
+              Cancelar aula
+            </button>
+
+            <button
+              type="submit"
+              name="submission_status"
+              value="planned"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100"
+            >
+              <i data-lucide="calendar-clock" class="h-4 w-4"></i>
+              Salvar como planejada
+            </button>
+
+            <button
+              type="submit"
+              name="submission_status"
+              value="completed"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+            >
+              <i data-lucide="circle-check" class="h-4 w-4"></i>
+              Registrar como realizada
+            </button>
+
+          {% elif object.status == 'completed' %}
+            <button
+              type="submit"
+              name="submission_status"
+              value="planned"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100"
+            >
+              <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+              Voltar para planejada
+            </button>
+
+            <button
+              type="submit"
+              name="submission_status"
+              value="completed"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+            >
+              <i data-lucide="save" class="h-4 w-4"></i>
+              Salvar alterações
+            </button>
+
+          {% else %}
+            <button
+              type="submit"
+              name="submission_status"
+              value="planned"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 text-sm font-medium text-white transition-colors hover:bg-purple-700"
+            >
+              <i data-lucide="calendar-plus" class="h-4 w-4"></i>
+              Reabrir como planejada
+            </button>
+
+            <button
+              type="submit"
+              name="submission_status"
+              value="cancelled"
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              <i data-lucide="save" class="h-4 w-4"></i>
+              Salvar alterações
+            </button>
+          {% endif %}
+
+        {% else %}
+          <button
+            type="submit"
+            name="submission_status"
+            value="planned"
+            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100"
+          >
+            <i data-lucide="calendar-clock" class="h-4 w-4"></i>
+            Salvar como planejada
+          </button>
+
+          <button
+            type="submit"
+            name="submission_status"
+            value="completed"
+            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+          >
+            <i data-lucide="circle-check" class="h-4 w-4"></i>
+            Registrar como realizada
+          </button>
         {% endif %}
-        <button type="submit" name="save_as_planning" class="bg-purple-500 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm transition-all">
-          Salvar como Planejamento
-        </button>
-        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-all">
-          {% if object %}Atualizar{% else %}Salvar{% endif %}
-        </button>
       </div>
     </div>
   </form>

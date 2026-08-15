@@ -1,48 +1,792 @@
 {% extends 'base.html' %}
-{% block title %}Aulas - TeachFlow{% endblock %}
+{% load static %}
+
+{% block title %}
+    {% if is_class_group_scope %}
+        Aulas da turma
+    {% else %}
+        Aulas
+    {% endif %}
+{% endblock %}
 
 {% block page_title %}
 <span class="inline-flex items-center gap-2">
-    <i data-lucide="book-open-check" class="w-6 h-6 text-primary"></i>
-    <span>Aulas</span>
+    <i data-lucide="book-open-check" class="h-6 w-6 text-primary"></i>
+
+    {% if is_class_group_scope %}
+        <span>Aulas da turma</span>
+    {% else %}
+        <span>Aulas</span>
+    {% endif %}
 </span>
 {% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6 gap-4">
-    <!-- Dropdown de Filtro - Ajustado -->
-    <div class="relative flex-1 min-w-0">
-        {% include "_filters.html" %}
-    </div>
-    
-    <!-- Botão Nova Aula - Ajustado para margem -->
-    <div class="ml-4 flex-shrink-0">
-        <a href="{% url 'lesson_form' %}" class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition whitespace-nowrap">
-            <i data-lucide="plus" class="w-5 h-5"></i>
-            <span>Nova Aula</span>
-        </a>
-    </div>
-</div>
+<div class="mx-auto">
 
-<div class="space-y-6">
-    {% if lessons %}
-    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {% for lesson in lessons %}
-        <div class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md border border-gray-200">
-            <div class="text-sm text-gray-500">{{ lesson.date|date:"d/m/Y" }}</div>
-            <h2 class="font-semibold text-lg text-gray-800">{{ lesson.title }}</h2>
-            <p class="text-gray-600 mt-1 line-clamp-2">{{ lesson.content|truncatewords:20 }}</p>
-            <div class="mt-2 flex gap-1 flex-wrap">
-                {% for tag in lesson.tags.all %}
-                <span class="text-xs px-2 py-1 rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }};">{{ tag.name }}</span>
+    {% if is_class_group_scope %}
+        {% url 'group_lessons' class_group.id as lessons_base_url %}
+    {% else %}
+        {% url 'lesson_list' as lessons_base_url %}
+    {% endif %}
+
+    <!-- Cabeçalho -->
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+            {% if is_class_group_scope %}
+                <h1 class="text-2xl font-bold text-gray-900">
+                    {{ class_group.name }}
+                </h1>
+
+                <p class="mt-1 text-sm leading-6 text-gray-500">
+                    {% if class_group.school %}
+                        {{ class_group.school }} ·
+                    {% endif %}
+
+                    {{ class_group.year }}
+
+                    {% if class_group.period %}
+                        · {{ class_group.period }}
+                    {% endif %}
+
+                    {% if class_group.schedule %}
+                        · {{ class_group.schedule }}
+                    {% endif %}
+                </p>
+
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
+                    Consulte os planejamentos, pendências e registros pedagógicos desta turma.
+                </p>
+            {% else %}
+                <h1 class="text-2xl font-bold text-gray-900">
+                    Gestão de aulas
+                </h1>
+
+                <p class="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
+                    Organize aulas planejadas, acompanhe registros pendentes e consulte
+                    o histórico pedagógico de suas turmas.
+                </p>
+            {% endif %}
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            {% if is_class_group_scope %}
+                <a
+                    href="{% url 'class_group_detail' class_group.id %}"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                >
+                    <i data-lucide="arrow-left" class="h-4 w-4"></i>
+                    Voltar à turma
+                </a>
+            {% endif %}
+
+            <a
+                href="{% url 'lesson_form' %}"
+                class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            >
+                <i data-lucide="plus" class="h-5 w-5"></i>
+                Nova aula
+            </a>
+        </div>
+    </div>
+
+    <!-- Navegação por situação -->
+    <div class="mb-6 overflow-x-auto">
+        <div class="inline-flex min-w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm sm:min-w-0">
+            <a
+                href="{{ lessons_base_url }}?section=upcoming{% if selected_tag %}&amp;tag={{ selected_tag|urlencode }}{% endif %}{% if selected_date %}&amp;date={{ selected_date|urlencode }}{% endif %}{% if selected_class_group and not is_class_group_scope %}&amp;class={{ selected_class_group|urlencode }}{% endif %}"
+                class="inline-flex min-w-36 flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors
+                {% if selected_section == 'upcoming' %}
+                    bg-primary text-white
+                {% else %}
+                    text-gray-600 hover:bg-gray-50
+                {% endif %}"
+            >
+                <i data-lucide="calendar-clock" class="h-4 w-4"></i>
+                <span>Próximas</span>
+
+                <span class="inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs
+                    {% if selected_section == 'upcoming' %}
+                        bg-white/20 text-white
+                    {% else %}
+                        bg-gray-100 text-gray-600
+                    {% endif %}"
+                >
+                    {{ upcoming_count }}
+                </span>
+            </a>
+
+            <a
+                href="{{ lessons_base_url }}?section=pending{% if selected_tag %}&amp;tag={{ selected_tag|urlencode }}{% endif %}{% if selected_date %}&amp;date={{ selected_date|urlencode }}{% endif %}{% if selected_class_group and not is_class_group_scope %}&amp;class={{ selected_class_group|urlencode }}{% endif %}"
+                class="inline-flex min-w-36 flex-1 items-center justify-center gap-2 border-l border-gray-200 px-4 py-3 text-sm font-medium transition-colors
+                {% if selected_section == 'pending' %}
+                    bg-amber-500 text-white
+                {% else %}
+                    text-gray-600 hover:bg-gray-50
+                {% endif %}"
+            >
+                <i data-lucide="circle-alert" class="h-4 w-4"></i>
+                <span>Pendentes</span>
+
+                <span class="inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs
+                    {% if selected_section == 'pending' %}
+                        bg-white/20 text-white
+                    {% else %}
+                        bg-amber-50 text-amber-700
+                    {% endif %}"
+                >
+                    {{ pending_count }}
+                </span>
+            </a>
+
+            <a
+                href="{{ lessons_base_url }}?section=completed{% if selected_tag %}&amp;tag={{ selected_tag|urlencode }}{% endif %}{% if selected_date %}&amp;date={{ selected_date|urlencode }}{% endif %}{% if selected_class_group and not is_class_group_scope %}&amp;class={{ selected_class_group|urlencode }}{% endif %}"
+                class="inline-flex min-w-36 flex-1 items-center justify-center gap-2 border-l border-gray-200 px-4 py-3 text-sm font-medium transition-colors
+                {% if selected_section == 'completed' %}
+                    bg-green-600 text-white
+                {% else %}
+                    text-gray-600 hover:bg-gray-50
+                {% endif %}"
+            >
+                <i data-lucide="circle-check-big" class="h-4 w-4"></i>
+                <span>Realizadas</span>
+
+                <span class="inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs
+                    {% if selected_section == 'completed' %}
+                        bg-white/20 text-white
+                    {% else %}
+                        bg-green-50 text-green-700
+                    {% endif %}"
+                >
+                    {{ completed_count }}
+                </span>
+            </a>
+
+            <a
+                href="{{ lessons_base_url }}?section=cancelled{% if selected_tag %}&amp;tag={{ selected_tag|urlencode }}{% endif %}{% if selected_date %}&amp;date={{ selected_date|urlencode }}{% endif %}{% if selected_class_group and not is_class_group_scope %}&amp;class={{ selected_class_group|urlencode }}{% endif %}"
+                class="inline-flex min-w-36 flex-1 items-center justify-center gap-2 border-l border-gray-200 px-4 py-3 text-sm font-medium transition-colors
+                {% if selected_section == 'cancelled' %}
+                    bg-gray-700 text-white
+                {% else %}
+                    text-gray-600 hover:bg-gray-50
+                {% endif %}"
+            >
+                <i data-lucide="calendar-x-2" class="h-4 w-4"></i>
+                <span>Canceladas</span>
+
+                <span class="inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs
+                    {% if selected_section == 'cancelled' %}
+                        bg-white/20 text-white
+                    {% else %}
+                        bg-gray-100 text-gray-600
+                    {% endif %}"
+                >
+                    {{ cancelled_count }}
+                </span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <form
+        id="lesson-filter-form"
+        method="get"
+        class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+    >
+        <input type="hidden" name="section" value="{{ selected_section }}">
+
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
+
+            <!-- Turma -->
+            {% if not is_class_group_scope %}
+                <div>
+                    <label
+                        for="lesson-class-filter"
+                        class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                    >
+                        Turma
+                    </label>
+
+                    <select
+                        id="lesson-class-filter"
+                        name="class"
+                        class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    >
+                        <option value="">Todas as turmas</option>
+
+                        {% for turma in class_groups %}
+                            <option
+                                value="{{ turma.id }}"
+                                {% if selected_class_group == turma.id|stringformat:"s" %}selected{% endif %}
+                            >
+                                {{ turma.name }} — {{ turma.year }}
+                                {% if not turma.is_active %} (Arquivada){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+
+            <!-- Tag -->
+            <div>
+                <label
+                    for="lesson-tag-filter"
+                    class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                >
+                    Tag
+                </label>
+
+                <select
+                    id="lesson-tag-filter"
+                    name="tag"
+                    class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                    <option value="">Todas as tags</option>
+
+                    {% for tag in tags %}
+                        <option
+                            value="{{ tag.id }}"
+                            {% if selected_tag == tag.id|stringformat:"s" %}selected{% endif %}
+                        >
+                            {{ tag.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Data -->
+            <div>
+                <label
+                    for="lesson-date-filter"
+                    class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                >
+                    Data de aplicação
+                </label>
+
+                <div class="relative">
+                    <input
+                        id="lesson-date-filter"
+                        type="date"
+                        name="date"
+                        value="{{ selected_date }}"
+                        class="h-10 w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 pr-10 text-sm text-gray-700 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    >
+
+                    <i
+                        data-lucide="calendar-days"
+                        class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                    ></i>
+                </div>
+            </div>
+
+            <!-- Ações -->
+            <div class="flex items-end justify-end {% if is_class_group_scope %}lg:col-span-2{% endif %}">
+                <a
+                    href="{{ lessons_base_url }}?section={{ selected_section }}"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
+                >
+                    <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+                    Limpar filtros
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <!-- Resultados -->
+    <div aria-live="polite">
+
+        <!-- Identificação da seção e contador -->
+        <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center gap-2">
+                {% if selected_section == 'upcoming' %}
+                    <i data-lucide="calendar-clock" class="h-5 w-5 text-primary"></i>
+
+                    <div>
+                        <h2 class="font-semibold text-gray-900">
+                            Próximas aulas
+                        </h2>
+
+                        <p class="text-sm text-gray-500">
+                            Aulas planejadas para hoje ou para datas futuras.
+                        </p>
+                    </div>
+
+                {% elif selected_section == 'pending' %}
+                    <i data-lucide="circle-alert" class="h-5 w-5 text-amber-600"></i>
+
+                    <div>
+                        <h2 class="font-semibold text-gray-900">
+                            Planejamentos pendentes
+                        </h2>
+
+                        <p class="text-sm text-gray-500">
+                            Aulas cuja data passou e ainda precisam ser confirmadas ou canceladas.
+                        </p>
+                    </div>
+
+                {% elif selected_section == 'completed' %}
+                    <i data-lucide="circle-check-big" class="h-5 w-5 text-green-600"></i>
+
+                    <div>
+                        <h2 class="font-semibold text-gray-900">
+                            Aulas realizadas
+                        </h2>
+
+                        <p class="text-sm text-gray-500">
+                            Histórico das aulas confirmadas como aplicadas.
+                        </p>
+                    </div>
+
+                {% else %}
+                    <i data-lucide="calendar-x-2" class="h-5 w-5 text-gray-500"></i>
+
+                    <div>
+                        <h2 class="font-semibold text-gray-900">
+                            Aulas canceladas
+                        </h2>
+
+                        <p class="text-sm text-gray-500">
+                            Planejamentos preservados que não foram realizados.
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="inline-flex items-center gap-2 text-sm text-gray-500">
+                <i data-lucide="notebooks" class="h-4 w-4"></i>
+
+                {% if results_count == 1 %}
+                    <span>1 aula encontrada</span>
+                {% else %}
+                    <span>{{ results_count }} aulas encontradas</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if lessons %}
+
+            <!-- Cards -->
+            <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {% for lesson in lessons %}
+                    <article
+                        class="group relative flex min-h-80 flex-col overflow-hidden rounded-xl border bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md
+                        {% if lesson.status == 'cancelled' %}
+                            border-gray-200 bg-gray-50/70
+                        {% elif lesson.status == 'completed' %}
+                            border-green-200
+                        {% elif lesson.date < today %}
+                            border-amber-200
+                        {% else %}
+                            border-blue-200
+                        {% endif %}"
+                    >
+                        <!-- Link principal -->
+                        <a
+                            href="{% url 'lesson_detail' lesson.id %}"
+                            class="absolute inset-0 z-10"
+                            aria-label="Ver detalhes da aula {{ lesson.title }}"
+                        ></a>
+
+                        <!-- Cabeçalho -->
+                        <div class="relative z-20 flex items-start justify-between gap-3 pointer-events-none">
+                            <div class="min-w-0">
+                                <h3
+                                    class="line-clamp-2 text-lg font-semibold leading-6 transition-colors
+                                    {% if lesson.status == 'cancelled' %}
+                                        text-gray-600
+                                    {% else %}
+                                        text-gray-900 group-hover:text-primary
+                                    {% endif %}"
+                                    title="{{ lesson.title }}"
+                                >
+                                    {{ lesson.title }}
+                                </h3>
+
+                                <div class="mt-2 flex flex-wrap items-center gap-2">
+                                    {% if lesson.status == 'completed' %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                                            Realizada
+                                        </span>
+
+                                    {% elif lesson.status == 'cancelled' %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                                            Cancelada
+                                        </span>
+
+                                    {% elif lesson.date < today %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                            Pendente
+                                        </span>
+
+                                    {% else %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                                            Planejada
+                                        </span>
+                                    {% endif %}
+
+                                    {% if lesson.date == today %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-600/20">
+                                            <i data-lucide="calendar-days" class="h-3.5 w-3.5"></i>
+                                            Hoje
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div
+                                class="flex flex-shrink-0 flex-col items-center rounded-lg px-3 py-2 text-center
+                                {% if lesson.status == 'completed' %}
+                                    bg-green-50 text-green-700
+                                {% elif lesson.status == 'cancelled' %}
+                                    bg-gray-100 text-gray-600
+                                {% elif lesson.date < today %}
+                                    bg-amber-50 text-amber-700
+                                {% else %}
+                                    bg-blue-50 text-blue-700
+                                {% endif %}"
+                            >
+                                <span class="text-lg font-bold leading-none">
+                                    {{ lesson.date|date:"d" }}
+                                </span>
+
+                                <span class="mt-1 text-xs font-semibold uppercase">
+                                    {{ lesson.date|date:"M" }}
+                                </span>
+
+                                <span class="mt-0.5 text-xs">
+                                    {{ lesson.date|date:"Y" }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Turma -->
+                        <div class="relative z-20 mt-4 flex items-center gap-2 text-sm text-gray-600 pointer-events-none">
+                            <i data-lucide="users-round" class="h-4 w-4 flex-shrink-0 text-gray-400"></i>
+
+                            <span class="truncate">
+                                {{ lesson.class_group.name }} · {{ lesson.class_group.year }}
+
+                                {% if not lesson.class_group.is_active %}
+                                    · Turma arquivada
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <!-- Conteúdo -->
+                        {% if lesson.content %}
+                            <p class="relative z-20 mt-4 line-clamp-3 text-sm leading-6 text-gray-600 pointer-events-none">
+                                {{ lesson.content }}
+                            </p>
+                        {% else %}
+                            <p class="relative z-20 mt-4 text-sm italic leading-6 text-gray-400 pointer-events-none">
+                                Nenhum conteúdo descritivo informado.
+                            </p>
+                        {% endif %}
+
+                        <!-- Data textual -->
+                        <div class="relative z-20 mt-4 flex items-center gap-2 text-xs text-gray-500 pointer-events-none">
+                            <i data-lucide="calendar" class="h-3.5 w-3.5"></i>
+
+                            {% if lesson.status == 'completed' %}
+                                <span>Aplicada em {{ lesson.date|date:"d/m/Y" }}</span>
+                            {% elif lesson.status == 'cancelled' %}
+                                <span>Prevista para {{ lesson.date|date:"d/m/Y" }}</span>
+                            {% else %}
+                                <span>Aplicação prevista para {{ lesson.date|date:"d/m/Y" }}</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Tags -->
+                        {% if lesson.tags.all %}
+                            <div class="relative z-20 mt-4 flex flex-wrap gap-1.5 pointer-events-none">
+                                {% for tag in lesson.tags.all|slice:":4" %}
+                                    <span
+                                        class="rounded-full px-2 py-1 text-xs font-medium"
+                                        style="background-color: {{ tag.color }}20; color: {{ tag.color }};"
+                                    >
+                                        {{ tag.name }}
+                                    </span>
+                                {% endfor %}
+
+                                {% if lesson.tags.count > 4 %}
+                                    <span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-500">
+                                        +{{ lesson.tags.count|add:"-4" }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Aviso contextual -->
+                        {% if lesson.status == 'planned' and lesson.date < today %}
+                            <div class="relative z-20 mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 pointer-events-none">
+                                <i data-lucide="triangle-alert" class="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600"></i>
+
+                                <p class="text-xs leading-5 text-amber-800">
+                                    Confirme se esta aula foi realizada, remarcada ou cancelada.
+                                </p>
+                            </div>
+
+                        {% elif lesson.status == 'cancelled' %}
+                            <div class="relative z-20 mt-4 flex items-start gap-2 rounded-lg border border-gray-200 bg-white/70 px-3 py-3 pointer-events-none">
+                                <i data-lucide="archive" class="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400"></i>
+
+                                <p class="text-xs leading-5 text-gray-500">
+                                    Planejamento preservado no histórico, mas não realizado.
+                                </p>
+                            </div>
+                        {% endif %}
+
+                        <!-- Ações -->
+                        <div class="relative z-20 mt-auto flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 pt-4">
+                            <a
+                                href="{% url 'lesson_detail' lesson.id %}"
+                                class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            >
+                                <i data-lucide="eye" class="h-4 w-4"></i>
+                                Detalhes
+                            </a>
+
+                            <a
+                                href="{% url 'lesson_form' lesson.id %}"
+                                class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            >
+                                {% if lesson.status == 'planned' and lesson.date < today %}
+                                    <i data-lucide="clipboard-check" class="h-4 w-4"></i>
+                                    Revisar
+                                {% else %}
+                                    <i data-lucide="pencil" class="h-4 w-4"></i>
+                                    Editar
+                                {% endif %}
+                            </a>
+                        </div>
+                    </article>
                 {% endfor %}
             </div>
-            <a href="{% url 'lesson_detail' lesson.id %}" class="text-sm text-primary mt-2 inline-block">Ver detalhes</a>
-        </div>
-        {% endfor %}
+
+            <!-- Paginação -->
+            {% if is_paginated %}
+                <nav
+                    class="mt-8 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between"
+                    aria-label="Paginação das aulas"
+                >
+                    <p class="text-sm text-gray-500">
+                        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                    </p>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        {% if page_obj.has_previous %}
+                            <a
+                                href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.previous_page_number }}"
+                                class="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            >
+                                <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                                Anterior
+                            </a>
+                        {% endif %}
+
+                        {% for page_number in page_obj.paginator.page_range %}
+                            {% if page_number == page_obj.number %}
+                                <span class="inline-flex h-10 min-w-10 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-white">
+                                    {{ page_number }}
+                                </span>
+                            {% elif page_number >= page_obj.number|add:"-2" and page_number <= page_obj.number|add:"2" %}
+                                <a
+                                    href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_number }}"
+                                    class="inline-flex h-10 min-w-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                                >
+                                    {{ page_number }}
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <a
+                                href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.next_page_number }}"
+                                class="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            >
+                                Próxima
+                                <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+                </nav>
+            {% endif %}
+
+        {% elif has_any_lessons %}
+
+            <!-- Estado vazio da seção ou dos filtros -->
+            <div class="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-14 text-center">
+                {% if has_active_filters %}
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+                        <i data-lucide="search-x" class="h-7 w-7 text-primary"></i>
+                    </div>
+
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhuma aula corresponde aos filtros
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                        Ajuste a turma, a tag ou a data de aplicação para consultar
+                        outros registros desta seção.
+                    </p>
+
+                    <a
+                        href="{{ lessons_base_url }}?section={{ selected_section }}"
+                        class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    >
+                        <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+                        Limpar filtros
+                    </a>
+
+                {% elif selected_section == 'upcoming' %}
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+                        <i data-lucide="calendar-clock" class="h-7 w-7 text-primary"></i>
+                    </div>
+
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhuma próxima aula planejada
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                        As aulas planejadas para hoje ou para datas futuras aparecerão aqui.
+                    </p>
+
+                    <a
+                        href="{% url 'lesson_form' %}"
+                        class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    >
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        Planejar aula
+                    </a>
+
+                {% elif selected_section == 'pending' %}
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-50">
+                        <i data-lucide="badge-check" class="h-7 w-7 text-green-600"></i>
+                    </div>
+
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhum planejamento pendente
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                        Não existem aulas vencidas aguardando confirmação ou cancelamento.
+                    </p>
+
+                    <a
+                        href="{{ lessons_base_url }}?section=upcoming"
+                        class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                        <i data-lucide="calendar-clock" class="h-4 w-4"></i>
+                        Ver próximas aulas
+                    </a>
+
+                {% elif selected_section == 'completed' %}
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-50">
+                        <i data-lucide="circle-check-big" class="h-7 w-7 text-green-600"></i>
+                    </div>
+
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhuma aula realizada
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                        As aulas confirmadas como realizadas formarão seu histórico pedagógico.
+                    </p>
+
+                    <a
+                        href="{{ lessons_base_url }}?section=upcoming"
+                        class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                        <i data-lucide="calendar-clock" class="h-4 w-4"></i>
+                        Ver planejadas
+                    </a>
+
+                {% else %}
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
+                        <i data-lucide="calendar-x-2" class="h-7 w-7 text-gray-500"></i>
+                    </div>
+
+                    <h2 class="mt-4 text-lg font-semibold text-gray-900">
+                        Nenhuma aula cancelada
+                    </h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                        Os planejamentos cancelados permanecerão disponíveis aqui com seu histórico preservado.
+                    </p>
+
+                    <a
+                        href="{{ lessons_base_url }}?section=upcoming"
+                        class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                        <i data-lucide="calendar-clock" class="h-4 w-4"></i>
+                        Ver planejadas
+                    </a>
+                {% endif %}
+            </div>
+
+        {% else %}
+
+            <!-- Estado inicial sem aulas -->
+            <div class="mx-auto mt-8 max-w-3xl">
+                <a
+                    href="{% url 'lesson_form' %}"
+                    class="group flex min-h-72 w-full items-center justify-center rounded-2xl border-2 border-dashed border-primary bg-blue-50 px-6 py-10 text-center transition-all duration-200 hover:bg-blue-100 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:min-h-80 sm:px-10"
+                    aria-label="Criar a primeira aula"
+                >
+                    <div class="max-w-lg">
+                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm transition-transform duration-200 group-hover:scale-105 sm:h-16 sm:w-16">
+                            <i data-lucide="book-open-check" class="h-7 w-7 text-primary sm:h-8 sm:w-8"></i>
+                        </div>
+
+                        <h2 class="mt-6 text-xl font-semibold text-gray-900 sm:text-2xl">
+                            {% if is_class_group_scope %}
+                                Esta turma ainda não possui aulas
+                            {% else %}
+                                Nenhuma aula cadastrada
+                            {% endif %}
+                        </h2>
+
+                        <p class="mx-auto mt-4 text-sm leading-7 text-gray-600 sm:text-base">
+                            {% if is_class_group_scope %}
+                                Crie a primeira aula de <strong>{{ class_group.name }}</strong>
+                                para começar a organizar seus conteúdos, exercícios e registros
+                                pedagógicos.
+                            {% else %}
+                                Crie sua primeira aula para começar a organizar conteúdos,
+                                exercícios e registros pedagógicos.
+                            {% endif %}
+                        </p>
+
+                        <p class="mx-auto mt-3 text-sm leading-7 text-gray-600 sm:text-base">
+                            {% if is_class_group_scope %}
+                                As aulas criadas neste contexto ficarão vinculadas a esta turma
+                                e à data de aplicação escolhida.
+                            {% else %}
+                                Toda aula salva ficará vinculada a uma turma, a uma data de
+                                aplicação e ao seu respectivo estado.
+                            {% endif %}
+                        </p>
+
+                        <div class="mt-8 text-center">
+                            <i data-lucide="plus" class="mx-auto h-7 w-7 text-primary transition-transform duration-200 group-hover:scale-110"></i>
+
+                            <span class="mt-3 block text-base font-semibold text-primary">
+                                Nova aula
+                            </span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        {% endif %}
     </div>
-    {% else %}
-    <p class="text-gray-500">Nenhuma aula registrada.</p>
-    {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script src="{% static 'js/lesson_list.js' %}" defer></script>
 {% endblock %}

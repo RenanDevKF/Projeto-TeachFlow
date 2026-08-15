@@ -1,0 +1,15 @@
+Olá, {{ user.first_name }}!
+
+Recebemos uma solicitação para alterar o e-mail da sua conta TeachFlow para:
+
+{{ new_email }}
+
+Para confirmar a alteração, acesse o link abaixo:
+
+{{ confirmation_url }}
+
+Este link é temporário e expira em 1 hora.
+
+Se você não solicitou essa alteração, ignore esta mensagem.
+
+Equipe TeachFlow

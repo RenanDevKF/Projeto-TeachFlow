@@ -1,343 +1,493 @@
-/**
- * Gerenciador de Seletores Múltiplos
- * Script unificado para formulários de exercícios e aulas
- */
-document.addEventListener('DOMContentLoaded', function() {
-    // Configurações disponíveis no formulário
-    const formConfigs = {
-        // Configuração para Objetivos de Aprendizagem (do formulário de exercício)
+document.addEventListener('DOMContentLoaded', () => {
+    const selectorConfigs = {
         objectives: {
+            type: 'objectives',
             triggerId: 'objective-trigger',
             dropdownId: 'objective-dropdown',
             filterId: 'objective-filter',
             listId: 'objective-list',
             selectedContainerId: 'selected-objectives',
             selectId: 'id_objectives',
-            dropdownArrowId: 'objective-dropdown-arrow',
+            arrowId: 'objective-dropdown-arrow',
             placeholderId: 'objectives-placeholder',
-            dataAttributePrefix: 'objective',
             placeholderText: 'Clique para selecionar objetivos',
-            // Propriedade especial para tratar descrições de objetivos
-            useDescription: true
+            checkboxAttribute: 'data-objective-select',
+            removeAttribute: 'data-remove-objective',
+            labelAttribute: 'data-objective-title',
+            fallbackLabelAttribute: 'data-objective-description',
+            descriptionAttribute: 'data-objective-description',
+            emptyIcon: 'target',
+            emptyText: 'Nenhum objetivo cadastrado.',
+            badgeClasses: 'border border-blue-200 bg-blue-50 text-blue-700',
         },
-        
-        // Configuração para Exercícios (do formulário de aula)
         exercises: {
+            type: 'exercises',
             triggerId: 'exercise-trigger',
             dropdownId: 'exercise-dropdown',
             filterId: 'exercise-filter',
             listId: 'exercise-list',
             selectedContainerId: 'selected-exercises',
             selectId: 'id_exercises',
-            dropdownArrowId: 'dropdown-arrow',
+            arrowId: 'dropdown-arrow',
             placeholderId: 'exercises-placeholder',
-            dataAttributePrefix: 'exercise',
-            placeholderText: 'Clique para selecionar exercícios'
+            placeholderText: 'Clique para selecionar exercícios',
+            checkboxAttribute: 'data-exercise-select',
+            removeAttribute: 'data-remove-exercise',
+            labelAttribute: 'data-exercise-title',
+            emptyIcon: 'clipboard-list',
+            emptyText: 'Nenhum exercício cadastrado.',
+            badgeClasses: 'border border-green-200 bg-green-50 text-green-700',
         },
-        
-        // Configuração para Tags (comum a ambos formulários)
         tags: {
+            type: 'tags',
             triggerId: 'tag-trigger',
             dropdownId: 'tag-dropdown',
             filterId: 'tag-filter',
             listId: 'tag-list',
             selectedContainerId: 'selected-tags',
             selectId: 'id_tags',
-            dropdownArrowId: 'tag-dropdown-arrow',
+            arrowId: 'tag-dropdown-arrow',
             placeholderId: 'tags-placeholder',
-            dataAttributePrefix: 'tag',
             placeholderText: 'Clique para selecionar tags',
-            // Propriedade especial para tratar cores de tags
-            useCustomColors: true
-        }
+            checkboxAttribute: 'data-tag-select',
+            removeAttribute: 'data-remove-tag',
+            labelAttribute: 'data-tag-name',
+            colorAttribute: 'data-tag-color',
+            emptyIcon: 'tags',
+            emptyText: 'Nenhuma tag cadastrada.',
+        },
     };
 
-    // Inicializa todos os seletores configurados que existem na página atual
-    Object.values(formConfigs).forEach(config => {
-        // Verifica se o seletor existe na página atual
-        if (document.getElementById(config.selectId)) {
-            setupMultiSelector(config);
-        }
+    const managers = {};
+
+    Object.entries(selectorConfigs).forEach(([type, config]) => {
+        const select = document.getElementById(config.selectId);
+        if (!select) return;
+
+        const manager = createMultiSelector(config);
+        if (manager) managers[type] = manager;
     });
 
-    /**
-     * Configura um seletor múltiplo baseado na configuração passada
-     * @param {Object} config - Configuração do seletor
-     */
-    function setupMultiSelector(config) {
-        // Elementos do DOM
+    window.multiSelectorManager = {
+        addItem(type, item) {
+            const manager = managers[type];
+
+            if (!manager) {
+                console.error(`Seletor múltiplo "${type}" não encontrado.`);
+                return false;
+            }
+
+            return manager.addItem(item);
+        },
+
+        selectItem(type, itemId) {
+            const manager = managers[type];
+            if (!manager) return false;
+
+            return manager.selectItem(String(itemId));
+        },
+
+        removeItem(type, itemId) {
+            const manager = managers[type];
+            if (!manager) return false;
+
+            return manager.removeItem(String(itemId));
+        },
+
+        refresh(type) {
+            const manager = managers[type];
+            if (!manager) return false;
+
+            manager.refresh();
+            return true;
+        },
+
+        hasSelector(type) {
+            return Boolean(managers[type]);
+        },
+    };
+
+    function createMultiSelector(config) {
         const trigger = document.getElementById(config.triggerId);
         const dropdown = document.getElementById(config.dropdownId);
         const filter = document.getElementById(config.filterId);
-        const list = document.getElementById(config.listId) || document.querySelector(`#${config.dropdownId} .dropdown-list`);
+        const list = document.getElementById(config.listId);
         const selectedContainer = document.getElementById(config.selectedContainerId);
         const select = document.getElementById(config.selectId);
-        const dropdownArrow = document.getElementById(config.dropdownArrowId);
-        const placeholder = document.getElementById(config.placeholderId);
+        const arrow = document.getElementById(config.arrowId);
 
-        // Verificação de elementos críticos
-        if (!select) {
-            console.error(`Elemento ${config.selectId} não encontrado! O formulário não está renderizando o campo corretamente.`);
-            return;
+        if (!trigger || !dropdown || !list || !selectedContainer || !select) {
+            console.error(`Estrutura incompleta do seletor ${config.selectId}.`);
+            return null;
         }
 
-        if (!trigger || !dropdown) {
-            console.error(`Elementos de interface para ${config.selectId} não encontrados!`);
-            return;
-        }
+        let isOpen = false;
 
-        // Variável para controlar o estado do dropdown
-        let isDropdownOpen = false;
-
-        // Cores para as tags (alternância entre várias cores)
-        const colors = [
-            'bg-blue-100 text-blue-800 border border-blue-200',
-            'bg-green-100 text-green-800 border border-green-200',
-            'bg-yellow-100 text-yellow-800 border border-yellow-200',
-            'bg-purple-100 text-purple-800 border border-purple-200',
-            'bg-pink-100 text-pink-800 border border-pink-200',
-            'bg-indigo-100 text-indigo-800 border border-indigo-200',
-            'bg-red-100 text-red-800 border border-red-200',
-            'bg-emerald-100 text-emerald-800 border border-emerald-200',
-            'bg-amber-100 text-amber-800 border border-amber-200',
-            'bg-cyan-100 text-cyan-800 border border-cyan-200'
-        ];
-
-        // 1. Suporte a teclado
-        trigger.addEventListener('keydown', (e) => {
-            if (['Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(e.key)) {
-                e.preventDefault();
-                if (!isDropdownOpen) openDropdown();
-                
-                // Navegação com setas (melhoria extra)
-                if (e.key === 'ArrowDown' && isDropdownOpen) {
-                    const firstItem = dropdown.querySelector('input:not([disabled])');
-                    firstItem?.focus();
-                }
-            }
-        });
-
-        // 2. Fechar com Escape
-        dropdown.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeDropdown();
-        });
-
-        // Função para alternar o dropdown
-        function toggleDropdown() {
-            if (isDropdownOpen) {
-                closeDropdown();
-            } else {
-                openDropdown();
-            }
-        }
-
-        // Função para abrir o dropdown
-        function openDropdown() {
-            dropdown.classList.remove('hidden');
-            if (dropdownArrow) dropdownArrow.classList.add('rotate-180');
-            if (filter) filter.focus();
-            isDropdownOpen = true;
-        }
-
-        // Função para fechar o dropdown
-        function closeDropdown() {
-            dropdown.classList.add('hidden');
-            if (dropdownArrow) dropdownArrow.classList.remove('rotate-180');
-            isDropdownOpen = false;
-        }
-
-        // Função para filtrar itens no dropdown
-        function filterItems() {
-            const filterText = filter.value.toLowerCase();
-            const items = list.querySelectorAll('label');
-            
-            items.forEach(item => {
-                const text = item.textContent.toLowerCase();
-                const parent = item.closest('label') || item;
-                
-                if (text.includes(filterText)) {
-                    parent.style.display = 'flex';
-                } else {
-                    parent.style.display = 'none';
-                }
-            });
-        }
-
-        // Função para obter o texto a ser exibido para um item selecionado
-        function getItemDisplayText(option, checkbox) {
-            // Se é um objetivo e tem descrição, usa a descrição
-            if (config.useDescription && checkbox && checkbox.getAttribute(`data-${config.dataAttributePrefix}-description`)) {
-                return checkbox.getAttribute(`data-${config.dataAttributePrefix}-description`);
-            }
-            
-            // Se é um exercício com título específico
-            if (checkbox && checkbox.getAttribute(`data-${config.dataAttributePrefix}-title`)) {
-                return checkbox.getAttribute(`data-${config.dataAttributePrefix}-title`);
-            }
-            
-            // Se é uma tag com nome específico
-            if (checkbox && checkbox.getAttribute(`data-${config.dataAttributePrefix}-name`)) {
-                return checkbox.getAttribute(`data-${config.dataAttributePrefix}-name`);
-            }
-            
-            // Padrão: usa o texto da opção
-            return option.text;
-        }
-
-        // Função para obter a cor para um item (tag)
-        function getItemColor(checkbox) {
-            // Se tem cor personalizada definida e a configuração permite, usa a cor personalizada
-            if (config.useCustomColors && checkbox && checkbox.getAttribute(`data-${config.dataAttributePrefix}-color`)) {
-                return checkbox.getAttribute(`data-${config.dataAttributePrefix}-color`);
-            }
-            
-            return null; // Sem cor personalizada
-        }
-
-        // Função para atualizar os itens selecionados
-        function updateSelectedItems() {
-            selectedContainer.innerHTML = '';
-            const selectedOptions = Array.from(select.selectedOptions);
-            
-            if (selectedOptions.length === 0) {
-                if (placeholder) {
-                    placeholder.textContent = config.placeholderText;
-                    placeholder.classList.remove('hidden');
-                    selectedContainer.appendChild(placeholder);
-                }
-                return;
-            } else if (placeholder) {
-                placeholder.classList.add('hidden');
-            }
-            
-            selectedOptions.forEach((option, index) => {
-                const itemId = option.value;
-                const dataAttr = `data-${config.dataAttributePrefix}-select`;
-                const checkbox = document.querySelector(`[${dataAttr}][value="${itemId}"]`);
-                
-                // Verifica se deve usar cor personalizada
-                const customColor = getItemColor(checkbox);
-                
-                // Cria o elemento de exibição
-                const itemElement = document.createElement('span');
-                
-                if (customColor) {
-                    // Estilo para tags com cores personalizadas
-                    itemElement.className = 'px-2 py-1 text-xs rounded-full flex items-center mr-2 mb-1';
-                    itemElement.style.backgroundColor = `${customColor}20`;
-                    itemElement.style.color = customColor;
-                } else {
-                    // Estilo com cor alternada para outros itens
-                    const colorClass = colors[index % colors.length];
-                    itemElement.className = `${colorClass} px-2 py-1 text-xs rounded-full flex items-center mr-2 mb-1`;
-                }
-                
-                // Texto do item
-                const displayText = getItemDisplayText(option, checkbox);
-                
-                // Conteúdo HTML do item
-                itemElement.innerHTML = `
-                    <span>${displayText}</span>
-                    <button type="button" 
-                            class="ml-1.5 text-current hover:text-red-600 hover:scale-110 transition-all focus:outline-none"
-                            data-remove-${config.dataAttributePrefix}="${itemId}"
-                            aria-label="Remover ${displayText}">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                `;
-                
-                selectedContainer.appendChild(itemElement);
-            });
-        }
-
-        // Função para sincronizar os checkboxes com o select oculto
-        function syncCheckboxesWithSelect() {
-            const dataAttr = `data-${config.dataAttributePrefix}-select`;
-            const checkboxes = document.querySelectorAll(`[${dataAttr}]`);
-            const selectedValues = Array.from(select.selectedOptions).map(opt => opt.value);
-            
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = selectedValues.includes(checkbox.value);
-            });
-        }
-
-        // Event listeners
-        
-        // 1. Abrir/fechar dropdown ao clicar no trigger
-        trigger.addEventListener('click', function(e) {
-            e.stopPropagation();
+        trigger.addEventListener('click', (event) => {
+            event.stopPropagation();
             toggleDropdown();
         });
 
-        // 2. Fechar dropdown ao clicar fora
-        document.addEventListener('click', function(e) {
-            if (!trigger.contains(e.target) && !dropdown.contains(e.target)) {
-                closeDropdown();
+        trigger.addEventListener('keydown', (event) => {
+            if (!['Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(event.key)) return;
+
+            event.preventDefault();
+
+            if (!isOpen) openDropdown();
+
+            if (event.key === 'ArrowDown') {
+                list.querySelector(`[${config.checkboxAttribute}]:not(:disabled)`)?.focus();
             }
         });
 
-        // 3. Filtrar itens ao digitar
-        if (filter) {
-            filter.addEventListener('input', filterItems);
+        dropdown.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') return;
+
+            closeDropdown();
+            trigger.focus();
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!trigger.contains(event.target) && !dropdown.contains(event.target)) closeDropdown();
+        });
+
+        filter?.addEventListener('input', () => filterItems(filter.value));
+
+        list.addEventListener('change', (event) => {
+            const checkbox = event.target.closest(`[${config.checkboxAttribute}]`);
+            if (!checkbox) return;
+
+            setSelectedState(checkbox.value, checkbox.checked);
+            renderSelectedItems();
+        });
+
+        selectedContainer.addEventListener('click', (event) => {
+            const removeButton = event.target.closest(`[${config.removeAttribute}]`);
+            if (!removeButton) return;
+
+            event.stopPropagation();
+
+            const itemId = removeButton.getAttribute(config.removeAttribute);
+            setSelectedState(itemId, false);
+            renderSelectedItems();
+        });
+
+        refresh();
+
+        return {
+            addItem,
+            selectItem,
+            removeItem,
+            refresh,
+        };
+
+        function toggleDropdown() {
+            isOpen ? closeDropdown() : openDropdown();
         }
 
-        // 4. Adicionar/remover ao marcar/desmarcar checkboxes
-        if (list) {
-            list.addEventListener('change', (e) => {
-                const dataAttr = `data-${config.dataAttributePrefix}-select`;
-                const checkbox = e.target.closest(`[${dataAttr}]`);
-                
-                if (checkbox) {
-                    const itemId = checkbox.value;
-                    const displayText = checkbox.getAttribute(`data-${config.dataAttributePrefix}-${config.dataAttributePrefix === 'objective' ? 'description' : 'title'}`) || 
-                                      checkbox.nextElementSibling?.textContent.trim();
-        
-                    const option = Array.from(select.options).find(opt => opt.value === itemId);
-                    
-                    if (checkbox.checked) {
-                        if (!option) {
-                            const newOption = new Option(displayText, itemId, true, true);
-                            select.add(newOption);
-                        } else {
-                            option.selected = true;
-                        }
-                    } else {
-                        if (option) option.selected = false;
-                    }
-                    
-                    updateSelectedItems();
+        function openDropdown() {
+            dropdown.classList.remove('hidden');
+            arrow?.classList.add('rotate-180');
+            trigger.setAttribute('aria-expanded', 'true');
+            isOpen = true;
+            filter?.focus();
+        }
+
+        function closeDropdown() {
+            dropdown.classList.add('hidden');
+            arrow?.classList.remove('rotate-180');
+            trigger.setAttribute('aria-expanded', 'false');
+            isOpen = false;
+        }
+
+        function filterItems(searchTerm) {
+            const normalizedTerm = normalizeText(searchTerm);
+
+            list.querySelectorAll('[data-selector-item]').forEach((item) => {
+                const searchableText = normalizeText(item.textContent);
+                item.classList.toggle('hidden', !searchableText.includes(normalizedTerm));
+            });
+        }
+
+        function normalizeText(value) {
+            return String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim();
+        }
+
+        function getOption(itemId) {
+            return Array.from(select.options).find((option) => option.value === String(itemId));
+        }
+
+        function getCheckbox(itemId) {
+            return list.querySelector(`[${config.checkboxAttribute}][value="${CSS.escape(String(itemId))}"]`);
+        }
+
+        function getLabel(itemId) {
+            const option = getOption(itemId);
+            const checkbox = getCheckbox(itemId);
+
+            return checkbox?.getAttribute(config.labelAttribute)
+                || checkbox?.getAttribute(config.fallbackLabelAttribute)
+                || option?.textContent.trim()
+                || '';
+        }
+
+        function getDescription(itemId) {
+            return getCheckbox(itemId)?.getAttribute(config.descriptionAttribute) || '';
+        }
+
+        function getColor(itemId) {
+            return getCheckbox(itemId)?.getAttribute(config.colorAttribute) || '';
+        }
+
+        function setSelectedState(itemId, selected) {
+            const normalizedId = String(itemId);
+            const option = getOption(normalizedId);
+            const checkbox = getCheckbox(normalizedId);
+
+            if (option) option.selected = selected;
+            if (checkbox) checkbox.checked = selected;
+        }
+
+        function selectItem(itemId) {
+            const option = getOption(itemId);
+            if (!option) return false;
+
+            setSelectedState(itemId, true);
+            renderSelectedItems();
+            return true;
+        }
+
+        function removeItem(itemId) {
+            const option = getOption(itemId);
+            const checkbox = getCheckbox(itemId);
+            const item = checkbox?.closest('[data-selector-item]');
+
+            if (!option && !checkbox) return false;
+
+            option?.remove();
+            item?.remove();
+
+            renderSelectedItems();
+            renderEmptyState();
+            return true;
+        }
+
+        function addItem(item) {
+            if (!item?.id) {
+                console.error(`Item inválido recebido pelo seletor "${config.type}".`);
+                return false;
+            }
+
+            const itemId = String(item.id);
+            const existingOption = getOption(itemId);
+
+            if (existingOption) {
+                setSelectedState(itemId, item.selected !== false);
+                renderSelectedItems();
+                return true;
+            }
+
+            const label = String(item.label || item.title || item.name || '').trim();
+
+            if (!label) {
+                console.error(`Item sem texto recebido pelo seletor "${config.type}".`);
+                return false;
+            }
+
+            const option = new Option(label, itemId, item.selected !== false, item.selected !== false);
+            select.add(option);
+
+            removeEmptyState();
+            list.appendChild(createListItem({
+                id: itemId,
+                label,
+                description: item.description || '',
+                color: item.color || '',
+                selected: item.selected !== false,
+            }));
+
+            renderSelectedItems();
+            filterItems(filter?.value || '');
+
+            return true;
+        }
+
+        function createListItem(item) {
+            const labelElement = document.createElement('label');
+            labelElement.dataset.selectorItem = '';
+            labelElement.className = config.type === 'tags'
+                ? 'flex cursor-pointer items-center gap-3 px-3 py-3 transition-colors hover:bg-gray-50'
+                : 'flex cursor-pointer items-start gap-3 px-3 py-3 transition-colors hover:bg-gray-50';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = item.id;
+            checkbox.checked = item.selected;
+            checkbox.setAttribute(config.checkboxAttribute, '');
+            checkbox.setAttribute(config.labelAttribute, item.label);
+            checkbox.className = config.type === 'objectives'
+                ? 'mt-0.5 h-4 w-4 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary'
+                : 'h-4 w-4 flex-shrink-0 rounded border-gray-300 text-primary focus:ring-primary';
+
+            if (config.descriptionAttribute) checkbox.setAttribute(config.descriptionAttribute, item.description);
+            if (config.colorAttribute) checkbox.setAttribute(config.colorAttribute, item.color);
+
+            labelElement.appendChild(checkbox);
+
+            if (config.type === 'tags') {
+                const colorDot = document.createElement('span');
+                colorDot.className = 'h-2.5 w-2.5 flex-shrink-0 rounded-full';
+                colorDot.style.backgroundColor = item.color;
+                labelElement.appendChild(colorDot);
+
+                const tagName = document.createElement('span');
+                tagName.className = 'min-w-0 truncate text-sm text-gray-700';
+                tagName.textContent = item.label;
+                labelElement.appendChild(tagName);
+
+                return labelElement;
+            }
+
+            const textContainer = document.createElement('span');
+            textContainer.className = 'min-w-0';
+
+            const title = document.createElement('span');
+            title.className = 'block text-sm font-medium leading-5 text-gray-700';
+            title.textContent = item.label;
+            textContainer.appendChild(title);
+
+            if (item.description) {
+                const description = document.createElement('span');
+                description.className = 'mt-1 block text-xs leading-5 text-gray-500';
+                description.textContent = item.description;
+                textContainer.appendChild(description);
+            }
+
+            labelElement.appendChild(textContainer);
+            return labelElement;
+        }
+
+        function renderSelectedItems() {
+            selectedContainer.replaceChildren();
+
+            const selectedOptions = Array.from(select.selectedOptions);
+
+            if (!selectedOptions.length) {
+                selectedContainer.appendChild(createPlaceholder());
+                return;
+            }
+
+            selectedOptions.forEach((option) => {
+                const itemId = option.value;
+                const badge = document.createElement('span');
+
+                badge.className = config.type === 'tags'
+                    ? 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium'
+                    : `inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${config.badgeClasses}`;
+
+                if (config.type === 'tags') {
+                    const color = getColor(itemId) || '#6B7280';
+                    badge.style.backgroundColor = `${color}20`;
+                    badge.style.color = color;
+                }
+
+                const text = document.createElement('span');
+                text.textContent = getLabel(itemId);
+                badge.appendChild(text);
+
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.setAttribute(config.removeAttribute, itemId);
+                removeButton.setAttribute('aria-label', `Remover ${getLabel(itemId)}`);
+                removeButton.className = 'ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full text-current transition-transform hover:scale-110 hover:text-red-600 focus:outline-none';
+
+                const removeIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                removeIcon.setAttribute('viewBox', '0 0 24 24');
+                removeIcon.setAttribute('fill', 'none');
+                removeIcon.setAttribute('stroke', 'currentColor');
+                removeIcon.setAttribute('class', 'h-3 w-3');
+
+                const removePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                removePath.setAttribute('stroke-linecap', 'round');
+                removePath.setAttribute('stroke-linejoin', 'round');
+                removePath.setAttribute('stroke-width', '2');
+                removePath.setAttribute('d', 'M6 18 18 6M6 6l12 12');
+
+                removeIcon.appendChild(removePath);
+                removeButton.appendChild(removeIcon);
+                badge.appendChild(removeButton);
+                selectedContainer.appendChild(badge);
+            });
+        }
+
+        function createPlaceholder() {
+            const placeholder = document.createElement('span');
+            placeholder.id = config.placeholderId;
+            placeholder.className = 'text-gray-500';
+            placeholder.textContent = config.placeholderText;
+
+            return placeholder;
+        }
+
+        function renderEmptyState() {
+            if (list.querySelector('[data-selector-item]')) {
+                removeEmptyState();
+                return;
+            }
+
+            if (list.querySelector('[data-selector-empty]')) return;
+
+            const emptyState = document.createElement('div');
+            emptyState.dataset.selectorEmpty = '';
+            emptyState.className = 'px-4 py-6 text-center';
+
+            const text = document.createElement('p');
+            text.className = 'text-sm text-gray-500';
+            text.textContent = config.emptyText;
+
+            emptyState.appendChild(text);
+            list.appendChild(emptyState);
+        }
+
+        function removeEmptyState() {
+            list.querySelector('[data-selector-empty]')?.remove();
+
+            list.querySelectorAll(':scope > div:not([data-selector-item])').forEach((element) => {
+                if (element.querySelector('p')?.textContent.includes(config.emptyText)) element.remove();
+            });
+        }
+
+        function syncCheckboxes() {
+            const selectedValues = new Set(Array.from(select.selectedOptions).map((option) => option.value));
+
+            list.querySelectorAll(`[${config.checkboxAttribute}]`).forEach((checkbox) => {
+                checkbox.checked = selectedValues.has(checkbox.value);
+            });
+        }
+
+        function prepareExistingItems() {
+            list.querySelectorAll(`label:has([${config.checkboxAttribute}])`).forEach((labelElement) => {
+                labelElement.dataset.selectorItem = '';
+
+                const checkbox = labelElement.querySelector(`[${config.checkboxAttribute}]`);
+                if (!checkbox) return;
+
+                if (!checkbox.getAttribute(config.labelAttribute)) {
+                    const option = getOption(checkbox.value);
+                    checkbox.setAttribute(config.labelAttribute, option?.textContent.trim() || '');
                 }
             });
         }
 
-        // 5. Remover item ao clicar no X
-        selectedContainer.addEventListener('click', function(e) {
-            const removeButton = e.target.closest(`[data-remove-${config.dataAttributePrefix}]`);
-            if (removeButton) {
-                e.stopPropagation();
-                const itemId = removeButton.getAttribute(`data-remove-${config.dataAttributePrefix}`);
-                
-                // Desmarca o checkbox na lista
-                const dataAttr = `data-${config.dataAttributePrefix}-select`;
-                const checkbox = document.querySelector(`[${dataAttr}][value="${itemId}"]`);
-                if (checkbox) {
-                    checkbox.checked = false;
-                }
-                
-                // Remove a seleção no select oculto
-                const option = Array.from(select.options).find(opt => opt.value === itemId);
-                if (option) {
-                    option.selected = false;
-                }
-                
-                updateSelectedItems();
-            }
-        });
-
-        // Inicialização
-        updateSelectedItems();
-        syncCheckboxesWithSelect();
+        function refresh() {
+            prepareExistingItems();
+            syncCheckboxes();
+            renderSelectedItems();
+            renderEmptyState();
+        }
     }
 });
