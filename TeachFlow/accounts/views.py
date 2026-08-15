@@ -77,16 +77,6 @@ class SignupView(CreateView):
             }, status=400)
         return super().form_invalid(form)
 
-    def handle_exception(self, request, exception):
-        """Captura exceções não tratadas"""
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': False,
-                'error': 'Erro interno',
-                'detail': str(exception)
-            }, status=500)
-        raise exception
-
 @method_decorator(never_cache, name='dispatch')
 class SignupCheckEmailView(TemplateView):
     template_name = 'accounts/signup_check_email.html'
