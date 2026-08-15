@@ -70,6 +70,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
                 Lower('username'),
                 name='unique_customuser_username_ci',
             ),
+            models.CheckConstraint(
+                condition=~models.Q(username__contains='@'),
+                name='customuser_username_without_at',
+            ),
         ]    
 
     def save(self, *args, **kwargs):

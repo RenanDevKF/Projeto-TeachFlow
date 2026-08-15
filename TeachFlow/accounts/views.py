@@ -19,7 +19,7 @@ from .forms import CustomUserCreationForm, UserProfileForm, TeacherProfileForm, 
 from .emails import send_account_activation_email, send_email_change_confirmation, send_email_change_notification
 from accounts.models import Teacher
 from .tokens import get_user_from_activation_token, get_email_change_data
-from .utils import normalize_email, normalize_username
+from .utils import normalize_email, normalize_username, validate_username
 
 @method_decorator(csrf_protect, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
@@ -427,6 +427,15 @@ def validate_username_email(request):
         'is_valid': True,
         'errors': {},
     }
+
+    username_validation_error = validate_username(username)
+
+    if username_validation_error:
+        data['is_valid'] = False
+        data['errors']['username'] = username_validation_error
+    elif username and CustomUser.objects.filter(username__iexact=username).exists():
+        data['is_valid'] = False
+        data['errors']['username'] = 'Este nome de usuário já está em uso.'
 
     if username and CustomUser.objects.filter(username__iexact=username).exists():
         data['is_valid'] = False

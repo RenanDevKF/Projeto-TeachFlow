@@ -3,7 +3,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import CustomUser, Teacher
 from django.core.exceptions import ValidationError
-from .utils import normalize_email, normalize_username
+from .utils import normalize_email, normalize_username, validate_username
 
 class CustomUserCreationForm(UserCreationForm):
     username = forms.CharField(
@@ -39,6 +39,11 @@ class CustomUserCreationForm(UserCreationForm):
         username = normalize_username(
             self.cleaned_data.get('username')
         )
+
+        validation_error = validate_username(username)
+
+        if validation_error:
+            raise ValidationError(validation_error)
 
         if CustomUser.objects.filter(username__iexact=username).exists():
             raise ValidationError("Este nome de usuário já está em uso.")
@@ -83,6 +88,11 @@ class UserProfileForm(forms.ModelForm):
 
         if not username:
             raise ValidationError("Informe um nome de usuário.")
+
+        validation_error = validate_username(username)
+
+        if validation_error:
+            raise ValidationError(validation_error)
 
         if CustomUser.objects.filter(username__iexact=username).exclude(pk=self.instance.pk).exists():
             raise ValidationError("Este nome de usuário já está em uso.")
