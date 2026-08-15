@@ -1,9 +1,37 @@
 # accounts/forms.py
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from .models import CustomUser, Teacher
 from django.core.exceptions import ValidationError
 from .utils import normalize_email, normalize_username, validate_username
+
+class CustomAuthenticationForm(AuthenticationForm):
+    username = forms.CharField(
+        label='E-mail ou nome de usuário',
+        widget=forms.TextInput(
+            attrs={
+                'autofocus': True,
+                'autocomplete': 'username',
+                'placeholder': 'seu@email.com ou usuário',
+            }
+        ),
+    )
+
+    password = forms.CharField(
+        label='Senha',
+        strip=False,
+        widget=forms.PasswordInput(
+            attrs={
+                'autocomplete': 'current-password',
+                'placeholder': '••••••••',
+            }
+        ),
+    )
+
+    error_messages = {
+        'invalid_login': 'E-mail, nome de usuário ou senha inválidos.',
+        'inactive': 'Esta conta está inativa.',
+    }
 
 class CustomUserCreationForm(UserCreationForm):
     username = forms.CharField(

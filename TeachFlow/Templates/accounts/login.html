@@ -28,18 +28,34 @@
     </div>
 
     <!-- Formulário -->
-    <form id="loginForm" method="post" action="{% url 'login' %}" class="w-full max-w-sm space-y-6">
+    <form method="post" action="{% url 'login' %}" class="w-full max-w-sm space-y-6">
         {% csrf_token %}
 
+        {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+
         <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email ou Nome de Usuário</label>
-            <input id="email" name="email" type="text" placeholder="seu@email.com" required
-                class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none focus:ring-2 transition">
+            <label for="{{ form.username.id_for_label }}" class="mb-1 block text-sm font-medium text-gray-700">
+                E-mail ou nome de usuário
+            </label>
+
+            <input
+                id="{{ form.username.id_for_label }}"
+                name="{{ form.username.html_name }}"
+                type="text"
+                value="{{ form.username.value|default:'' }}"
+                placeholder="seu@email.com ou usuário"
+                autocomplete="username"
+                autofocus
+                required
+                class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+            >
         </div>
 
         <div>
             <div class="mb-1 flex items-center justify-between gap-3">
-                <label for="password" class="block text-sm font-medium text-gray-700">
+                <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700">
                     Senha
                 </label>
 
@@ -52,19 +68,28 @@
             </div>
 
             <input
-                id="password"
-                name="password"
+                id="{{ form.password.id_for_label }}"
+                name="{{ form.password.html_name }}"
                 type="password"
                 placeholder="••••••••"
+                autocomplete="current-password"
                 required
-                class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none focus:ring-2 transition"
+                class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
             >
         </div>
 
-        <div id="errorMessage" class="hidden text-red-500 text-sm text-center"></div>
+        {% if form.non_field_errors %}
+            <div class="text-center text-sm text-red-500">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
 
-        <button type="submit" id="submitButton"
-            class="w-full bg-primary hover:bg-blue-600 text-white font-semibold rounded-lg py-3 transition">
+        <button
+            type="submit"
+            class="w-full rounded-lg bg-primary py-3 font-semibold text-white transition hover:bg-blue-600"
+        >
             Entrar
         </button>
     </form>
@@ -75,7 +100,5 @@
         <a href="{% url 'register' %}" class="text-primary hover:underline font-semibold">Criar conta</a>
     </div>
 
-    <!-- Scripts -->
-    <script src="{% static 'js/login.js' %}"></script>
 </body>
 </html>

@@ -10,12 +10,12 @@ from django.views.decorators.cache import never_cache
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.contrib import messages
-from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
+from django.contrib.auth import logout, update_session_auth_hash
 from django.db import transaction
 from django.shortcuts import redirect, render
 from django.http import JsonResponse
 from .models import CustomUser, Subscription, SubscriptionPlan
-from .forms import CustomUserCreationForm, UserProfileForm, TeacherProfileForm, ChangeEmailForm
+from .forms import CustomUserCreationForm, UserProfileForm, TeacherProfileForm, ChangeEmailForm, CustomAuthenticationForm
 from .emails import send_account_activation_email, send_email_change_confirmation, send_email_change_notification
 from accounts.models import Teacher
 from .tokens import get_user_from_activation_token, get_email_change_data
@@ -181,35 +181,14 @@ class ActivateAccountView(View):
 @method_decorator(never_cache, name='dispatch')
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
+    authentication_form = CustomAuthenticationForm
     redirect_authenticated_user = True
-    
+
     def get_success_url(self):
-        # Redireciona superusuários diretamente para o admin
         if self.request.user.is_superuser:
             return reverse('admin:index')
-        return super().get_success_url()
 
-    def post(self, request, *args, **kwargs):
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            # Lógica para AJAX
-            email = request.POST.get('email')
-            password = request.POST.get('password')
-            user = authenticate(request, username=email, password=password)
-            
-            if user is not None:
-                login(request, user)
-                return JsonResponse({
-                    'success': True,
-                    'redirect_url': self.get_success_url()
-                })
-            else:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Email ou senha inválidos'
-                }, status=400)
-        
-        # Fallback para comportamento padrão
-        return super().post(request, *args, **kwargs)
+        return super().get_success_url()
 
 @method_decorator(never_cache, name='dispatch')
 class CustomLogoutView(LogoutView):
