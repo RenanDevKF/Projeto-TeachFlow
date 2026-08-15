@@ -208,12 +208,17 @@ class ProfileView(LoginRequiredMixin, View):
             instance=request.user.teacher_profile,
         )
 
+        password_form = PasswordChangeForm(
+            request.user,
+        )
+
         return render(
             request,
             self.template_name,
             {
                 'profile_form': profile_form,
                 'teacher_form': teacher_form,
+                'password_form': password_form,
             },
         )
 
@@ -255,13 +260,13 @@ class ProfileView(LoginRequiredMixin, View):
             )
 
         if form_type == 'password_change':
-            form = PasswordChangeForm(
+            password_form = PasswordChangeForm(
                 request.user,
                 request.POST,
             )
 
-            if form.is_valid():
-                user = form.save()
+            if password_form.is_valid():
+                user = password_form.save()
 
                 update_session_auth_hash(
                     request,
@@ -272,14 +277,28 @@ class ProfileView(LoginRequiredMixin, View):
                     request,
                     'Senha alterada com sucesso!',
                 )
-            else:
-                for errors in form.errors.values():
-                    messages.error(
-                        request,
-                        errors[0],
-                    )
 
-            return redirect('profile')
+                return redirect('profile')
+
+            profile_form = UserProfileForm(
+                instance=request.user,
+            )
+
+            teacher_form = TeacherProfileForm(
+                instance=request.user.teacher_profile,
+            )
+
+            return render(
+                request,
+                self.template_name,
+                {
+                    'profile_form': profile_form,
+                    'teacher_form': teacher_form,
+                    'password_form': password_form,
+                    'active_tab': 'password',
+                },
+                status=400,
+            )
 
         return redirect('profile')
     
