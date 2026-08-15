@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
         currentStep = step;
     }
 
-    document.getElementById('next-1').addEventListener('click', async () => {
+    document.getElementById('next-1').addEventListener('click', () => {
         const username = form.elements['username'].value.trim();
         const firstName = form.elements['first_name'].value.trim();
         const lastName = form.elements['last_name'].value.trim();
@@ -30,37 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        try {
-            const response = await fetch(
-                '/accounts/validate-username-email/?username=' +
-                encodeURIComponent(username) +
-                '&email=' +
-                encodeURIComponent(email)
-            );
-
-            const data = await response.json();
-
-            if (!data.is_valid) {
-                const messages = [];
-
-                if (data.errors.username) {
-                    messages.push(data.errors.username);
-                }
-
-                if (data.errors.email) {
-                    messages.push(data.errors.email);
-                }
-
-                alert(messages.join('\n'));
-                return;
-            }
-
-            showStep(2);
-
-        } catch (error) {
-            console.error('Erro na validação:', error);
-            alert('Erro ao validar informações. Tente novamente.');
-        }
+        showStep(2);
     });
 
     document.getElementById('prev-2').addEventListener('click', () => {

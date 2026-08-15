@@ -412,37 +412,3 @@ class ConfirmEmailChangeView(LoginRequiredMixin, View):
         )
 
         return redirect('profile')
-    
- #função isolada para validação de email e username   
-def validate_username_email(request):
-    username = normalize_username(
-        request.GET.get('username')
-    )
-
-    email = normalize_email(
-        request.GET.get('email')
-    )
-
-    data = {
-        'is_valid': True,
-        'errors': {},
-    }
-
-    username_validation_error = validate_username(username)
-
-    if username_validation_error:
-        data['is_valid'] = False
-        data['errors']['username'] = username_validation_error
-    elif username and CustomUser.objects.filter(username__iexact=username).exists():
-        data['is_valid'] = False
-        data['errors']['username'] = 'Este nome de usuário já está em uso.'
-
-    if username and CustomUser.objects.filter(username__iexact=username).exists():
-        data['is_valid'] = False
-        data['errors']['username'] = 'Este nome de usuário já está em uso.'
-
-    if email and CustomUser.objects.filter(email__iexact=email).exists():
-        data['is_valid'] = False
-        data['errors']['email'] = 'Este e-mail já está em uso.'
-
-    return JsonResponse(data)
