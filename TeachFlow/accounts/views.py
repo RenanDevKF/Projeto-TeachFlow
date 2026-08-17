@@ -12,7 +12,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.contrib import messages
 from django.contrib.auth import logout, update_session_auth_hash
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.shortcuts import redirect, render
 from django.http import JsonResponse
 from .models import CustomUser, Subscription, SubscriptionPlan
@@ -34,20 +34,47 @@ class SignupView(CreateView):
     success_url = reverse_lazy('signup_check_email')
 
     def form_valid(self, form):
-        with transaction.atomic():
-            user = form.save(commit=False)
-            user.is_teacher = True
-            user.is_active = False
-            user.email_verified_at = None
-            user.save()
+        try:
+            with transaction.atomic():
+                user = form.save(commit=False)
+                user.is_teacher = True
+                user.is_active = False
+                user.email_verified_at = None
+                user.save()
 
-            Teacher.objects.create(user=user)
+                Teacher.objects.create(user=user)
 
-            Subscription.objects.create(
-                user=user,
-                plan=SubscriptionPlan.FREE,
-                is_active=True,
-            )
+                Subscription.objects.create(
+                    user=user,
+                    plan=SubscriptionPlan.FREE,
+                    is_active=True,
+                )
+
+        except IntegrityError:
+            has_known_conflict = False
+
+            if CustomUser.objects.filter(
+                email__iexact=form.cleaned_data['email'],
+            ).exists():
+                form.add_error(
+                    'email',
+                    'Este e-mail já está em uso.',
+                )
+                has_known_conflict = True
+
+            if CustomUser.objects.filter(
+                username__iexact=form.cleaned_data['username'],
+            ).exists():
+                form.add_error(
+                    'username',
+                    'Este nome de usuário já está em uso.',
+                )
+                has_known_conflict = True
+
+            if has_known_conflict:
+                return self.form_invalid(form)
+
+            raise
 
         try:
             send_account_activation_email(
@@ -268,16 +295,34 @@ class ProfileView(LoginRequiredMixin, View):
             )
 
             if profile_form.is_valid() and teacher_form.is_valid():
-                with transaction.atomic():
-                    profile_form.save()
-                    teacher_form.save()
+                try:
+                    with transaction.atomic():
+                        profile_form.save()
+                        teacher_form.save()
 
-                messages.success(
-                    request,
-                    'Informações atualizadas com sucesso!',
-                )
+                except IntegrityError:
+                    username = profile_form.cleaned_data.get('username')
 
-                return redirect('profile')
+                    if (
+                        username
+                        and CustomUser.objects.filter(
+                            username__iexact=username,
+                        ).exclude(pk=request.user.pk).exists()
+                    ):
+                        profile_form.add_error(
+                            'username',
+                            'Este nome de usuário já está em uso.',
+                        )
+                    else:
+                        raise
+
+                else:
+                    messages.success(
+                        request,
+                        'Informações atualizadas com sucesso!',
+                    )
+
+                    return redirect('profile')
 
             return render(
                 request,
@@ -436,12 +481,37 @@ class ConfirmEmailChangeView(LoginRequiredMixin, View):
 
         request.user.email = new_email
         request.user.email_verified_at = timezone.now()
-        request.user.save(
-            update_fields=[
-                'email',
-                'email_verified_at',
-            ]
-        )
+
+        try:
+            with transaction.atomic():
+                request.user.save(
+                    update_fields=[
+                        'email',
+                        'email_verified_at',
+                    ]
+                )
+
+        except IntegrityError:
+            request.user.refresh_from_db(
+                fields=[
+                    'email',
+                    'email_verified_at',
+                ]
+            )
+
+            if CustomUser.objects.filter(
+                email__iexact=new_email,
+            ).exclude(pk=request.user.pk).exists():
+                messages.error(
+                    request,
+                    (
+                        'Este e-mail não está mais disponível. '
+                        'Solicite a alteração novamente com outro endereço.'
+                    ),
+                )
+                return redirect('profile')
+
+            raise
 
         send_email_change_notification(
             request.user,
