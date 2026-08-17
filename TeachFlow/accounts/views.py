@@ -21,6 +21,9 @@ from .emails import send_account_activation_email, send_email_change_confirmatio
 from accounts.models import Teacher
 from .tokens import get_user_from_activation_token, get_email_change_data
 from .utils import normalize_email, normalize_username, validate_username
+import logging
+
+logger = logging.getLogger(__name__)
 
 @method_decorator(csrf_protect, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
@@ -46,10 +49,24 @@ class SignupView(CreateView):
                 is_active=True,
             )
 
-        send_account_activation_email(
-            self.request,
-            user,
-        )
+        try:
+            send_account_activation_email(
+                self.request,
+                user,
+            )
+        except Exception:
+            logger.exception(
+                'Falha ao enviar e-mail de ativação para o usuário %s.',
+                user.pk,
+            )
+
+            messages.warning(
+                self.request,
+                (
+                    'Sua conta foi criada, mas não foi possível enviar o e-mail '
+                    'de confirmação agora. Tente reenviar o link abaixo.'
+                ),
+            )
 
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse(
@@ -97,10 +114,16 @@ class ResendActivationEmailView(View):
             ).first()
 
             if user:
-                send_account_activation_email(
-                    request,
-                    user,
-                )
+                try:
+                    send_account_activation_email(
+                        request,
+                        user,
+                    )
+                except Exception:
+                    logger.exception(
+                        'Falha ao reenviar e-mail de ativação para o usuário %s.',
+                        user.pk,
+                    )
 
         messages.success(
             request,
@@ -316,11 +339,27 @@ class ChangeEmailView(LoginRequiredMixin, View):
         )
 
         if form.is_valid():
-            send_email_change_confirmation(
-                request,
-                request.user,
-                form.cleaned_data['new_email'],
-            )
+            try:
+                send_email_change_confirmation(
+                    request,
+                    request.user,
+                    form.cleaned_data['new_email'],
+                )
+            except Exception:
+                logger.exception(
+                    'Falha ao enviar confirmação de troca de e-mail para o usuário %s.',
+                    request.user.pk,
+                )
+
+                messages.error(
+                    request,
+                    (
+                        'Não foi possível enviar o e-mail de confirmação agora. '
+                        'Tente novamente em alguns instantes.'
+                    ),
+                )
+
+                return redirect('change_email')
 
             messages.success(
                 request,
