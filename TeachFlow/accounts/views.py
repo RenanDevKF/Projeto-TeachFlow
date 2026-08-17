@@ -215,27 +215,42 @@ class CustomLogoutView(LogoutView):
 class ProfileView(LoginRequiredMixin, View):
     template_name = 'accounts/profile.html'
 
+    def get_context(
+        self,
+        request,
+        *,
+        profile_form=None,
+        teacher_form=None,
+        password_form=None,
+        active_tab='personal-info',
+    ):
+        if profile_form is None:
+            profile_form = UserProfileForm(
+                instance=request.user,
+            )
+
+        if teacher_form is None:
+            teacher_form = TeacherProfileForm(
+                instance=request.user.teacher_profile,
+            )
+
+        if password_form is None:
+            password_form = PasswordChangeForm(
+                request.user,
+            )
+
+        return {
+            'profile_form': profile_form,
+            'teacher_form': teacher_form,
+            'password_form': password_form,
+            'active_tab': active_tab,
+        }
+
     def get(self, request):
-        profile_form = UserProfileForm(
-            instance=request.user,
-        )
-
-        teacher_form = TeacherProfileForm(
-            instance=request.user.teacher_profile,
-        )
-
-        password_form = PasswordChangeForm(
-            request.user,
-        )
-
         return render(
             request,
             self.template_name,
-            {
-                'profile_form': profile_form,
-                'teacher_form': teacher_form,
-                'password_form': password_form,
-            },
+            self.get_context(request),
         )
 
     def post(self, request):
@@ -267,11 +282,12 @@ class ProfileView(LoginRequiredMixin, View):
             return render(
                 request,
                 self.template_name,
-                {
-                    'profile_form': profile_form,
-                    'teacher_form': teacher_form,
-                    'active_tab': 'personal-info',
-                },
+                self.get_context(
+                    request,
+                    profile_form=profile_form,
+                    teacher_form=teacher_form,
+                    active_tab='personal-info',
+                ),
                 status=400,
             )
 
@@ -296,23 +312,14 @@ class ProfileView(LoginRequiredMixin, View):
 
                 return redirect('profile')
 
-            profile_form = UserProfileForm(
-                instance=request.user,
-            )
-
-            teacher_form = TeacherProfileForm(
-                instance=request.user.teacher_profile,
-            )
-
             return render(
                 request,
                 self.template_name,
-                {
-                    'profile_form': profile_form,
-                    'teacher_form': teacher_form,
-                    'password_form': password_form,
-                    'active_tab': 'password',
-                },
+                self.get_context(
+                    request,
+                    password_form=password_form,
+                    active_tab='password',
+                ),
                 status=400,
             )
 
