@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core import signing
 from django.urls import reverse_lazy, reverse
 from django.views.decorators.cache import never_cache
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.contrib import messages
@@ -34,6 +35,7 @@ class SignupView(CreateView):
             user = form.save(commit=False)
             user.is_teacher = True
             user.is_active = False
+            user.email_verified_at = None
             user.save()
 
             Teacher.objects.create(user=user)
@@ -91,6 +93,7 @@ class ResendActivationEmailView(View):
             user = CustomUser.objects.filter(
                 email__iexact=email,
                 is_active=False,
+                email_verified_at__isnull=True,
             ).first()
 
             if user:
@@ -147,7 +150,7 @@ class ActivateAccountView(View):
                 status=400,
             )
 
-        if user.is_active:
+        if user.email_verified_at is not None:
             return render(
                 request,
                 self.template_name,
@@ -156,8 +159,9 @@ class ActivateAccountView(View):
                 },
             )
 
+        user.email_verified_at = timezone.now()
         user.is_active = True
-        user.save(update_fields=['is_active'])
+        user.save(update_fields=['email_verified_at', 'is_active'])
 
         return render(
             request,
@@ -385,17 +389,16 @@ class ConfirmEmailChangeView(LoginRequiredMixin, View):
         old_email = request.user.email
 
         request.user.email = new_email
-        request.user.save(update_fields=['email'])
+        request.user.email_verified_at = timezone.now()
+        request.user.save(
+            update_fields=[
+                'email',
+                'email_verified_at',
+            ]
+        )
 
         send_email_change_notification(
             request.user,
             old_email,
             new_email,
         )
-
-        messages.success(
-            request,
-            'E-mail alterado com sucesso!',
-        )
-
-        return redirect('profile')
