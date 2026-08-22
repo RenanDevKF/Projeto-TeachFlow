@@ -22,9 +22,6 @@ class SecureModelAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return request.user.is_superuser
     
-    def has_delete_permission(self, request, obj=None):
-        return request.user.is_superuser
-    
     # Impede deleção em massa (só deleta um por um)
     def has_delete_permission(self, request, obj=None):
         if obj and request.user.is_superuser:
