@@ -20,6 +20,32 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / '.env')
 
+def env_bool(name, default=False):
+    value = os.getenv(name)
+
+    if value is None:
+        return default
+
+    value = value.strip().lower()
+
+    if value in ('1', 'true', 'yes', 'on'):
+        return True
+
+    if value in ('0', 'false', 'no', 'off'):
+        return False
+
+    raise ValueError(f'Valor inválido para {name}: {value}')
+
+
+def env_list(name, default=''):
+    value = os.getenv(name, default)
+
+    return [
+        item.strip()
+        for item in value.split(',')
+        if item.strip()
+    ]
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -27,9 +53,10 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.environ['SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool('DEBUG', False)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS')
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
 
 
 # Application definition
@@ -149,20 +176,29 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Força o uso de HTTPS
-SECURE_SSL_REDIRECT = False  # Em produção
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Se atrás de proxy
+# HTTPS
+SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', False)
+
+if env_bool('USE_X_FORWARDED_PROTO', False):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Proteção de cookies
-SESSION_COOKIE_SECURE = False  # Mude para True em produção
-CSRF_COOKIE_SECURE = False     # Mude para True em produção
+SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', False)
+CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', False)
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'  # ou 'Strict'
 
 # Cabeçalhos de segurança
-SECURE_HSTS_SECONDS = 31536000  # 1 ano
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(
+    'SECURE_HSTS_INCLUDE_SUBDOMAINS',
+    False,
+)
+SECURE_HSTS_PRELOAD = env_bool(
+    'SECURE_HSTS_PRELOAD',
+    False,
+)
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
