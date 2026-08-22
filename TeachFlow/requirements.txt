@@ -4,3 +4,4 @@ django-axes==7.0.2
 django-otp==1.6.0
 sqlparse==0.5.3
 tzdata==2025.2
+python-dotenv==1.2.3
