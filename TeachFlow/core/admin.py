@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import User, Group
 from django.db.models import Q
-from django.utils.html import format_html, mark_safe
+from django.utils.html import format_html, format_html_join
 from django.urls import reverse
 
 from .models import (
@@ -170,10 +170,20 @@ class ExerciseAdmin(SecureModelAdmin):
 
     def related_lessons(self, obj):
         lessons = obj.lessons.select_related('class_group').all()
-        return mark_safe("<br>".join(
-            f'<a href="{reverse("admin:core_lesson_change", args=[l.id])}">{l.title} ({l.date} - {l.class_group.name})</a>'
-            for l in lessons
-        ))
+
+        return format_html_join(
+            '<br>',
+            '<a href="{}">{} ({} - {})</a>',
+            (
+                (
+                    reverse('admin:core_lesson_change', args=[lesson.id]),
+                    lesson.title,
+                    lesson.date,
+                    lesson.class_group.name,
+                )
+                for lesson in lessons
+            ),
+        )
     related_lessons.short_description = 'Aulas que usam este exercício'
 
     def get_list_filter(self, request):
