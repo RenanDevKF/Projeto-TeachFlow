@@ -16,11 +16,12 @@ class CustomUserManager(BaseUserManager):
         if not email:
             raise ValueError('O email é obrigatório')
         email = normalize_email(email)
+        username = normalize_username(extra_fields.get('username'))
 
-        if 'username' in extra_fields:
-            extra_fields['username'] = normalize_username(
-                extra_fields['username']
-            )
+        if not username:
+            raise ValueError('O nome de usuário é obrigatório')
+
+        extra_fields['username'] = username
 
         user = self.model(
             email=email,
