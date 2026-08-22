@@ -74,5 +74,5 @@ def send_email_change_notification(user, old_email, new_email):
         message=message,
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[old_email],
-        fail_silently=True,
+        fail_silently=False,
     )

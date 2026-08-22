@@ -513,8 +513,21 @@ class ConfirmEmailChangeView(LoginRequiredMixin, View):
 
             raise
 
-        send_email_change_notification(
-            request.user,
-            old_email,
-            new_email,
+        try:
+            send_email_change_notification(
+                request.user,
+                old_email,
+                new_email,
+            )
+        except Exception:
+            logger.exception(
+                'Falha ao enviar notificação de troca de e-mail para o usuário %s.',
+                request.user.pk,
+            )
+
+        messages.success(
+            request,
+            'E-mail alterado com sucesso!',
         )
+
+        return redirect('profile')
