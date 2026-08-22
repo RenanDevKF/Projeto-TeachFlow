@@ -235,11 +235,6 @@ class LearningObjectiveAdmin(SecureModelAdmin):
         }),
     )
 
-
-class AdminActionLogAdmin(SecureModelAdmin):
-    list_display = ('user', 'action', 'model_name', 'object_id', 'timestamp')
-    readonly_fields = ('user', 'action', 'model_name', 'object_id', 'timestamp')
-
 # Optional: Customize the admin site header and title
 admin.site.site_header = "Teaching Assistant Admin"
 admin.site.site_title = "Teaching Assistant"
@@ -249,9 +244,9 @@ admin.site.index_title = "Administration Panel"
 admin.site.unregister(Group)
 
 @admin.register(AdminActionLog)
-class AdminActionLogAdmin(admin.ModelAdmin):
+class AdminActionLogAdmin(SecureModelAdmin):
     list_display = ('action', 'model_name', 'object_id', 'user', 'timestamp')
     list_filter = ('action', 'model_name', 'timestamp')
     search_fields = ('user__email', 'model_name', 'object_id')
-    readonly_fields = ('timestamp',)  # Evita edição da data
-    date_hierarchy = 'timestamp'  # Navegação por datas
+    readonly_fields = ('user', 'action', 'model_name', 'object_id', 'timestamp')
+    date_hierarchy = 'timestamp'
