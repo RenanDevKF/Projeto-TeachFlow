@@ -2,6 +2,5 @@ asgiref==3.8.1
 Django==5.2
 django-axes==7.0.2
 django-otp==1.6.0
-django-ratelimit==4.1.0
 sqlparse==0.5.3
 tzdata==2025.2
