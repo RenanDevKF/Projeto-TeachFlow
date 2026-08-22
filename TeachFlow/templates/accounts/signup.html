@@ -79,6 +79,7 @@
                         type="text"
                         name="first_name"
                         id="first_name"
+                        value="{{ form.first_name.value|default:'' }}"
                         autocomplete="given-name"
                         required
                         class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none"
@@ -103,6 +104,7 @@
                         type="text"
                         name="last_name"
                         id="last_name"
+                        value="{{ form.last_name.value|default:'' }}"
                         autocomplete="family-name"
                         required
                         class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none"
@@ -126,6 +128,7 @@
                         type="text"
                         name="username"
                         id="username"
+                        value="{{ form.username.value|default:'' }}"
                         autocomplete="username"
                         required
                         class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none"
@@ -149,6 +152,7 @@
                         type="email"
                         name="email"
                         id="email"
+                        value="{{ form.email.value|default:'' }}"
                         autocomplete="email"
                         required
                         class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none"
