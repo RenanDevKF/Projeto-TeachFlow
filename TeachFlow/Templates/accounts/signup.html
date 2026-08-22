@@ -48,12 +48,20 @@
     >
         {% csrf_token %}
 
+        {% if form.non_field_errors %}
+            <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         <div id="step-indicator" class="text-center text-sm text-gray-600">
-            Etapa 1 de 2
+            {% if form.password1.errors or form.password2.errors %}Etapa 2 de 2{% else %}Etapa 1 de 2{% endif %}
         </div>
 
         <!-- Etapa 1: Informações pessoais -->
-        <div id="step-1" class="step">
+        <div id="step-1" class="step {% if form.password1.errors or form.password2.errors %}hidden{% endif %}">
             <h2 class="text-lg font-semibold text-gray-800 mb-4 text-center">
                 Informações pessoais
             </h2>
@@ -75,6 +83,12 @@
                         required
                         class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none"
                     >
+                    
+                    {% if form.first_name.errors %}
+                        {% for error in form.first_name.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
                 </div>
 
                 <div>
@@ -92,7 +106,12 @@
                         autocomplete="family-name"
                         required
                         class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none"
-                    >
+                    >        
+                    {% if form.last_name.errors %}
+                        {% for error in form.last_name.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
                 </div>
 
                 <div>
@@ -111,6 +130,11 @@
                         required
                         class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none"
                     >
+                    {% if form.username.errors %}
+                        {% for error in form.username.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
                 </div>
 
                 <div>
@@ -129,6 +153,11 @@
                         required
                         class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none"
                     >
+                    {% if form.email.errors %}
+                        {% for error in form.email.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
                 </div>
             </div>
 
@@ -142,7 +171,7 @@
         </div>
 
         <!-- Etapa 2: Senha -->
-        <div id="step-2" class="step hidden">
+        <div id="step-2" class="step {% if not form.password1.errors and not form.password2.errors %}hidden{% endif %}">
             <h2 class="text-lg font-semibold text-gray-800 mb-4 text-center">
                 Credenciais de acesso
             </h2>
@@ -169,6 +198,12 @@
                             {{ form.password1.help_text|safe }}
                         </div>
                     {% endif %}
+
+                    {% if form.password1.errors %}
+                        {% for error in form.password1.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
                 </div>
 
                 <div>
@@ -187,6 +222,11 @@
                         required
                         class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 focus:border-primary focus:ring-primary focus:outline-none"
                     >
+                    {% if form.password2.errors %}
+                        {% for error in form.password2.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
                 </div>
             </div>
 
