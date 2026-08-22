@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Minha Conta - TeachFlow{% endblock %}
 
 {% block page_title %}
@@ -10,32 +11,57 @@
 
 {% block content %}
 <div class="max-w-4xl mx-auto">
-    {% if messages %}
-    <div class="mb-6">
-        {% for message in messages %}
-        <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-800{% elif message.tags == 'error' %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %}">
-            {{ message }}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
 
     <!-- Seções de perfil em tabs -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-        <div class="flex border-b border-gray-200">
-            <button class="tab-button active py-3 px-6 font-medium text-primary border-b-2 border-primary" data-tab="personal-info">
+        <div class="flex border-b border-gray-200" role="tablist" aria-label="Configurações da conta">
+            <button
+                type="button"
+                role="tab"
+                id="tab-personal-info"
+                aria-controls="personal-info"
+                aria-selected="{% if active_tab == 'password' %}false{% else %}true{% endif %}"
+                tabindex="{% if active_tab == 'password' %}-1{% else %}0{% endif %}"
+                class="tab-button py-3 px-6 font-medium hover:text-primary {% if active_tab == 'password' %}text-gray-500{% else %}active text-primary border-b-2 border-primary{% endif %}"
+                data-tab="personal-info"
+            >
                 Informações Pessoais
             </button>
-            <button class="tab-button py-3 px-6 font-medium text-gray-500 hover:text-primary" data-tab="password">
+
+            <button
+                type="button"
+                role="tab"
+                id="tab-password"
+                aria-controls="password"
+                aria-selected="{% if active_tab == 'password' %}true{% else %}false{% endif %}"
+                tabindex="{% if active_tab == 'password' %}0{% else %}-1{% endif %}"
+                class="tab-button py-3 px-6 font-medium hover:text-primary {% if active_tab == 'password' %}active text-primary border-b-2 border-primary{% else %}text-gray-500{% endif %}"
+                data-tab="password"
+            >
                 Senha
             </button>
-            <button class="tab-button py-3 px-6 font-medium text-gray-500 hover:text-primary" data-tab="subscription">
+
+            <button
+                type="button"
+                role="tab"
+                id="tab-subscription"
+                aria-controls="subscription"
+                aria-selected="false"
+                tabindex="-1"
+                class="tab-button py-3 px-6 font-medium text-gray-500 hover:text-primary"
+                data-tab="subscription"
+            >
                 Assinatura
             </button>
         </div>
 
         <!-- Informações Pessoais -->
-        <div id="personal-info" class="tab-content active p-6">
+        <div
+            id="personal-info"
+            role="tabpanel"
+            aria-labelledby="tab-personal-info"
+            class="tab-content {% if active_tab == 'password' %}hidden{% else %}active{% endif %} p-6"
+        >
             <form method="post" action="{% url 'profile' %}" class="space-y-4">
                 {% csrf_token %}
                 <input type="hidden" name="form_type" value="profile_info">
@@ -198,26 +224,99 @@
         </div>
 
         <!-- Senha -->
-        <div id="password" class="tab-content hidden p-6">
+        <div
+            id="password"
+            role="tabpanel"
+            aria-labelledby="tab-password"
+            class="tab-content {% if active_tab == 'password' %}active{% else %}hidden{% endif %} p-6"
+        >
             <form method="post" action="{% url 'profile' %}" class="space-y-4">
                 {% csrf_token %}
                 <input type="hidden" name="form_type" value="password_change">
-                
+
                 <div>
-                    <label for="current_password" class="block text-sm font-medium text-gray-700 mb-1">Senha Atual</label>
-                    <input type="password" name="current_password" id="current_password" class="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
+                    <label for="{{ password_form.old_password.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Senha Atual
+                    </label>
+
+                    <input
+                        type="password"
+                        name="{{ password_form.old_password.html_name }}"
+                        id="{{ password_form.old_password.id_for_label }}"
+                        autocomplete="current-password"
+                        required
+                        class="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    >
+
+                    {% if password_form.old_password.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {% for error in password_form.old_password.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
-                
+
                 <div>
-                    <label for="new_password1" class="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
-                    <input type="password" name="new_password1" id="new_password1" class="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
+                    <label for="{{ password_form.new_password1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Nova Senha
+                    </label>
+
+                    <input
+                        type="password"
+                        name="{{ password_form.new_password1.html_name }}"
+                        id="{{ password_form.new_password1.id_for_label }}"
+                        autocomplete="new-password"
+                        required
+                        class="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    >
+
+                    {% if password_form.new_password1.help_text %}
+                        <div class="mt-2 text-xs leading-5 text-gray-500">
+                            {{ password_form.new_password1.help_text|safe }}
+                        </div>
+                    {% endif %}
+
+                    {% if password_form.new_password1.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {% for error in password_form.new_password1.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
-                
+
                 <div>
-                    <label for="new_password2" class="block text-sm font-medium text-gray-700 mb-1">Confirmar Nova Senha</label>
-                    <input type="password" name="new_password2" id="new_password2" class="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
+                    <label for="{{ password_form.new_password2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Confirmar Nova Senha
+                    </label>
+
+                    <input
+                        type="password"
+                        name="{{ password_form.new_password2.html_name }}"
+                        id="{{ password_form.new_password2.id_for_label }}"
+                        autocomplete="new-password"
+                        required
+                        class="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    >
+
+                    {% if password_form.new_password2.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {% for error in password_form.new_password2.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
-                
+
+                {% if password_form.non_field_errors %}
+                    <div class="text-sm text-red-600">
+                        {% for error in password_form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
                 <div class="flex justify-end">
                     <button type="submit" class="bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition">
                         Alterar Senha
@@ -227,7 +326,12 @@
         </div>
 
         <!-- Assinatura -->
-        <div id="subscription" class="tab-content hidden p-6">
+        <div
+            id="subscription"
+            role="tabpanel"
+            aria-labelledby="tab-subscription"
+            class="tab-content hidden p-6"
+        >
             <div>
                 <h3 class="text-lg font-medium text-gray-900 mb-2">Seu plano atual</h3>
 
@@ -272,35 +376,10 @@
                 </div>
             </div>
         </div>
-
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Tabs functionality
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
-        
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                // Remove active class from all buttons and contents
-                tabButtons.forEach(btn => btn.classList.remove('active', 'text-primary', 'border-b-2', 'border-primary'));
-                tabButtons.forEach(btn => btn.classList.add('text-gray-500'));
-                tabContents.forEach(content => content.classList.add('hidden'));
-                tabContents.forEach(content => content.classList.remove('active'));
-                
-                // Add active class to clicked button and corresponding content
-                button.classList.add('active', 'text-primary', 'border-b-2', 'border-primary');
-                button.classList.remove('text-gray-500');
-                
-                const tabId = button.getAttribute('data-tab');
-                const activeContent = document.getElementById(tabId);
-                activeContent.classList.remove('hidden');
-                activeContent.classList.add('active');
-            });
-        });
-        
-    });
-</script>
+<script src="{% static 'js/profile.js' %}"></script>
 {% endblock %}

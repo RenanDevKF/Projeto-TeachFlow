@@ -90,21 +90,6 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
   
-    // Função para máscaras de campos
-    function setupMasks() {
-      // Máscara para telefone
-      const phoneInputs = document.querySelectorAll('input[type="tel"]');
-      
-      phoneInputs.forEach(input => {
-        input.addEventListener('input', function(e) {
-          let value = e.target.value.replace(/\D/g, '');
-          value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
-          value = value.replace(/(\d)(\d{4})$/, '$1-$2');
-          e.target.value = value;
-        });
-      });
-    }
-  
     // Função para busca dinâmica
     function setupSearch() {
       const searchInputs = document.querySelectorAll('[data-search]');
@@ -166,7 +151,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setupTabs();
     setupConfirmations();
     setupToggles();
-    setupMasks();
     setupSearch();
     preloadImages();
     setupFlashMessages();

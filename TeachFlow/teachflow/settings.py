@@ -50,7 +50,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_ratelimit.middleware.RatelimitMiddleware',
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
@@ -163,12 +162,6 @@ SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
-
-# Configuração de rate limiting para proteção contra ataques
-# Necessário instalar django-ratelimit
-RATELIMIT_ENABLE = True
-RATELIMIT_VIEW = 'accounts.views.lockout_view'  # View customizada para bloqueio
-RATELIMIT_LOGIN = '5/m'  # 5 tentativas por minuto
 
 # E-mail em desenvolvimento
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

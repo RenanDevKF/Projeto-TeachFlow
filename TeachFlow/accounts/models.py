@@ -2,10 +2,7 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
-from django.core.exceptions import ValidationError
-from django.db.models.signals import post_save
 from django.db.models.functions import Lower
-from django.dispatch import receiver
 from .utils import normalize_email, normalize_username
 
 
@@ -37,6 +34,7 @@ class CustomUserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('email_verified_at', timezone.now())
         
         if not extra_fields.get('is_staff'):
             raise ValueError('Superuser precisa ter is_staff=True')
@@ -51,6 +49,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
     is_active = models.BooleanField(default=True)
+    email_verified_at = models.DateTimeField(null=True, blank=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
     is_teacher = models.BooleanField(default=False)
@@ -70,6 +69,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
                 Lower('username'),
                 name='unique_customuser_username_ci',
             ),
+            models.CheckConstraint(
+                condition=~models.Q(username__contains='@'),
+                name='customuser_username_without_at',
+            ),
         ]    
 
     def save(self, *args, **kwargs):
@@ -81,22 +84,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
-    def validate_email_domain(email):
-        if email.endswith('@tempmail.com'):
-            raise ValidationError("Email inválido.")
-
-@receiver(post_save, sender=CustomUser)
-def create_teacher_profile(sender, instance, created, **kwargs):
-    if created and instance.is_teacher:  # Adicione um campo `is_teacher` no CustomUser se necessário
-        Teacher.objects.create(user=instance)  
-
-
 class Teacher(models.Model):
     """Perfil do professor vinculado ao CustomUser"""
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='teacher_profile')
-    bio = models.TextField(blank=True)
     subject_area = models.CharField(max_length=100, blank=True)
-    phone = models.CharField(max_length=20, blank=True)
     display_name = models.CharField(max_length=100, blank=True)
 
     def __str__(self):

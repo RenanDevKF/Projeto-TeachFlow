@@ -43,9 +43,18 @@
         </div>
 
         {% if messages %}
-            <div class="mt-6">
+            <div class="mt-6 space-y-3">
                 {% for message in messages %}
-                    <div class="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+                    <div class="rounded-lg px-4 py-3 text-sm
+                        {% if message.tags == 'success' %}
+                            bg-green-50 text-green-700
+                        {% elif message.tags == 'warning' %}
+                            bg-amber-50 text-amber-700
+                        {% elif message.tags == 'error' %}
+                            bg-red-50 text-red-700
+                        {% else %}
+                            bg-blue-50 text-blue-700
+                        {% endif %}">
                         {{ message }}
                     </div>
                 {% endfor %}
