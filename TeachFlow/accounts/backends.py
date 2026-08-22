@@ -21,6 +21,7 @@ class EmailOrUsernameBackend(ModelBackend):
                     username__iexact=normalize_username(identifier)
                 )
         except (CustomUser.DoesNotExist, CustomUser.MultipleObjectsReturned):
+            CustomUser().set_password(password)
             return None
 
         if user.check_password(password) and self.user_can_authenticate(user):

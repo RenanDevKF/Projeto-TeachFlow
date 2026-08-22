@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import Group
 from django.db.models import Q
 from django.utils.html import format_html, format_html_join
 from django.urls import reverse
