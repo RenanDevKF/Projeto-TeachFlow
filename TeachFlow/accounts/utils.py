@@ -1,3 +1,5 @@
+import re
+
 def normalize_username(value):
     return (value or '').strip().lower()
 
@@ -8,7 +10,7 @@ def normalize_email(value):
 def validate_username(value):
     username = normalize_username(value)
 
-    if '@' in username:
-        return 'O nome de usuário não pode conter @.'
+    if not re.fullmatch(r'[\w.-]+', username, flags=re.UNICODE):
+        return 'Use apenas letras, números, ponto, hífen e sublinhado.'
 
     return None
