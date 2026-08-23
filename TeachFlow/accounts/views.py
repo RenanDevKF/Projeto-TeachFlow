@@ -233,6 +233,18 @@ class CustomLoginView(LoginView):
 
         return super().get_success_url()
 
+
+def axes_lockout_response(request, credentials):
+    return redirect('login_lockout')
+
+
+class LoginLockoutView(CustomLoginView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['axes_locked_out'] = True
+        return context
+
+
 @method_decorator(never_cache, name='dispatch')
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('login')

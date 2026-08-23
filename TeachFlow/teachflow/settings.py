@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
-
+from datetime import timedelta
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'axes',
     'accounts',
     'core',
     
@@ -81,6 +82,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
@@ -112,11 +114,22 @@ LOGOUT_REDIRECT_URL = 'login'
 WSGI_APPLICATION = 'teachflow.wsgi.application'
 
 AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
     'accounts.backends.EmailOrUsernameBackend',
-    'django.contrib.auth.backends.ModelBackend',  # Deixe também o padrão
 ]
 
+# Proteção contra força bruta com django-axes
+AXES_USERNAME_FORM_FIELD = 'username'
 
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = timedelta(minutes=10)
+AXES_USE_ATTEMPT_EXPIRATION = True
+
+AXES_LOCKOUT_PARAMETERS = [
+    ['username', 'ip_address'],
+]
+
+AXES_LOCKOUT_CALLABLE = 'accounts.views.axes_lockout_response'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

@@ -35,6 +35,12 @@
             <input type="hidden" name="next" value="{{ next }}">
         {% endif %}
 
+        {% if axes_locked_out %}
+            <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-600">
+                Muitas tentativas de login. Aguarde alguns minutos e tente novamente.
+            </div>
+        {% endif %}
+
         <div>
             <label for="{{ form.username.id_for_label }}" class="mb-1 block text-sm font-medium text-gray-700">
                 E-mail ou nome de usuário
