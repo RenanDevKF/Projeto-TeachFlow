@@ -2,7 +2,6 @@ from django.template import context
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import logout
 from django.core.paginator import Paginator
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect, get_object_or_404, render
@@ -12,7 +11,7 @@ from django.db.models import Q, Case, IntegerField, Value, When, Count, Prefetch
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
-from django.http import JsonResponse, Http404, HttpResponseRedirect
+from django.http import JsonResponse, Http404, HttpResponseRedirect, HttpResponseForbidden
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, LessonExercise
 from .utils import normalize_objective_title, normalize_tag_name, find_existing_tag, validate_tag_name
 from .forms import *
@@ -48,9 +47,7 @@ def dashboard_view(request):
     
     # Verifica se o usuário tem perfil de professor
     if not hasattr(request.user, 'teacher_profile'):
-        messages.error(request, "Acesso restrito a professores.")
-        logout(request)  # Desloga o usuário para evitar loops
-        return redirect('login')
+        return HttpResponseForbidden("Acesso restrito a professores.")
     
     teacher = request.user.teacher_profile
     today = timezone.localdate()
