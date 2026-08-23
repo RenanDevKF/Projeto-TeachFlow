@@ -1208,6 +1208,12 @@ def toggle_exercise_applied(request, lesson_id, exercise_id):
             'message': 'Dados da requisição inválidos.',
         }, status=400)
 
+    if not isinstance(data, dict):
+        return JsonResponse({
+            'success': False,
+            'message': 'Dados da requisição inválidos.',
+        }, status=400)
+
     is_applied = data.get('is_applied')
 
     if not isinstance(is_applied, bool):
@@ -1385,10 +1391,23 @@ class QuickCreateLearningObjectiveView(LoginRequiredMixin, TeacherRequiredMixin,
                 'error': 'Dados inválidos.',
             }, status=400)
 
-        title = normalize_objective_title(
-            data.get('title', '')
-        )
-        description = data.get('description', '').strip()
+        if request.content_type == 'application/json' and not isinstance(data, dict):
+            return JsonResponse({
+                'success': False,
+                'error': 'Dados inválidos.',
+            }, status=400)
+
+        raw_title = data.get('title', '')
+        raw_description = data.get('description', '')
+
+        if not isinstance(raw_title, str) or not isinstance(raw_description, str):
+            return JsonResponse({
+                'success': False,
+                'error': 'Dados inválidos.',
+            }, status=400)
+
+        title = normalize_objective_title(raw_title)
+        description = raw_description.strip()
 
         if not title:
             return JsonResponse({
@@ -2002,9 +2021,21 @@ class QuickCreateExerciseTagView(LoginRequiredMixin, TeacherRequiredMixin, View)
                 'error': 'Dados inválidos.',
             }, status=400)
 
-        tag_name = normalize_tag_name(
-            data.get('name', '')
-        )   
+        if request.content_type == 'application/json' and not isinstance(data, dict):
+            return JsonResponse({
+                'success': False,
+                'error': 'Dados inválidos.',
+            }, status=400)
+
+        raw_tag_name = data.get('name', '')
+
+        if not isinstance(raw_tag_name, str):
+            return JsonResponse({
+                'success': False,
+                'error': 'Dados inválidos.',
+            }, status=400)
+
+        tag_name = normalize_tag_name(raw_tag_name)
 
         validation_error = validate_tag_name(tag_name)
 
@@ -2236,7 +2267,13 @@ class QuickAddTagView(
             ):
                 return ''
 
+            if not isinstance(data, dict):
+                return ''
+
             raw_tag_name = data.get('tag_name', '')
+
+            if not isinstance(raw_tag_name, str):
+                return ''
         else:
             raw_tag_name = request.POST.get(
                 'tag_name',
