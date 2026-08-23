@@ -950,7 +950,9 @@ class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView,):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        related_lessons = self.object.lessons.select_related(
+        related_lessons = self.object.lessons.filter(
+            class_group__teacher=self.request.user.teacher_profile
+        ).select_related(
             'class_group'
         ).order_by(
             '-date',
@@ -964,7 +966,9 @@ class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView,):
 
         if self.object.is_template:
             generated_exercises = (
-                self.object.generated_exercises.order_by(
+                self.object.generated_exercises.filter(
+                    created_by=self.request.user.teacher_profile
+                ).order_by(
                     'title',
                     'id',
                 )
