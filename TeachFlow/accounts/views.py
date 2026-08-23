@@ -1,5 +1,5 @@
 # accounts/views.py
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LoginView, LogoutView, PasswordResetView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.forms import PasswordChangeForm
 from django.views.generic import CreateView, UpdateView, View, TemplateView
@@ -9,6 +9,7 @@ from django.urls import reverse_lazy, reverse
 from django.views.decorators.cache import never_cache
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 from django.views.decorators.csrf import csrf_protect
 from django.contrib import messages
 from django.contrib.auth import logout, update_session_auth_hash
@@ -25,6 +26,18 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def ratelimit_email_key(group, request):
+    return normalize_email(request.POST.get('email'))
+
+@method_decorator(
+    ratelimit(
+        key='ip',
+        rate='5/h',
+        method='POST',
+        block=False,
+    ),
+    name='post',
+)
 @method_decorator(csrf_protect, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
 class SignupView(CreateView):
@@ -32,6 +45,27 @@ class SignupView(CreateView):
     template_name = 'accounts/signup.html'
     form_class = CustomUserCreationForm
     success_url = reverse_lazy('signup_check_email')
+
+    def post(self, request, *args, **kwargs):
+        if getattr(request, 'limited', False):
+            message = 'Muitas tentativas de cadastro. Aguarde um pouco e tente novamente.'
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse(
+                    {
+                        'success': False,
+                        'error': 'Limite de tentativas excedido',
+                        'errors': {
+                            '__all__': [message],
+                        },
+                    },
+                    status=429,
+                )
+
+            messages.error(request, message)
+            return redirect('register')
+
+        return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
         try:
@@ -127,11 +161,40 @@ class SignupView(CreateView):
 class SignupCheckEmailView(TemplateView):
     template_name = 'accounts/signup_check_email.html'
 
+@method_decorator(
+    ratelimit(
+        key='ip',
+        rate='10/h',
+        method='POST',
+        block=False,
+    ),
+    name='post',
+)
+@method_decorator(
+    ratelimit(
+        key=ratelimit_email_key,
+        rate='3/h',
+        method='POST',
+        block=False,
+    ),
+    name='post',
+)
 @method_decorator(csrf_protect, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
 class ResendActivationEmailView(View):
     def post(self, request):
         email = ' '.join(request.POST.get('email', '').split())
+
+        if getattr(request, 'limited', False):
+            messages.success(
+                request,
+                (
+                    'Se existir uma conta aguardando confirmação para este e-mail, '
+                    'um novo link foi enviado.'
+                ),
+            )
+
+            return redirect('signup_check_email')
 
         if email:
             user = CustomUser.objects.filter(
@@ -244,6 +307,30 @@ class LoginLockoutView(CustomLoginView):
         context['axes_locked_out'] = True
         return context
 
+@method_decorator(
+    ratelimit(
+        key='ip',
+        rate='10/h',
+        method='POST',
+        block=False,
+    ),
+    name='post',
+)
+@method_decorator(
+    ratelimit(
+        key=ratelimit_email_key,
+        rate='3/h',
+        method='POST',
+        block=False,
+    ),
+    name='post',
+)
+class CustomPasswordResetView(PasswordResetView):
+    def post(self, request, *args, **kwargs):
+        if getattr(request, 'limited', False):
+            return redirect(self.get_success_url())
+
+        return super().post(request, *args, **kwargs)
 
 @method_decorator(never_cache, name='dispatch')
 class CustomLogoutView(LogoutView):
@@ -382,6 +469,15 @@ class ProfileView(LoginRequiredMixin, View):
 
         return redirect('profile')
     
+@method_decorator(
+    ratelimit(
+        key='user',
+        rate='5/h',
+        method='POST',
+        block=False,
+    ),
+    name='post',
+)
 @method_decorator(csrf_protect, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
 class ChangeEmailView(LoginRequiredMixin, View):
@@ -397,6 +493,14 @@ class ChangeEmailView(LoginRequiredMixin, View):
         )
 
     def post(self, request):
+        if getattr(request, 'limited', False):
+            messages.error(
+                request,
+                'Muitas solicitações de troca de e-mail. Aguarde um pouco e tente novamente.',
+            )
+
+            return redirect('change_email')
+
         form = ChangeEmailForm(
             request.user,
             request.POST,

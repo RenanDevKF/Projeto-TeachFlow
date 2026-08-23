@@ -10,6 +10,7 @@ from .views import (
     ConfirmEmailChangeView,
     CustomLoginView,
     CustomLogoutView,
+    CustomPasswordResetView,
     LoginLockoutView,
     ProfileView,
     ResendActivationEmailView,
@@ -26,7 +27,7 @@ urlpatterns = [
     path('login/locked/', never_cache(LoginLockoutView.as_view()), name='login_lockout'),
     path(
         'password-reset/',
-        never_cache(auth_views.PasswordResetView.as_view(
+        never_cache(CustomPasswordResetView.as_view(
             template_name='accounts/password_reset_form.html',
             email_template_name='accounts/emails/password_reset_email.txt',
             subject_template_name='accounts/emails/password_reset_subject.txt',
