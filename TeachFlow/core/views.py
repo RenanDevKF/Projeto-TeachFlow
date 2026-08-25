@@ -1421,6 +1421,17 @@ class QuickCreateLearningObjectiveView(LoginRequiredMixin, TeacherRequiredMixin,
                 'error': 'O título deve possuir no máximo 200 caracteres.',
             }, status=400)
 
+        description_max_length = LearningObjective._meta.get_field('description').max_length
+
+        if len(description) > description_max_length:
+            return JsonResponse({
+                'success': False,
+                'error': (
+                    f'A descrição deve possuir no máximo '
+                    f'{description_max_length} caracteres.'
+                ),
+            }, status=400)
+
         existing_objective = LearningObjective.objects.filter(
             teacher=request.user.teacher_profile,
             title__iexact=title,
