@@ -983,10 +983,7 @@ class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView,):
             generated_exercises_count
         )
 
-        context['can_delete_exercise'] = (
-            lessons_count == 0
-            and generated_exercises_count == 0
-        )
+        context['can_delete_exercise'] = lessons_count == 0
 
         return context
         
@@ -1121,48 +1118,16 @@ class ExerciseDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
     def form_valid(self, form):
         lessons_count = self.object.lessons.count()
 
-        generated_exercises_count = (
-            self.object.generated_exercises.count()
-            if self.object.is_template
-            else 0
-        )
-
-        if lessons_count > 0 or generated_exercises_count > 0:
-            if (
-                lessons_count > 0
-                and generated_exercises_count > 0
-            ):
-                message = (
-                    'Este recurso não pode ser excluído porque está '
-                    f'vinculado a {lessons_count} '
-                    f'{"aula" if lessons_count == 1 else "aulas"} '
-                    f'e possui {generated_exercises_count} '
-                    f'{"cópia gerada" if generated_exercises_count == 1 else "cópias geradas"}. '
-                    'Você pode arquivá-lo para removê-lo da lista principal '
-                    'sem perder o histórico.'
-                )
-
-            elif lessons_count > 0:
-                message = (
+        if lessons_count > 0:
+            messages.error(
+                self.request,
+                (
                     'Este exercício não pode ser excluído porque está '
                     f'vinculado a {lessons_count} '
                     f'{"aula" if lessons_count == 1 else "aulas"}. '
                     'Você pode arquivá-lo para removê-lo da lista principal '
                     'sem perder o histórico.'
-                )
-
-            else:
-                message = (
-                    'Este modelo não pode ser excluído porque já gerou '
-                    f'{generated_exercises_count} '
-                    f'{"exercício" if generated_exercises_count == 1 else "exercícios"}. '
-                    'Você pode arquivá-lo para removê-lo da lista principal '
-                    'sem perder a referência de origem das cópias.'
-                )
-
-            messages.error(
-                self.request,
-                message,
+                ),
             )
 
             return redirect(
