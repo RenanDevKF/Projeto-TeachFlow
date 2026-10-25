@@ -7,5 +7,9 @@
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.1"
+  },
+  "dependencies": {
+    "flatpickr": "^4.6.13",
+    "lucide": "^1.34.0"
   }
 }

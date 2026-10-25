@@ -12,7 +12,7 @@
 {% block vendor_css %}
 <link
     rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+    href="{% static 'css/vendors/flatpickr.min.css' %}"
 >
 
 <link
@@ -431,12 +431,12 @@
 
 {% block vendor_scripts %}
 <script
-    src="https://cdn.jsdelivr.net/npm/flatpickr"
+    src="{% static 'js/vendors/flatpickr.min.js' %}"
     defer
 ></script>
 
 <script
-    src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"
+    src="{% static 'js/vendors/flatpickr-pt.js' %}"
     defer
 ></script>
 {% endblock %}

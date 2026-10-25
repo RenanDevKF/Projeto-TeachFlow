@@ -10,6 +10,8 @@ from .views import (
     ConfirmEmailChangeView,
     CustomLoginView,
     CustomLogoutView,
+    CustomPasswordResetView,
+    LoginLockoutView,
     ProfileView,
     ResendActivationEmailView,
     SignupCheckEmailView,
@@ -22,9 +24,10 @@ urlpatterns = [
     path('register/resend-activation/', never_cache(csrf_protect(ResendActivationEmailView.as_view())), name='resend_activation_email'),
     path('activate/<str:token>/', never_cache(ActivateAccountView.as_view()), name='activate_account'),
     path('login/', never_cache(csrf_protect(CustomLoginView.as_view())), name='login'),
+    path('login/locked/', never_cache(LoginLockoutView.as_view()), name='login_lockout'),
     path(
         'password-reset/',
-        never_cache(auth_views.PasswordResetView.as_view(
+        never_cache(CustomPasswordResetView.as_view(
             template_name='accounts/password_reset_form.html',
             email_template_name='accounts/emails/password_reset_email.txt',
             subject_template_name='accounts/emails/password_reset_subject.txt',

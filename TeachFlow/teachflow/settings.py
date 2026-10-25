@@ -10,22 +10,53 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+from datetime import timedelta
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv(BASE_DIR / '.env')
+
+def env_bool(name, default=False):
+    value = os.getenv(name)
+
+    if value is None:
+        return default
+
+    value = value.strip().lower()
+
+    if value in ('1', 'true', 'yes', 'on'):
+        return True
+
+    if value in ('0', 'false', 'no', 'off'):
+        return False
+
+    raise ValueError(f'Valor inválido para {name}: {value}')
+
+
+def env_list(name, default=''):
+    value = os.getenv(name, default)
+
+    return [
+        item.strip()
+        for item in value.split(',')
+        if item.strip()
+    ]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-%3l&2_g0t+7^a_=!54&+3v(xcg!f!+*ml!=*dg-bcu-0)dwihk'
+SECRET_KEY = os.environ['SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool('DEBUG', False)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS')
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
 
 
 # Application definition
@@ -37,6 +68,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'axes',
     'accounts',
     'core',
     
@@ -48,8 +80,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'teachflow.middleware.AuthenticatedNoCacheMiddleware',
+    'teachflow.middleware.ContentSecurityPolicyMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
@@ -81,11 +116,22 @@ LOGOUT_REDIRECT_URL = 'login'
 WSGI_APPLICATION = 'teachflow.wsgi.application'
 
 AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
     'accounts.backends.EmailOrUsernameBackend',
-    'django.contrib.auth.backends.ModelBackend',  # Deixe também o padrão
 ]
 
+# Proteção contra força bruta com django-axes
+AXES_USERNAME_FORM_FIELD = 'username'
 
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = timedelta(minutes=10)
+AXES_USE_ATTEMPT_EXPIRATION = True
+
+AXES_LOCKOUT_PARAMETERS = [
+    ['username', 'ip_address'],
+]
+
+AXES_LOCKOUT_CALLABLE = 'accounts.views.axes_lockout_response'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -145,28 +191,52 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Força o uso de HTTPS
-SECURE_SSL_REDIRECT = False  # Em produção
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Se atrás de proxy
+# HTTPS
+SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', False)
+
+if env_bool('USE_X_FORWARDED_PROTO', False):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Proteção de cookies
-SESSION_COOKIE_SECURE = False  # Mude para True em produção
-CSRF_COOKIE_SECURE = False     # Mude para True em produção
+SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', False)
+CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', False)
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'  # ou 'Strict'
 
 # Cabeçalhos de segurança
-SECURE_HSTS_SECONDS = 31536000  # 1 ano
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(
+    'SECURE_HSTS_INCLUDE_SUBDOMAINS',
+    False,
+)
+SECURE_HSTS_PRELOAD = env_bool(
+    'SECURE_HSTS_PRELOAD',
+    False,
+)
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
 
-# E-mail em desenvolvimento
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'TeachFlow <noreply@teachflow.local>'
+# E-mail
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend',
+)
+
+EMAIL_HOST = os.getenv('EMAIL_HOST', '')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', False)
+EMAIL_USE_SSL = env_bool('EMAIL_USE_SSL', False)
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    'DEFAULT_FROM_EMAIL',
+    'TeachFlow <noreply@teachflow.local>',
+)
 
 # Tempo máximo para confirmação de e-mail: 24 horas
 ACCOUNT_ACTIVATION_TIMEOUT = 60 * 60 * 24
+PASSWORD_RESET_TIMEOUT = 60 * 60
 EMAIL_CHANGE_TIMEOUT = 60 * 60

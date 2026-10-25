@@ -19,7 +19,7 @@ class ClassGroup(models.Model):
         ('Noite', 'Noite'),
     ]
     name = models.CharField(max_length=100, verbose_name="Nome da turma")
-    description = models.TextField(blank=True, verbose_name="Descrição")
+    description = models.TextField(blank=True, max_length=1000, verbose_name="Descrição")
     school = models.CharField(max_length=100, verbose_name="Escola")
     period = models.CharField(max_length=10, choices=PERIOD_CHOICES, blank=True, verbose_name="Período")
     schedule = models.CharField(max_length=50, blank=True, null=True, verbose_name="Horário")
@@ -51,7 +51,11 @@ class ClassGroup(models.Model):
                 models.F('teacher'),
                 models.F('year'),
                 name='unique_class_group_teacher_name_school_year'
-            )
+            ),
+            models.CheckConstraint(
+                condition=Q(year__gte=2000, year__lte=2100),
+                name='classgroup_year_between_2000_2100',
+            ),
         ]
     
     def __str__(self):
@@ -63,7 +67,7 @@ class Student(models.Model):
     last_name = models.CharField(max_length=100)
     birth_date = models.DateField(blank=True, null=True, verbose_name="Data de Nascimento")  # NOVA LINHA
     class_group = models.ForeignKey(ClassGroup, on_delete=models.CASCADE, related_name='students')
-    notes = models.TextField(blank=True)
+    notes = models.TextField(blank=True, max_length=2000)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -124,7 +128,7 @@ class LearningObjective(models.Model):
     """Objetivo de aprendizagem reutilizável definido pelo professor."""
 
     title = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
+    description = models.TextField(blank=True, max_length=1000)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='learning_objectives')
     is_active = models.BooleanField(
         default=True,
@@ -159,8 +163,8 @@ class Lesson(models.Model):
     date = models.DateField(verbose_name='Data de aplicação')
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PLANNED, verbose_name='Status')
     title = models.CharField(max_length=200)
-    content = models.TextField()
-    performance_notes = models.TextField(blank=True)
+    content = models.TextField(max_length=5000)
+    performance_notes = models.TextField(blank=True, max_length=3000)
     exercises = models.ManyToManyField(
         'Exercise',
         through='LessonExercise',
@@ -186,7 +190,7 @@ class Lesson(models.Model):
         
 class Exercise(models.Model):
     title = models.CharField(max_length=200)
-    description = models.TextField()
+    description = models.TextField(max_length=3000)
     duration = models.PositiveIntegerField(
         null=True, blank=True,
         validators=[
@@ -196,7 +200,7 @@ class Exercise(models.Model):
         verbose_name='Duração',
         help_text='Duração estimada em minutos, entre 1 e 1440.',
     )
-    materials = models.TextField(blank=True)
+    materials = models.TextField(blank=True, max_length=2000)
     created_by = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='exercises')
     objectives = models.ManyToManyField(LearningObjective, blank=True, related_name='exercises')
     tags = models.ManyToManyField(Tag, blank=True, related_name='exercises')
@@ -220,6 +224,15 @@ class Exercise(models.Model):
         ordering = ['title']
         verbose_name = 'Exercício'
         verbose_name_plural = 'Exercícios'
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(duration__isnull=True) | Q(
+                    duration__gte=1,
+                    duration__lte=1440,
+                ),
+                name='exercise_duration_between_1_1440_or_null',
+            ),
+        ]
     
     def __str__(self):
         return self.title

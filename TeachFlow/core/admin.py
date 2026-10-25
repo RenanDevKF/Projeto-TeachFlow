@@ -1,7 +1,7 @@
 from django.contrib import admin
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import Group
 from django.db.models import Q
-from django.utils.html import format_html, mark_safe
+from django.utils.html import format_html, format_html_join
 from django.urls import reverse
 
 from .models import (
@@ -20,9 +20,6 @@ class SecureModelAdmin(admin.ModelAdmin):
         return request.user.is_superuser
     
     def has_change_permission(self, request, obj=None):
-        return request.user.is_superuser
-    
-    def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
     
     # Impede deleção em massa (só deleta um por um)
@@ -173,10 +170,20 @@ class ExerciseAdmin(SecureModelAdmin):
 
     def related_lessons(self, obj):
         lessons = obj.lessons.select_related('class_group').all()
-        return mark_safe("<br>".join(
-            f'<a href="{reverse("admin:core_lesson_change", args=[l.id])}">{l.title} ({l.date} - {l.class_group.name})</a>'
-            for l in lessons
-        ))
+
+        return format_html_join(
+            '<br>',
+            '<a href="{}">{} ({} - {})</a>',
+            (
+                (
+                    reverse('admin:core_lesson_change', args=[lesson.id]),
+                    lesson.title,
+                    lesson.date,
+                    lesson.class_group.name,
+                )
+                for lesson in lessons
+            ),
+        )
     related_lessons.short_description = 'Aulas que usam este exercício'
 
     def get_list_filter(self, request):
@@ -228,11 +235,6 @@ class LearningObjectiveAdmin(SecureModelAdmin):
         }),
     )
 
-
-class AdminActionLogAdmin(SecureModelAdmin):
-    list_display = ('user', 'action', 'model_name', 'object_id', 'timestamp')
-    readonly_fields = ('user', 'action', 'model_name', 'object_id', 'timestamp')
-
 # Optional: Customize the admin site header and title
 admin.site.site_header = "Teaching Assistant Admin"
 admin.site.site_title = "Teaching Assistant"
@@ -242,9 +244,9 @@ admin.site.index_title = "Administration Panel"
 admin.site.unregister(Group)
 
 @admin.register(AdminActionLog)
-class AdminActionLogAdmin(admin.ModelAdmin):
+class AdminActionLogAdmin(SecureModelAdmin):
     list_display = ('action', 'model_name', 'object_id', 'user', 'timestamp')
     list_filter = ('action', 'model_name', 'timestamp')
     search_fields = ('user__email', 'model_name', 'object_id')
-    readonly_fields = ('timestamp',)  # Evita edição da data
-    date_hierarchy = 'timestamp'  # Navegação por datas
+    readonly_fields = ('user', 'action', 'model_name', 'object_id', 'timestamp')
+    date_hierarchy = 'timestamp'

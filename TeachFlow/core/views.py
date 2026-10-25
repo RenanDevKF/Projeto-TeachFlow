@@ -2,7 +2,6 @@ from django.template import context
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import logout
 from django.core.paginator import Paginator
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect, get_object_or_404, render
@@ -12,7 +11,7 @@ from django.db.models import Q, Case, IntegerField, Value, When, Count, Prefetch
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
-from django.http import JsonResponse, Http404, HttpResponseRedirect
+from django.http import JsonResponse, Http404, HttpResponseRedirect, HttpResponseForbidden
 from .models import ClassGroup, Student, Lesson, Exercise, Tag, LearningObjective, LessonExercise
 from .utils import normalize_objective_title, normalize_tag_name, find_existing_tag, validate_tag_name
 from .forms import *
@@ -48,9 +47,7 @@ def dashboard_view(request):
     
     # Verifica se o usuário tem perfil de professor
     if not hasattr(request.user, 'teacher_profile'):
-        messages.error(request, "Acesso restrito a professores.")
-        logout(request)  # Desloga o usuário para evitar loops
-        return redirect('login')
+        return HttpResponseForbidden("Acesso restrito a professores.")
     
     teacher = request.user.teacher_profile
     today = timezone.localdate()
@@ -950,7 +947,9 @@ class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView,):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        related_lessons = self.object.lessons.select_related(
+        related_lessons = self.object.lessons.filter(
+            class_group__teacher=self.request.user.teacher_profile
+        ).select_related(
             'class_group'
         ).order_by(
             '-date',
@@ -964,7 +963,9 @@ class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView,):
 
         if self.object.is_template:
             generated_exercises = (
-                self.object.generated_exercises.order_by(
+                self.object.generated_exercises.filter(
+                    created_by=self.request.user.teacher_profile
+                ).order_by(
                     'title',
                     'id',
                 )
@@ -982,10 +983,7 @@ class ExerciseDetailView(LoginRequiredMixin, TeacherRequiredMixin, DetailView,):
             generated_exercises_count
         )
 
-        context['can_delete_exercise'] = (
-            lessons_count == 0
-            and generated_exercises_count == 0
-        )
+        context['can_delete_exercise'] = lessons_count == 0
 
         return context
         
@@ -1120,48 +1118,16 @@ class ExerciseDeleteView(LoginRequiredMixin, TeacherRequiredMixin, DeleteView):
     def form_valid(self, form):
         lessons_count = self.object.lessons.count()
 
-        generated_exercises_count = (
-            self.object.generated_exercises.count()
-            if self.object.is_template
-            else 0
-        )
-
-        if lessons_count > 0 or generated_exercises_count > 0:
-            if (
-                lessons_count > 0
-                and generated_exercises_count > 0
-            ):
-                message = (
-                    'Este recurso não pode ser excluído porque está '
-                    f'vinculado a {lessons_count} '
-                    f'{"aula" if lessons_count == 1 else "aulas"} '
-                    f'e possui {generated_exercises_count} '
-                    f'{"cópia gerada" if generated_exercises_count == 1 else "cópias geradas"}. '
-                    'Você pode arquivá-lo para removê-lo da lista principal '
-                    'sem perder o histórico.'
-                )
-
-            elif lessons_count > 0:
-                message = (
+        if lessons_count > 0:
+            messages.error(
+                self.request,
+                (
                     'Este exercício não pode ser excluído porque está '
                     f'vinculado a {lessons_count} '
                     f'{"aula" if lessons_count == 1 else "aulas"}. '
                     'Você pode arquivá-lo para removê-lo da lista principal '
                     'sem perder o histórico.'
-                )
-
-            else:
-                message = (
-                    'Este modelo não pode ser excluído porque já gerou '
-                    f'{generated_exercises_count} '
-                    f'{"exercício" if generated_exercises_count == 1 else "exercícios"}. '
-                    'Você pode arquivá-lo para removê-lo da lista principal '
-                    'sem perder a referência de origem das cópias.'
-                )
-
-            messages.error(
-                self.request,
-                message,
+                ),
             )
 
             return redirect(
@@ -1202,6 +1168,12 @@ def toggle_exercise_applied(request, lesson_id, exercise_id):
     try:
         data = json.loads(request.body.decode('utf-8'))
     except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({
+            'success': False,
+            'message': 'Dados da requisição inválidos.',
+        }, status=400)
+
+    if not isinstance(data, dict):
         return JsonResponse({
             'success': False,
             'message': 'Dados da requisição inválidos.',
@@ -1384,10 +1356,23 @@ class QuickCreateLearningObjectiveView(LoginRequiredMixin, TeacherRequiredMixin,
                 'error': 'Dados inválidos.',
             }, status=400)
 
-        title = normalize_objective_title(
-            data.get('title', '')
-        )
-        description = data.get('description', '').strip()
+        if request.content_type == 'application/json' and not isinstance(data, dict):
+            return JsonResponse({
+                'success': False,
+                'error': 'Dados inválidos.',
+            }, status=400)
+
+        raw_title = data.get('title', '')
+        raw_description = data.get('description', '')
+
+        if not isinstance(raw_title, str) or not isinstance(raw_description, str):
+            return JsonResponse({
+                'success': False,
+                'error': 'Dados inválidos.',
+            }, status=400)
+
+        title = normalize_objective_title(raw_title)
+        description = raw_description.strip()
 
         if not title:
             return JsonResponse({
@@ -1399,6 +1384,17 @@ class QuickCreateLearningObjectiveView(LoginRequiredMixin, TeacherRequiredMixin,
             return JsonResponse({
                 'success': False,
                 'error': 'O título deve possuir no máximo 200 caracteres.',
+            }, status=400)
+
+        description_max_length = LearningObjective._meta.get_field('description').max_length
+
+        if len(description) > description_max_length:
+            return JsonResponse({
+                'success': False,
+                'error': (
+                    f'A descrição deve possuir no máximo '
+                    f'{description_max_length} caracteres.'
+                ),
             }, status=400)
 
         existing_objective = LearningObjective.objects.filter(
@@ -2001,9 +1997,21 @@ class QuickCreateExerciseTagView(LoginRequiredMixin, TeacherRequiredMixin, View)
                 'error': 'Dados inválidos.',
             }, status=400)
 
-        tag_name = normalize_tag_name(
-            data.get('name', '')
-        )   
+        if request.content_type == 'application/json' and not isinstance(data, dict):
+            return JsonResponse({
+                'success': False,
+                'error': 'Dados inválidos.',
+            }, status=400)
+
+        raw_tag_name = data.get('name', '')
+
+        if not isinstance(raw_tag_name, str):
+            return JsonResponse({
+                'success': False,
+                'error': 'Dados inválidos.',
+            }, status=400)
+
+        tag_name = normalize_tag_name(raw_tag_name)
 
         validation_error = validate_tag_name(tag_name)
 
@@ -2235,7 +2243,13 @@ class QuickAddTagView(
             ):
                 return ''
 
+            if not isinstance(data, dict):
+                return ''
+
             raw_tag_name = data.get('tag_name', '')
+
+            if not isinstance(raw_tag_name, str):
+                return ''
         else:
             raw_tag_name = request.POST.get(
                 'tag_name',
