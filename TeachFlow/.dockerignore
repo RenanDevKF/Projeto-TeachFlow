@@ -1,0 +1,44 @@
+# Git e arquivos de configuração locais
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+
+# Ambientes virtuais e dependências locais
+venv/
+.venv/
+env/
+node_modules/
+
+# Bancos de dados locais
+*.sqlite3
+*.sqlite3-*
+*.db
+
+# Arquivos Python gerados
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Logs, temporários e relatórios
+*.log
+tmp/
+temp/
+.coverage
+coverage/
+htmlcov/
+
+# Arquivos gerados em execução
+media/
+staticfiles/
+
+# Configurações de IDE e sistema
+.vscode/
+.idea/
+.DS_Store
+
+# Configurações Docker locais
+docker-compose.override.yml

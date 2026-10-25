@@ -49,9 +49,9 @@ coverage/
 .pylintrc
 .editorconfig
 
-# Arquivos de Docker (se você não commitar os logs de build)
+# Configurações Docker específicas do ambiente local
 docker-compose.override.yml
-*.dockerignore
+.env.docker
 
 # Outros arquivos específicos do seu sistema operacional ou IDE
 .vscode/
