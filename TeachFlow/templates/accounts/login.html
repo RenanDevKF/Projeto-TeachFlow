@@ -1,0 +1,120 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeachFlow - Login</title>
+
+    <!-- Fonte -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="{% static 'css/build.css' %}" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col justify-center items-center font-sans">
+
+    <!-- Header com Ícone + Título -->
+    <div class="flex flex-col items-center mb-8">
+        <!-- Ícone circular perfeito -->
+        <div class="bg-blue-100 p-2 rounded-full flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#4A90E2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+            </svg>
+        </div>
+
+        <!-- Título e subtítulo -->
+        <h1 class="text-3xl font-extrabold text-gray-800 mt-4">TeachFlow</h1>
+        <p class="text-gray-500 text-sm mt-1">Sua plataforma para organização pedagógica</p>
+    </div>
+
+    <!-- Formulário -->
+    <form method="post" action="{% url 'login' %}" class="w-full max-w-sm space-y-6">
+        {% csrf_token %}
+
+        {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+
+        {% if axes_locked_out %}
+            <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-600">
+                Muitas tentativas de login. Aguarde alguns minutos e tente novamente.
+            </div>
+        {% endif %}
+
+        <div>
+            <label for="{{ form.username.id_for_label }}" class="mb-1 block text-sm font-medium text-gray-700">
+                E-mail ou nome de usuário
+            </label>
+
+            <input
+                id="{{ form.username.id_for_label }}"
+                name="{{ form.username.html_name }}"
+                type="text"
+                value="{{ form.username.value|default:'' }}"
+                placeholder="seu@email.com ou usuário"
+                autocomplete="username"
+                autofocus
+                required
+                class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+        </div>
+
+        <div>
+            <div class="mb-1 flex items-center justify-between gap-3">
+                <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Senha
+                </label>
+
+                <a
+                    href="{% url 'password_reset' %}"
+                    class="text-xs font-medium text-primary hover:underline"
+                >
+                    Esqueci minha senha
+                </a>
+            </div>
+
+            <input
+                id="{{ form.password.id_for_label }}"
+                name="{{ form.password.html_name }}"
+                type="password"
+                placeholder="••••••••"
+                autocomplete="current-password"
+                required
+                class="block w-full rounded-lg border border-gray-300 bg-gray-100 p-3 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+        </div>
+
+        {% if form.non_field_errors %}
+            <div class="text-center text-sm text-red-500">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <button
+            type="submit"
+            class="w-full rounded-lg bg-primary py-3 font-semibold text-white transition hover:bg-blue-600"
+        >
+            Entrar
+        </button>
+    </form>
+
+    <p class="text-center text-sm text-gray-500">
+        Não confirmou seu e-mail?
+        <a
+            href="{% url 'signup_check_email' %}"
+            class="font-medium text-primary hover:underline"
+        >
+            Reenviar confirmação
+        </a>
+    </p>
+
+    <!-- Link Criar Conta -->
+    <div class="text-center text-sm mt-6 text-gray-600">
+        Ainda não tem uma conta? 
+        <a href="{% url 'register' %}" class="text-primary hover:underline font-semibold">Criar conta</a>
+    </div>
+
+</body>
+</html>

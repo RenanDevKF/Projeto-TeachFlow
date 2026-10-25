@@ -168,14 +168,9 @@
     </div>
 </div>
 
-<script src="https://unpkg.com/lucide@latest" defer></script>
+<script src="{% static 'js/vendors/lucide.min.js' %}" defer></script>
 <script src="{% static 'js/filters.js' %}"></script>
-
-<script>
-    window.addEventListener('DOMContentLoaded', () => {
-        lucide.createIcons();
-    });
-</script>
+<script src="{% static 'js/lucide_init.js' %}" defer></script>
 
 {% block vendor_scripts %}{% endblock %}
 {% block scripts %}{% endblock %}

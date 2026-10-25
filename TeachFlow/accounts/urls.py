@@ -4,13 +4,14 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import views as auth_views
-from .views import validate_username_email
 from .views import (
     ActivateAccountView,
     ChangeEmailView,
     ConfirmEmailChangeView,
     CustomLoginView,
     CustomLogoutView,
+    CustomPasswordResetView,
+    LoginLockoutView,
     ProfileView,
     ResendActivationEmailView,
     SignupCheckEmailView,
@@ -23,9 +24,10 @@ urlpatterns = [
     path('register/resend-activation/', never_cache(csrf_protect(ResendActivationEmailView.as_view())), name='resend_activation_email'),
     path('activate/<str:token>/', never_cache(ActivateAccountView.as_view()), name='activate_account'),
     path('login/', never_cache(csrf_protect(CustomLoginView.as_view())), name='login'),
+    path('login/locked/', never_cache(LoginLockoutView.as_view()), name='login_lockout'),
     path(
         'password-reset/',
-        never_cache(auth_views.PasswordResetView.as_view(
+        never_cache(CustomPasswordResetView.as_view(
             template_name='accounts/password_reset_form.html',
             email_template_name='accounts/emails/password_reset_email.txt',
             subject_template_name='accounts/emails/password_reset_subject.txt',
@@ -59,5 +61,4 @@ urlpatterns = [
     path('profile/', login_required(never_cache(ProfileView.as_view())), name='profile'),
     path('profile/change-email/', login_required(never_cache(ChangeEmailView.as_view())), name='change_email'),
     path('profile/change-email/confirm/<str:token>/', login_required(never_cache(ConfirmEmailChangeView.as_view())), name='confirm_email_change'),
-    path('validate-username-email/', validate_username_email, name='validate_username_email'),
 ]

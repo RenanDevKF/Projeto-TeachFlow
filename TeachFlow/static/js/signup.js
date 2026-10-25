@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
         currentStep = step;
     }
 
-    document.getElementById('next-1').addEventListener('click', async () => {
+    document.getElementById('next-1').addEventListener('click', () => {
         const username = form.elements['username'].value.trim();
         const firstName = form.elements['first_name'].value.trim();
         const lastName = form.elements['last_name'].value.trim();
@@ -30,37 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        try {
-            const response = await fetch(
-                '/accounts/validate-username-email/?username=' +
-                encodeURIComponent(username) +
-                '&email=' +
-                encodeURIComponent(email)
-            );
-
-            const data = await response.json();
-
-            if (!data.is_valid) {
-                const messages = [];
-
-                if (data.errors.username) {
-                    messages.push(data.errors.username);
-                }
-
-                if (data.errors.email) {
-                    messages.push(data.errors.email);
-                }
-
-                alert(messages.join('\n'));
-                return;
-            }
-
-            showStep(2);
-
-        } catch (error) {
-            console.error('Erro na validação:', error);
-            alert('Erro ao validar informações. Tente novamente.');
-        }
+        showStep(2);
     });
 
     document.getElementById('prev-2').addEventListener('click', () => {
@@ -79,13 +49,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (password1 !== password2) {
             alert('As senhas não coincidem.');
-            return;
-        }
-
-        const passwordError = validatePassword(password1);
-
-        if (passwordError) {
-            alert(passwordError);
             return;
         }
 
@@ -125,36 +88,6 @@ document.addEventListener('DOMContentLoaded', function () {
             isSubmitting = false;
         }
     });
-
-    function validatePassword(password) {
-        const minLength = 8;
-        const hasNumber = /\d/.test(password);
-        const hasUppercase = /[A-Z]/.test(password);
-        const hasLowercase = /[a-z]/.test(password);
-        const hasSpecialChar = /[@$!%*?&]/.test(password);
-
-        if (password.length < minLength) {
-            return 'A senha deve ter pelo menos 8 caracteres.';
-        }
-
-        if (!hasNumber) {
-            return 'A senha deve conter pelo menos um número.';
-        }
-
-        if (!hasUppercase) {
-            return 'A senha deve conter pelo menos uma letra maiúscula.';
-        }
-
-        if (!hasLowercase) {
-            return 'A senha deve conter pelo menos uma letra minúscula.';
-        }
-
-        if (!hasSpecialChar) {
-            return 'A senha deve conter pelo menos um caractere especial (@, $, !, %, *, ?, &).';
-        }
-
-        return null;
-    }
 
     function getCSRFToken() {
         const csrfInput = document.querySelector(

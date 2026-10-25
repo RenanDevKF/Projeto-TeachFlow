@@ -1,5 +1,5 @@
 # accounts/views.py
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LoginView, LogoutView, PasswordResetView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.forms import PasswordChangeForm
 from django.views.generic import CreateView, UpdateView, View, TemplateView
@@ -7,20 +7,37 @@ from django.conf import settings
 from django.core import signing
 from django.urls import reverse_lazy, reverse
 from django.views.decorators.cache import never_cache
+from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 from django.views.decorators.csrf import csrf_protect
 from django.contrib import messages
-from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
-from django.db import transaction
+from django.contrib.auth import logout, update_session_auth_hash
+from django.db import transaction, IntegrityError
 from django.shortcuts import redirect, render
 from django.http import JsonResponse
 from .models import CustomUser, Subscription, SubscriptionPlan
-from .forms import CustomUserCreationForm, UserProfileForm, TeacherProfileForm, ChangeEmailForm
+from .forms import CustomUserCreationForm, UserProfileForm, TeacherProfileForm, ChangeEmailForm, CustomAuthenticationForm
 from .emails import send_account_activation_email, send_email_change_confirmation, send_email_change_notification
 from accounts.models import Teacher
 from .tokens import get_user_from_activation_token, get_email_change_data
-from .utils import normalize_email, normalize_username
+from .utils import normalize_email, normalize_username, validate_username
+import logging
 
+logger = logging.getLogger(__name__)
+
+def ratelimit_email_key(group, request):
+    return normalize_email(request.POST.get('email'))
+
+@method_decorator(
+    ratelimit(
+        key='ip',
+        rate='5/h',
+        method='POST',
+        block=False,
+    ),
+    name='post',
+)
 @method_decorator(csrf_protect, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
 class SignupView(CreateView):
@@ -29,26 +46,88 @@ class SignupView(CreateView):
     form_class = CustomUserCreationForm
     success_url = reverse_lazy('signup_check_email')
 
-    def form_valid(self, form):
-        with transaction.atomic():
-            user = form.save(commit=False)
-            user.is_teacher = True
-            user.is_active = False
-            user.save()
+    def post(self, request, *args, **kwargs):
+        if getattr(request, 'limited', False):
+            message = 'Muitas tentativas de cadastro. Aguarde um pouco e tente novamente.'
 
-            if not hasattr(user, 'teacher_profile'):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse(
+                    {
+                        'success': False,
+                        'error': 'Limite de tentativas excedido',
+                        'errors': {
+                            '__all__': [message],
+                        },
+                    },
+                    status=429,
+                )
+
+            messages.error(request, message)
+            return redirect('register')
+
+        return super().post(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        try:
+            with transaction.atomic():
+                user = form.save(commit=False)
+                user.is_teacher = True
+                user.is_active = False
+                user.email_verified_at = None
+                user.save()
+
                 Teacher.objects.create(user=user)
 
-            Subscription.objects.create(
-                user=user,
-                plan=SubscriptionPlan.FREE,
-                is_active=True,
+                Subscription.objects.create(
+                    user=user,
+                    plan=SubscriptionPlan.FREE,
+                    is_active=True,
+                )
+
+        except IntegrityError:
+            has_known_conflict = False
+
+            if CustomUser.objects.filter(
+                email__iexact=form.cleaned_data['email'],
+            ).exists():
+                form.add_error(
+                    'email',
+                    'Este e-mail já está em uso.',
+                )
+                has_known_conflict = True
+
+            if CustomUser.objects.filter(
+                username__iexact=form.cleaned_data['username'],
+            ).exists():
+                form.add_error(
+                    'username',
+                    'Este nome de usuário já está em uso.',
+                )
+                has_known_conflict = True
+
+            if has_known_conflict:
+                return self.form_invalid(form)
+
+            raise
+
+        try:
+            send_account_activation_email(
+                self.request,
+                user,
+            )
+        except Exception:
+            logger.exception(
+                'Falha ao enviar e-mail de ativação para o usuário %s.',
+                user.pk,
             )
 
-        send_account_activation_email(
-            self.request,
-            user,
-        )
+            messages.warning(
+                self.request,
+                (
+                    'Sua conta foi criada, mas não foi possível enviar o e-mail '
+                    'de confirmação agora. Tente reenviar o link abaixo.'
+                ),
+            )
 
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse(
@@ -78,37 +157,63 @@ class SignupView(CreateView):
             }, status=400)
         return super().form_invalid(form)
 
-    def handle_exception(self, request, exception):
-        """Captura exceções não tratadas"""
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': False,
-                'error': 'Erro interno',
-                'detail': str(exception)
-            }, status=500)
-        raise exception
-
 @method_decorator(never_cache, name='dispatch')
 class SignupCheckEmailView(TemplateView):
     template_name = 'accounts/signup_check_email.html'
 
+@method_decorator(
+    ratelimit(
+        key='ip',
+        rate='10/h',
+        method='POST',
+        block=False,
+    ),
+    name='post',
+)
+@method_decorator(
+    ratelimit(
+        key=ratelimit_email_key,
+        rate='3/h',
+        method='POST',
+        block=False,
+    ),
+    name='post',
+)
 @method_decorator(csrf_protect, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
 class ResendActivationEmailView(View):
     def post(self, request):
         email = ' '.join(request.POST.get('email', '').split())
 
+        if getattr(request, 'limited', False):
+            messages.success(
+                request,
+                (
+                    'Se existir uma conta aguardando confirmação para este e-mail, '
+                    'um novo link foi enviado.'
+                ),
+            )
+
+            return redirect('signup_check_email')
+
         if email:
             user = CustomUser.objects.filter(
                 email__iexact=email,
                 is_active=False,
+                email_verified_at__isnull=True,
             ).first()
 
             if user:
-                send_account_activation_email(
-                    request,
-                    user,
-                )
+                try:
+                    send_account_activation_email(
+                        request,
+                        user,
+                    )
+                except Exception:
+                    logger.exception(
+                        'Falha ao reenviar e-mail de ativação para o usuário %s.',
+                        user.pk,
+                    )
 
         messages.success(
             request,
@@ -158,7 +263,7 @@ class ActivateAccountView(View):
                 status=400,
             )
 
-        if user.is_active:
+        if user.email_verified_at is not None:
             return render(
                 request,
                 self.template_name,
@@ -167,8 +272,9 @@ class ActivateAccountView(View):
                 },
             )
 
+        user.email_verified_at = timezone.now()
         user.is_active = True
-        user.save(update_fields=['is_active'])
+        user.save(update_fields=['email_verified_at', 'is_active'])
 
         return render(
             request,
@@ -181,34 +287,49 @@ class ActivateAccountView(View):
 @method_decorator(never_cache, name='dispatch')
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
+    authentication_form = CustomAuthenticationForm
     redirect_authenticated_user = True
-    
+
     def get_success_url(self):
-        # Redireciona superusuários diretamente para o admin
         if self.request.user.is_superuser:
             return reverse('admin:index')
+
         return super().get_success_url()
 
+
+def axes_lockout_response(request, credentials):
+    return redirect('login_lockout')
+
+
+class LoginLockoutView(CustomLoginView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['axes_locked_out'] = True
+        return context
+
+@method_decorator(
+    ratelimit(
+        key='ip',
+        rate='10/h',
+        method='POST',
+        block=False,
+    ),
+    name='post',
+)
+@method_decorator(
+    ratelimit(
+        key=ratelimit_email_key,
+        rate='3/h',
+        method='POST',
+        block=False,
+    ),
+    name='post',
+)
+class CustomPasswordResetView(PasswordResetView):
     def post(self, request, *args, **kwargs):
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            # Lógica para AJAX
-            email = request.POST.get('email')
-            password = request.POST.get('password')
-            user = authenticate(request, username=email, password=password)
-            
-            if user is not None:
-                login(request, user)
-                return JsonResponse({
-                    'success': True,
-                    'redirect_url': self.get_success_url()
-                })
-            else:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Email ou senha inválidos'
-                }, status=400)
-        
-        # Fallback para comportamento padrão
+        if getattr(request, 'limited', False):
+            return redirect(self.get_success_url())
+
         return super().post(request, *args, **kwargs)
 
 @method_decorator(never_cache, name='dispatch')
@@ -220,22 +341,42 @@ class CustomLogoutView(LogoutView):
 class ProfileView(LoginRequiredMixin, View):
     template_name = 'accounts/profile.html'
 
+    def get_context(
+        self,
+        request,
+        *,
+        profile_form=None,
+        teacher_form=None,
+        password_form=None,
+        active_tab='personal-info',
+    ):
+        if profile_form is None:
+            profile_form = UserProfileForm(
+                instance=request.user,
+            )
+
+        if teacher_form is None:
+            teacher_form = TeacherProfileForm(
+                instance=request.user.teacher_profile,
+            )
+
+        if password_form is None:
+            password_form = PasswordChangeForm(
+                request.user,
+            )
+
+        return {
+            'profile_form': profile_form,
+            'teacher_form': teacher_form,
+            'password_form': password_form,
+            'active_tab': active_tab,
+        }
+
     def get(self, request):
-        profile_form = UserProfileForm(
-            instance=request.user,
-        )
-
-        teacher_form = TeacherProfileForm(
-            instance=request.user.teacher_profile,
-        )
-
         return render(
             request,
             self.template_name,
-            {
-                'profile_form': profile_form,
-                'teacher_form': teacher_form,
-            },
+            self.get_context(request),
         )
 
     def post(self, request):
@@ -253,36 +394,55 @@ class ProfileView(LoginRequiredMixin, View):
             )
 
             if profile_form.is_valid() and teacher_form.is_valid():
-                with transaction.atomic():
-                    profile_form.save()
-                    teacher_form.save()
+                try:
+                    with transaction.atomic():
+                        profile_form.save()
+                        teacher_form.save()
 
-                messages.success(
-                    request,
-                    'Informações atualizadas com sucesso!',
-                )
+                except IntegrityError:
+                    username = profile_form.cleaned_data.get('username')
 
-                return redirect('profile')
+                    if (
+                        username
+                        and CustomUser.objects.filter(
+                            username__iexact=username,
+                        ).exclude(pk=request.user.pk).exists()
+                    ):
+                        profile_form.add_error(
+                            'username',
+                            'Este nome de usuário já está em uso.',
+                        )
+                    else:
+                        raise
+
+                else:
+                    messages.success(
+                        request,
+                        'Informações atualizadas com sucesso!',
+                    )
+
+                    return redirect('profile')
 
             return render(
                 request,
                 self.template_name,
-                {
-                    'profile_form': profile_form,
-                    'teacher_form': teacher_form,
-                    'active_tab': 'personal-info',
-                },
+                self.get_context(
+                    request,
+                    profile_form=profile_form,
+                    teacher_form=teacher_form,
+                    active_tab='personal-info',
+                ),
                 status=400,
             )
 
         if form_type == 'password_change':
-            form = PasswordChangeForm(
+            password_form = PasswordChangeForm(
                 request.user,
                 request.POST,
             )
 
-            if form.is_valid():
-                user = form.save()
+            if password_form.is_valid():
+                user = password_form.save()
 
                 update_session_auth_hash(
                     request,
@@ -293,17 +453,31 @@ class ProfileView(LoginRequiredMixin, View):
                     request,
                     'Senha alterada com sucesso!',
                 )
-            else:
-                for errors in form.errors.values():
-                    messages.error(
-                        request,
-                        errors[0],
-                    )
 
-            return redirect('profile')
+                return redirect('profile')
+
+            return render(
+                request,
+                self.template_name,
+                self.get_context(
+                    request,
+                    password_form=password_form,
+                    active_tab='password',
+                ),
+                status=400,
+            )
 
         return redirect('profile')
     
+@method_decorator(
+    ratelimit(
+        key='user',
+        rate='5/h',
+        method='POST',
+        block=False,
+    ),
+    name='post',
+)
 @method_decorator(csrf_protect, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
 class ChangeEmailView(LoginRequiredMixin, View):
@@ -319,17 +493,41 @@ class ChangeEmailView(LoginRequiredMixin, View):
         )
 
     def post(self, request):
+        if getattr(request, 'limited', False):
+            messages.error(
+                request,
+                'Muitas solicitações de troca de e-mail. Aguarde um pouco e tente novamente.',
+            )
+
+            return redirect('change_email')
+
         form = ChangeEmailForm(
             request.user,
             request.POST,
         )
 
         if form.is_valid():
-            send_email_change_confirmation(
-                request,
-                request.user,
-                form.cleaned_data['new_email'],
-            )
+            try:
+                send_email_change_confirmation(
+                    request,
+                    request.user,
+                    form.cleaned_data['new_email'],
+                )
+            except Exception:
+                logger.exception(
+                    'Falha ao enviar confirmação de troca de e-mail para o usuário %s.',
+                    request.user.pk,
+                )
+
+                messages.error(
+                    request,
+                    (
+                        'Não foi possível enviar o e-mail de confirmação agora. '
+                        'Tente novamente em alguns instantes.'
+                    ),
+                )
+
+                return redirect('change_email')
 
             messages.success(
                 request,
@@ -398,13 +596,50 @@ class ConfirmEmailChangeView(LoginRequiredMixin, View):
         old_email = request.user.email
 
         request.user.email = new_email
-        request.user.save(update_fields=['email'])
+        request.user.email_verified_at = timezone.now()
 
-        send_email_change_notification(
-            request.user,
-            old_email,
-            new_email,
-        )
+        try:
+            with transaction.atomic():
+                request.user.save(
+                    update_fields=[
+                        'email',
+                        'email_verified_at',
+                    ]
+                )
+
+        except IntegrityError:
+            request.user.refresh_from_db(
+                fields=[
+                    'email',
+                    'email_verified_at',
+                ]
+            )
+
+            if CustomUser.objects.filter(
+                email__iexact=new_email,
+            ).exclude(pk=request.user.pk).exists():
+                messages.error(
+                    request,
+                    (
+                        'Este e-mail não está mais disponível. '
+                        'Solicite a alteração novamente com outro endereço.'
+                    ),
+                )
+                return redirect('profile')
+
+            raise
+
+        try:
+            send_email_change_notification(
+                request.user,
+                old_email,
+                new_email,
+            )
+        except Exception:
+            logger.exception(
+                'Falha ao enviar notificação de troca de e-mail para o usuário %s.',
+                request.user.pk,
+            )
 
         messages.success(
             request,
@@ -412,28 +647,3 @@ class ConfirmEmailChangeView(LoginRequiredMixin, View):
         )
 
         return redirect('profile')
-    
- #função isolada para validação de email e username   
-def validate_username_email(request):
-    username = normalize_username(
-        request.GET.get('username')
-    )
-
-    email = normalize_email(
-        request.GET.get('email')
-    )
-
-    data = {
-        'is_valid': True,
-        'errors': {},
-    }
-
-    if username and CustomUser.objects.filter(username__iexact=username).exists():
-        data['is_valid'] = False
-        data['errors']['username'] = 'Este nome de usuário já está em uso.'
-
-    if email and CustomUser.objects.filter(email__iexact=email).exists():
-        data['is_valid'] = False
-        data['errors']['email'] = 'Este e-mail já está em uso.'
-
-    return JsonResponse(data)

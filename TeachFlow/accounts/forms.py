@@ -1,9 +1,37 @@
 # accounts/forms.py
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from .models import CustomUser, Teacher
 from django.core.exceptions import ValidationError
-from .utils import normalize_email, normalize_username
+from .utils import normalize_email, normalize_username, validate_username
+
+class CustomAuthenticationForm(AuthenticationForm):
+    username = forms.CharField(
+        label='E-mail ou nome de usuário',
+        widget=forms.TextInput(
+            attrs={
+                'autofocus': True,
+                'autocomplete': 'username',
+                'placeholder': 'seu@email.com ou usuário',
+            }
+        ),
+    )
+
+    password = forms.CharField(
+        label='Senha',
+        strip=False,
+        widget=forms.PasswordInput(
+            attrs={
+                'autocomplete': 'current-password',
+                'placeholder': '••••••••',
+            }
+        ),
+    )
+
+    error_messages = {
+        'invalid_login': 'E-mail, nome de usuário ou senha inválidos.',
+        'inactive': 'Esta conta está inativa.',
+    }
 
 class CustomUserCreationForm(UserCreationForm):
     username = forms.CharField(
@@ -22,14 +50,6 @@ class CustomUserCreationForm(UserCreationForm):
         required=True,
         widget=forms.EmailInput(attrs={'class': 'form-control'})
     )
-    password1 = forms.CharField(
-        label="Password",
-        widget=forms.PasswordInput(attrs={'class': 'form-control'})
-    )
-    password2 = forms.CharField(
-        label="Password confirmation",
-        widget=forms.PasswordInput(attrs={'class': 'form-control'})
-    )
 
     class Meta:
         model = CustomUser
@@ -39,6 +59,11 @@ class CustomUserCreationForm(UserCreationForm):
         username = normalize_username(
             self.cleaned_data.get('username')
         )
+
+        validation_error = validate_username(username)
+
+        if validation_error:
+            raise ValidationError(validation_error)
 
         if CustomUser.objects.filter(username__iexact=username).exists():
             raise ValidationError("Este nome de usuário já está em uso.")
@@ -83,6 +108,11 @@ class UserProfileForm(forms.ModelForm):
 
         if not username:
             raise ValidationError("Informe um nome de usuário.")
+
+        validation_error = validate_username(username)
+
+        if validation_error:
+            raise ValidationError(validation_error)
 
         if CustomUser.objects.filter(username__iexact=username).exclude(pk=self.instance.pk).exists():
             raise ValidationError("Este nome de usuário já está em uso.")
